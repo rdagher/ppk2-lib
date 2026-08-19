@@ -7,8 +7,6 @@ stages: [lint, test, build, firmware, hil]
 
 variables:
   UV_LINK_MODE: copy
-  # Nordic toolchain image for the firmware matrix (west + Zephyr SDK).
-  NCS_IMAGE: "ghcr.io/nrfconnect/sdk-nrf-toolchain:v3.3.1"
 
 .uv:
   image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
@@ -44,9 +42,11 @@ wheel:
     expire_in: 2 weeks
 
 # One job per (app x board); each hex feeds the HIL job for that board.
+# Mirrors the local flow: nrfutil sdk-manager owns the NCS install
+# (default ~/ncs) and launches west.
 firmware:
   stage: firmware
-  image: $NCS_IMAGE
+  image: ubuntu:24.04
   parallel:
     matrix:
       - APP: [bench-dut, trace-demo]
@@ -54,10 +54,21 @@ firmware:
           - nrf52840dk/nrf52840
           - nrf54l15dk/nrf54l15/cpuapp
           - nrf54lm20dk/nrf54lm20b/cpuapp
+  cache:
+    key: ncs-v3.3.1
+    paths: [.ncs/]
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq curl git ca-certificates
+    - curl -fsSL -o /usr/local/bin/nrfutil https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
+    - chmod +x /usr/local/bin/nrfutil
+    - nrfutil install sdk-manager
+    - ln -sfn "$CI_PROJECT_DIR/.ncs" "$HOME/ncs"
+    - test -d "$HOME/ncs/v3.3.1" || (nrfutil sdk-manager install v3.3.1 && rm -rf "$HOME/ncs/downloads" "$HOME/ncs/tmp")
   script:
     - DK=$(echo "$BOARD" | cut -d/ -f1)
-    - west build --board "$BOARD" --pristine=always --build-dir "build/$DK" "firmware/$APP"
-    - mkdir -p hex && cp "build/$DK/merged.hex" "hex/$APP-$DK.hex"
+    - cd "$HOME/ncs/v3.3.1" && nrfutil sdk-manager toolchain launch --ncs-version v3.3.1 --
+        west build --board "$BOARD" --pristine=always --build-dir "$CI_PROJECT_DIR/build/$DK" "$CI_PROJECT_DIR/firmware/$APP"
+    - mkdir -p "$CI_PROJECT_DIR/hex" && cp "$CI_PROJECT_DIR/build/$DK/merged.hex" "$CI_PROJECT_DIR/hex/$APP-$DK.hex"
   artifacts:
     paths: [hex/]
     expire_in: 2 weeks

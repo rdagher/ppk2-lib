@@ -8,8 +8,17 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]   # all branches; tags are the release workflow's job
   pull_request:
+  workflow_dispatch:
+
+# A new push cancels the previous in-flight run of the same ref.
+# Note: direct-push workflow — with a PR open, push + pull_request
+# events would both run (different refs, not deduped). If we adopt
+# PR-based review, restrict push back to [main].
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
@@ -70,7 +79,6 @@ jobs:
   firmware:
     name: fw ${{ matrix.app }} / ${{ matrix.board }}
     runs-on: ubuntu-latest
-    container: ghcr.io/nrfconnect/sdk-nrf-toolchain:v3.3.1
     strategy:
       fail-fast: false
       matrix:
@@ -82,26 +90,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache NCS west workspace
+      # Same toolchain flow as the local justfiles: nrfutil sdk-manager
+      # owns the NCS install (default ~/ncs on Linux) and launches west.
+      - name: Cache NCS install
         uses: actions/cache@v4
         with:
-          path: /tmp/ncs
+          path: ~/ncs
           key: ncs-v3.3.1
 
-      - name: Init NCS workspace (cache miss only)
+      - name: Install nrfutil + sdk-manager
         run: |
-          if [ ! -d /tmp/ncs/.west ]; then
-            west init -m https://github.com/nrfconnect/sdk-nrf --mr v3.3.1 /tmp/ncs
-            cd /tmp/ncs && west update --narrow -o=--depth=1
+          curl -fsSL -o /usr/local/bin/nrfutil \
+            https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
+          sudo chmod +x /usr/local/bin/nrfutil
+          nrfutil install sdk-manager
+
+      - name: Install NCS v3.3.1 (cache miss only)
+        run: |
+          if [ ! -d "$HOME/ncs/v3.3.1" ]; then
+            nrfutil sdk-manager install v3.3.1
+            rm -rf "$HOME/ncs/downloads" "$HOME/ncs/tmp"
           fi
 
       - name: Build
+        id: build
         run: |
           DK=$(echo "${{ matrix.board }}" | cut -d/ -f1)
-          cd /tmp/ncs
-          west build --board "${{ matrix.board }}" --pristine=always \
-            --build-dir "$GITHUB_WORKSPACE/build/$DK" \
-            "$GITHUB_WORKSPACE/firmware/${{ matrix.app }}"
+          echo "dk=$DK" >> "$GITHUB_OUTPUT"
+          cd "$HOME/ncs/v3.3.1"
+          nrfutil sdk-manager toolchain launch --ncs-version v3.3.1 -- \
+            west build --board "${{ matrix.board }}" --pristine=always \
+              --build-dir "$GITHUB_WORKSPACE/build/$DK" \
+              "$GITHUB_WORKSPACE/firmware/${{ matrix.app }}"
           mkdir -p "$GITHUB_WORKSPACE/hex"
           cp "$GITHUB_WORKSPACE/build/$DK/merged.hex" \
             "$GITHUB_WORKSPACE/hex/${{ matrix.app }}-$DK.hex"
@@ -109,6 +129,6 @@ jobs:
       - name: Upload hex (feeds the HIL bench)
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.app }}-${{ matrix.board == 'nrf52840dk/nrf52840' && 'nrf52840dk' || matrix.board == 'nrf54l15dk/nrf54l15/cpuapp' && 'nrf54l15dk' || 'nrf54lm20dk' }}
+          name: ${{ matrix.app }}-${{ steps.build.outputs.dk }}
           path: hex/*.hex
           retention-days: 14
