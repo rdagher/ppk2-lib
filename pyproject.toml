@@ -1,0 +1,116 @@
+[project]
+name = "ppk2-lib"
+dynamic = ["version"]
+description = "Python library + CLI for Nordic's Power Profiler Kit II (PPK2)"
+readme = "README.md"
+authors = [{ name = "Roudy Dagher" }]
+license = { text = "Apache-2.0 OR MIT" }
+requires-python = ">=3.11"
+keywords = ["ppk2", "nordic", "power-profiler", "embedded", "current-measurement"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Hardware",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pyserial>=3.5",
+    "typer>=0.12",
+]
+
+[project.scripts]
+ppk2 = "ppk2.cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/rdagher/ppk2-lib"
+Repository = "https://github.com/rdagher/ppk2-lib"
+
+[dependency-groups]
+# The A/B capture-comparison harness (validation/) — not needed for
+# the library, the CLI, or the fast test tier.
+validation = [
+    "pandas>=2",
+    "scipy>=1.11",
+]
+dev = [
+    "pytest>=8",
+    "pyright>=1.1.380",
+    "ruff>=0.7",
+]
+
+[tool.hatch.version]
+path = "src/ppk2/__init__.py"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ppk2"]
+
+[tool.pytest.ini_options]
+minversion = "8"
+testpaths = ["tests"]
+markers = [
+    "hardware: requires a real PPK2 plugged in (slow, HIL tier)",
+]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # bugbear
+    "UP",   # pyupgrade
+    "RUF",  # ruff-specific
+    "TCH",  # type-checking imports
+    "D",    # pydocstyle
+    "SIM",  # simplifications
+    "PTH",  # pathlib usage
+]
+ignore = [
+    "D100",  # module-level docstring not required everywhere
+    "D104",  # __init__.py docstring not required
+    "D203",  # incompatible with D211
+    "D213",  # incompatible with D212
+]
+# Domain-specific Unicode that's intentional and unambiguous in context:
+# µ (micro) in µA / µJ / µC, → (state-machine flow), σ (statistics).
+# RUF002/RUF003 still catch genuine ASCII-vs-Unicode confusables.
+allowed-confusables = ["µ", "→", "σ"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]  # tests don't need pydocstyle
+
+[tool.ruff.lint.flake8-implicit-str-concat]
+allow-multiline = true
+
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["ppk2", "tests"]
+
+[tool.ruff.format]
+docstring-code-format = true

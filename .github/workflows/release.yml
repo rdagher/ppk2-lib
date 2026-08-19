@@ -1,0 +1,50 @@
+# Tag-driven release: push a `v*` tag → build wheel + sdist with uv,
+# smoke-test the wheel in a clean venv, attach both to a GitHub
+# Release. No PyPI publish — the experimental phase distributes via
+# GitHub only (`pip install git+…` or the attached wheel).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the GitHub Release + upload assets
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel + sdist
+        run: uv build
+
+      - name: Smoke-test the wheel in a clean venv
+        run: |
+          uv venv /tmp/smoke
+          VIRTUAL_ENV=/tmp/smoke uv pip install dist/*.whl
+          /tmp/smoke/bin/ppk2 --help
+          /tmp/smoke/bin/ppk2 version
+          /tmp/smoke/bin/python -c "from ppk2 import Session, StreamParser, parse_metadata; import ppk2; print(ppk2.__version__)"
+
+      - name: Check tag matches package version
+        run: |
+          PKG_VERSION=$(/tmp/smoke/bin/python -c "import ppk2; print(ppk2.__version__)")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "tag $GITHUB_REF_NAME does not match ppk2.__version__ $PKG_VERSION" >&2
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, 'a') || contains(github.ref_name, 'b') || contains(github.ref_name, 'rc') || startsWith(github.ref_name, 'v0.') }}

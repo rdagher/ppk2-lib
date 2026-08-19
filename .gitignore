@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtualenvs (uv default)
+.venv/
+venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Tooling caches
+.ruff_cache/
+.mypy_cache/
+.pyright/
+
+# Build artefacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Capture artefacts (raw byte dumps + CSV exports from validation runs)
+*.csv
+*.csv.gz
+*.ppk2.bin
+# Test fixtures (tiny, committed for reproducibility)
+!tests/fixtures/*.csv
+!tests/fixtures/*.bin
+# Committed reference captures (gzipped, lossless) for validation rounds
+!validation/evidence/*/captures/*.csv.gz
+
+# Firmware hex artefacts — built locally (`just hex`) and, later, by a
+# CI build matrix. Never committed.
+*.hex
+
+# mkdocs build output
+site/

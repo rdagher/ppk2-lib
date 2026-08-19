@@ -1,0 +1,11 @@
+/*
+ * nRF54L15DK (PCA10156) PPK2 trace pins: P1.11 -> D0, P1.12 -> D1.
+ * Same pair as firmware/bench-dut (routed to the GPIO connectors;
+ * unclaimed by any default-enabled peripheral).
+ */
+/ {
+	zephyr,user {
+		ppk2-d0-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+		ppk2-d1-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+	};
+};

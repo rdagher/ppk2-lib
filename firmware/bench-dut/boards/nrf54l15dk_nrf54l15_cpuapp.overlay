@@ -1,0 +1,34 @@
+/*
+ * nRF54L15DK (PCA10156) PPK2 bench-DUT pin assignment.
+ *
+ * P1.11 → PPK2 D0 (5 Hz square wave)
+ * P1.12 → PPK2 D1 (0.5 Hz square wave)
+ *
+ * Both pins are routed to the DK's GPIO connectors (HW User Guide
+ * 4503_209, "Connector interface") and are unclaimed in the default
+ * board DTS: P1.11 appears only in the disabled spi22 pinctrl group,
+ * P1.12 nowhere. LEDs (P2.09/P1.10/P2.07/P1.14), buttons
+ * (P1.13/P1.09/P1.08/P0.04) and the uart20 console (P1.04-P1.07)
+ * are deliberately avoided.
+ */
+
+/ {
+	ppk2_signals {
+		compatible = "gpio-leds";
+
+		ppk2_d0: ppk2_d0 {
+			gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+			label = "PPK2 D0 — 5 Hz";
+		};
+
+		ppk2_d1: ppk2_d1 {
+			gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+			label = "PPK2 D1 — 0.5 Hz";
+		};
+	};
+
+	aliases {
+		ppk2-d0 = &ppk2_d0;
+		ppk2-d1 = &ppk2_d1;
+	};
+};
