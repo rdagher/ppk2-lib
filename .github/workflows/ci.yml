@@ -101,19 +101,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Cache NCS install
+      # The frozen toolchain env: NCS install, nrfutil binary, and its
+      # sdk-manager command — one key restores everything downstream.
+      - name: Cache toolchain env
         id: cache
         uses: actions/cache@v4
         with:
-          path: ~/ncs
-          key: ncs-v3.3.1
+          path: |
+            ~/ncs
+            ~/.nrfutil
+            ~/.local/bin/nrfutil
+          key: ncs-v3.3.1-toolchain
 
       - name: Install nrfutil + NCS v3.3.1 (cache miss only)
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          curl -fsSL -o /usr/local/bin/nrfutil \
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o "$HOME/.local/bin/nrfutil" \
             https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
-          sudo chmod +x /usr/local/bin/nrfutil
+          chmod +x "$HOME/.local/bin/nrfutil"
+          export PATH="$HOME/.local/bin:$PATH"
           nrfutil install sdk-manager
           nrfutil sdk-manager install v3.3.1
           rm -rf "$HOME/ncs/downloads" "$HOME/ncs/tmp"
@@ -136,22 +143,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Restore NCS install
-        uses: actions/cache@v4
+      # Restore-only: the env was frozen by prepare-ncs; nothing is
+      # installed here.
+      - name: Restore toolchain env
+        uses: actions/cache/restore@v4
         with:
-          path: ~/ncs
-          key: ncs-v3.3.1
-
-      - name: Install nrfutil
-        run: |
-          curl -fsSL -o /usr/local/bin/nrfutil \
-            https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
-          sudo chmod +x /usr/local/bin/nrfutil
-          nrfutil install sdk-manager
+          path: |
+            ~/ncs
+            ~/.nrfutil
+            ~/.local/bin/nrfutil
+          key: ncs-v3.3.1-toolchain
+          fail-on-cache-miss: true
 
       - name: Build both apps
         id: build
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
           DK=$(echo "${{ matrix.board }}" | cut -d/ -f1)
           echo "dk=$DK" >> "$GITHUB_OUTPUT"
           mkdir -p "$GITHUB_WORKSPACE/hex"
