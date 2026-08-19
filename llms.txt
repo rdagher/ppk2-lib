@@ -1,0 +1,35 @@
+# ppk2-lib
+
+> Python library + CLI for Nordic's Power Profiler Kit II (PPK2):
+> calibrated current + logic captures at 100 kSPS, GUI-parity CSV
+> output, source/ammeter modes, scriptable DUT power control, and
+> energy attribution via GPIO trace markers. EXPERIMENTAL — the API
+> may change between 0.x versions; not yet on PyPI (install from
+> git).
+
+Import name and binary are `ppk2`; the distribution is `ppk2-lib`.
+Three layers: `ppk2.protocol` (stdlib-only wire primitives),
+`ppk2.client` (pyserial session driver), `ppk2.cli` (typer binary).
+One process owns the PPK2 at a time; quit the Nordic GUI before
+capturing. Captures are boot-inclusive (DUT power-cycles at t=0).
+
+## Docs
+
+- [README](README.md): install, quick start, layer table, dev workflow
+- [Architecture](docs/ARCHITECTURE.md): three-layer design, session lifecycle (sequence diagram), threading model
+- [Protocol notes](docs/PROTOCOL.md): opcodes, metadata format, sample frame, stream reassembly, calibration formula, CSV format, firmware caveats
+- [Changelog](CHANGELOG.md): 0.1.0 feature list and known limitations
+
+## Firmware
+
+- [Reference bench DUT](firmware/bench-dut/README.md): deterministic D0/D1 signal for HIL tests; wiring + per-board pins (nRF52840/nRF54L15/nRF54LM20 DKs)
+- [Trace-marker demo](firmware/trace-demo/README.md): C + C++ RAII markers for energy attribution, both-mode flash/capture recipes, reference measurements
+
+## Validation
+
+- [A/B harness](validation/README.md): statistical capture comparison (means, KS, per-pin rates) + acceptance contract
+- [Committed evidence](validation/evidence/trace_demo/README.md): GUI-vs-CLI parity rounds with reference captures and plots
+
+## Optional
+
+- [Claude Code skill](.claude/skills/ppk2/SKILL.md): operational recipes for driving the PPK2 from an AI coding agent
