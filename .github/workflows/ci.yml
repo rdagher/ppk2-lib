@@ -1,7 +1,9 @@
 # Fast-tier CI: static analysis + hardware-free tests + wheel build.
 #
-# Fast tier only. The canonical full pipeline (firmware build matrix
-# per board + HIL tier on self-hosted bench runners) is .gitlab-ci.yml.
+# Fast tier + firmware build matrix. The canonical full pipeline
+# (including the HIL tier on self-hosted bench runners) is
+# .gitlab-ci.yml; the firmware jobs here mirror its matrix so the
+# shipped Zephyr apps stay green per board.
 name: ci
 
 on:
@@ -64,3 +66,49 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv build
+
+  firmware:
+    name: fw ${{ matrix.app }} / ${{ matrix.board }}
+    runs-on: ubuntu-latest
+    container: ghcr.io/nrfconnect/sdk-nrf-toolchain:v3.3.1
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [bench-dut, trace-demo]
+        board:
+          - nrf52840dk/nrf52840
+          - nrf54l15dk/nrf54l15/cpuapp
+          - nrf54lm20dk/nrf54lm20b/cpuapp
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache NCS west workspace
+        uses: actions/cache@v4
+        with:
+          path: /tmp/ncs
+          key: ncs-v3.3.1
+
+      - name: Init NCS workspace (cache miss only)
+        run: |
+          if [ ! -d /tmp/ncs/.west ]; then
+            west init -m https://github.com/nrfconnect/sdk-nrf --mr v3.3.1 /tmp/ncs
+            cd /tmp/ncs && west update --narrow -o=--depth=1
+          fi
+
+      - name: Build
+        run: |
+          DK=$(echo "${{ matrix.board }}" | cut -d/ -f1)
+          cd /tmp/ncs
+          west build --board "${{ matrix.board }}" --pristine=always \
+            --build-dir "$GITHUB_WORKSPACE/build/$DK" \
+            "$GITHUB_WORKSPACE/firmware/${{ matrix.app }}"
+          mkdir -p "$GITHUB_WORKSPACE/hex"
+          cp "$GITHUB_WORKSPACE/build/$DK/merged.hex" \
+            "$GITHUB_WORKSPACE/hex/${{ matrix.app }}-$DK.hex"
+
+      - name: Upload hex (feeds the HIL bench)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-${{ matrix.board == 'nrf52840dk/nrf52840' && 'nrf52840dk' || matrix.board == 'nrf54l15dk/nrf54l15/cpuapp' && 'nrf54l15dk' || 'nrf54lm20dk' }}
+          path: hex/*.hex
+          retention-days: 14

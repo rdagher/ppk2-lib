@@ -8,7 +8,7 @@ stages: [lint, test, build, firmware, hil]
 variables:
   UV_LINK_MODE: copy
   # Nordic toolchain image for the firmware matrix (west + Zephyr SDK).
-  NCS_IMAGE: "ghcr.io/nrfconnect/sdk-nrf-toolchain:v3.1.0"
+  NCS_IMAGE: "ghcr.io/nrfconnect/sdk-nrf-toolchain:v3.3.1"
 
 .uv:
   image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
