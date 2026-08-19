@@ -171,3 +171,39 @@ jobs:
           name: fw-${{ steps.build.outputs.dk }}
           path: hex/*.hex
           retention-days: 14
+
+  # ── HIL tier (placeholders) ──────────────────────────────────
+  # Self-hosted bench runners (planned: two Raspberry Pis), each
+  # with a PPK2 wired to one DK. Runner labels select the hardware;
+  # the fw-<dk> artifact from the matrix supplies the hexes: flash
+  # bench-dut under PPK2 power, then run the hardware-marked tier.
+  #
+  # hil-nrf52840:
+  #   needs: [changes, firmware]
+  #   if: needs.changes.outputs.firmware == 'true'
+  #   runs-on: [self-hosted, ppk2-bench, nrf52840dk]
+  #   timeout-minutes: 20
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/download-artifact@v4
+  #       with: { name: fw-nrf52840dk, path: hex }
+  #     - uses: astral-sh/setup-uv@v5
+  #     - run: uv sync --all-extras
+  #     - run: uv run ppk2 run --source --vdd 3.0 --
+  #         nrfutil device program --firmware hex/bench-dut-nrf52840dk.hex
+  #     - run: uv run pytest -m hardware
+  #
+  # hil-nrf54lm20:
+  #   needs: [changes, firmware]
+  #   if: needs.changes.outputs.firmware == 'true'
+  #   runs-on: [self-hosted, ppk2-bench, nrf54lm20dk]
+  #   timeout-minutes: 20
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/download-artifact@v4
+  #       with: { name: fw-nrf54lm20dk, path: hex }
+  #     - uses: astral-sh/setup-uv@v5
+  #     - run: uv sync --all-extras
+  #     - run: uv run ppk2 run --vdd 3.3 --
+  #         nrfutil device program --firmware hex/bench-dut-nrf54lm20dk.hex
+  #     - run: uv run pytest -m hardware
