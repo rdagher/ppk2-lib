@@ -1,0 +1,91 @@
+# Canonical CI pipeline. The GitHub Actions workflow mirrors the
+# fast tier only; this file carries the full shape: fast tier,
+# per-board firmware build matrix, and the HIL tier that consumes
+# those firmware artifacts on self-hosted bench runners.
+
+stages: [lint, test, build, firmware, hil]
+
+variables:
+  UV_LINK_MODE: copy
+  # Nordic toolchain image for the firmware matrix (west + Zephyr SDK).
+  NCS_IMAGE: "ghcr.io/nrfconnect/sdk-nrf-toolchain:v3.1.0"
+
+.uv:
+  image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+  before_script:
+    - uv sync --all-extras
+
+lint:
+  extends: .uv
+  stage: lint
+  script:
+    - uv run pyright src tests
+    - uv run ruff check src tests validation
+    - uv run ruff format --check src tests validation
+
+test:
+  stage: test
+  image: ghcr.io/astral-sh/uv:python$PY-bookworm-slim
+  parallel:
+    matrix:
+      - PY: ["3.11", "3.13"]
+  script:
+    - uv sync --all-extras
+    - uv run pytest -m "not hardware"
+
+wheel:
+  extends: .uv
+  stage: build
+  before_script: []
+  script:
+    - uv build
+  artifacts:
+    paths: [dist/]
+    expire_in: 2 weeks
+
+# One job per (app x board); each hex feeds the HIL job for that board.
+firmware:
+  stage: firmware
+  image: $NCS_IMAGE
+  parallel:
+    matrix:
+      - APP: [bench-dut, trace-demo]
+        BOARD:
+          - nrf52840dk/nrf52840
+          - nrf54l15dk/nrf54l15/cpuapp
+          - nrf54lm20dk/nrf54lm20b/cpuapp
+  script:
+    - DK=$(echo "$BOARD" | cut -d/ -f1)
+    - west build --board "$BOARD" --pristine=always --build-dir "build/$DK" "firmware/$APP"
+    - mkdir -p hex && cp "build/$DK/merged.hex" "hex/$APP-$DK.hex"
+  artifacts:
+    paths: [hex/]
+    expire_in: 2 weeks
+
+# ── HIL tier (placeholders) ─────────────────────────────────────
+# Self-hosted bench runners (planned: two Raspberry Pis), each with
+# a PPK2 wired to one DK. Runner tags select the hardware; `needs`
+# pulls the matching hexes from the firmware matrix. Flash bench-dut
+# under PPK2 power, then run the hardware-marked pytest tier.
+#
+# hil-nrf52840:
+#   stage: hil
+#   tags: [ppk2-bench, nrf52840dk]
+#   needs: ["firmware: [bench-dut, nrf52840dk/nrf52840]",
+#           "firmware: [trace-demo, nrf52840dk/nrf52840]"]
+#   script:
+#     - uv sync --all-extras
+#     - uv run ppk2 run --source --vdd 3.0 --
+#         nrfutil device program --firmware hex/bench-dut-nrf52840dk.hex
+#     - uv run pytest -m hardware
+#
+# hil-nrf54lm20:
+#   stage: hil
+#   tags: [ppk2-bench, nrf54lm20dk]
+#   needs: ["firmware: [bench-dut, nrf54lm20dk/nrf54lm20b/cpuapp]",
+#           "firmware: [trace-demo, nrf54lm20dk/nrf54lm20b/cpuapp]"]
+#   script:
+#     - uv sync --all-extras
+#     - uv run ppk2 run --vdd 3.3 --
+#         nrfutil device program --firmware hex/bench-dut-nrf54lm20dk.hex
+#     - uv run pytest -m hardware

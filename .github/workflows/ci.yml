@@ -1,9 +1,7 @@
 # Fast-tier CI: static analysis + hardware-free tests + wheel build.
 #
-# The HIL tier (pytest -m hardware) needs a physical PPK2 wired to
-# the bench-DUT firmware and deliberately does NOT run here — it is
-# planned as a self-hosted runner stage (future work).
-# Firmware example builds (Zephyr toolchain) are also future work.
+# Fast tier only. The canonical full pipeline (firmware build matrix
+# per board + HIL tier on self-hosted bench runners) is .gitlab-ci.yml.
 name: ci
 
 on:
