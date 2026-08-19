@@ -76,13 +76,59 @@ jobs:
           python-version: "3.12"
       - run: uv build
 
-  firmware:
-    name: fw ${{ matrix.app }} / ${{ matrix.board }}
+  # Firmware only rebuilds when firmware sources (or this workflow)
+  # change — docs/python-only pushes skip the heavy jobs entirely.
+  changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      firmware: ${{ steps.filter.outputs.firmware }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            firmware:
+              - 'firmware/**'
+              - '.github/workflows/ci.yml'
+
+  # Seed the NCS cache once so the board matrix never stampedes a
+  # cold key with parallel multi-GB installs.
+  prepare-ncs:
+    needs: changes
+    if: needs.changes.outputs.firmware == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Cache NCS install
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/ncs
+          key: ncs-v3.3.1
+
+      - name: Install nrfutil + NCS v3.3.1 (cache miss only)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o /usr/local/bin/nrfutil \
+            https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
+          sudo chmod +x /usr/local/bin/nrfutil
+          nrfutil install sdk-manager
+          nrfutil sdk-manager install v3.3.1
+          rm -rf "$HOME/ncs/downloads" "$HOME/ncs/tmp"
+
+  # One job per board, both apps — the artifact is the per-DK bundle
+  # the HIL bench consumes.
+  firmware:
+    name: fw ${{ matrix.board }}
+    needs: [changes, prepare-ncs]
+    if: needs.changes.outputs.firmware == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        app: [bench-dut, trace-demo]
         board:
           - nrf52840dk/nrf52840
           - nrf54l15dk/nrf54l15/cpuapp
@@ -90,45 +136,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Same toolchain flow as the local justfiles: nrfutil sdk-manager
-      # owns the NCS install (default ~/ncs on Linux) and launches west.
-      - name: Cache NCS install
+      - name: Restore NCS install
         uses: actions/cache@v4
         with:
           path: ~/ncs
           key: ncs-v3.3.1
 
-      - name: Install nrfutil + sdk-manager
+      - name: Install nrfutil
         run: |
           curl -fsSL -o /usr/local/bin/nrfutil \
             https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
           sudo chmod +x /usr/local/bin/nrfutil
           nrfutil install sdk-manager
 
-      - name: Install NCS v3.3.1 (cache miss only)
-        run: |
-          if [ ! -d "$HOME/ncs/v3.3.1" ]; then
-            nrfutil sdk-manager install v3.3.1
-            rm -rf "$HOME/ncs/downloads" "$HOME/ncs/tmp"
-          fi
-
-      - name: Build
+      - name: Build both apps
         id: build
         run: |
           DK=$(echo "${{ matrix.board }}" | cut -d/ -f1)
           echo "dk=$DK" >> "$GITHUB_OUTPUT"
-          cd "$HOME/ncs/v3.3.1"
-          nrfutil sdk-manager toolchain launch --ncs-version v3.3.1 -- \
-            west build --board "${{ matrix.board }}" --pristine=always \
-              --build-dir "$GITHUB_WORKSPACE/build/$DK" \
-              "$GITHUB_WORKSPACE/firmware/${{ matrix.app }}"
           mkdir -p "$GITHUB_WORKSPACE/hex"
-          cp "$GITHUB_WORKSPACE/build/$DK/merged.hex" \
-            "$GITHUB_WORKSPACE/hex/${{ matrix.app }}-$DK.hex"
+          cd "$HOME/ncs/v3.3.1"
+          for APP in bench-dut trace-demo; do
+            nrfutil sdk-manager toolchain launch --ncs-version v3.3.1 -- \
+              west build --board "${{ matrix.board }}" --pristine=always \
+                --build-dir "$GITHUB_WORKSPACE/build/$APP" \
+                "$GITHUB_WORKSPACE/firmware/$APP"
+            cp "$GITHUB_WORKSPACE/build/$APP/merged.hex" \
+              "$GITHUB_WORKSPACE/hex/$APP-$DK.hex"
+          done
 
-      - name: Upload hex (feeds the HIL bench)
+      - name: Upload hex bundle (feeds the HIL bench)
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.app }}-${{ steps.build.outputs.dk }}
+          name: fw-${{ steps.build.outputs.dk }}
           path: hex/*.hex
           retention-days: 14

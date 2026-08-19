@@ -47,10 +47,12 @@ wheel:
 firmware:
   stage: firmware
   image: ubuntu:24.04
+  rules:
+    - changes:
+        paths: [firmware/**/*, .gitlab-ci.yml]
   parallel:
     matrix:
-      - APP: [bench-dut, trace-demo]
-        BOARD:
+      - BOARD:
           - nrf52840dk/nrf52840
           - nrf54l15dk/nrf54l15/cpuapp
           - nrf54lm20dk/nrf54lm20b/cpuapp
@@ -66,9 +68,15 @@ firmware:
     - test -d "$HOME/ncs/v3.3.1" || (nrfutil sdk-manager install v3.3.1 && rm -rf "$HOME/ncs/downloads" "$HOME/ncs/tmp")
   script:
     - DK=$(echo "$BOARD" | cut -d/ -f1)
-    - cd "$HOME/ncs/v3.3.1" && nrfutil sdk-manager toolchain launch --ncs-version v3.3.1 --
-        west build --board "$BOARD" --pristine=always --build-dir "$CI_PROJECT_DIR/build/$DK" "$CI_PROJECT_DIR/firmware/$APP"
-    - mkdir -p "$CI_PROJECT_DIR/hex" && cp "$CI_PROJECT_DIR/build/$DK/merged.hex" "$CI_PROJECT_DIR/hex/$APP-$DK.hex"
+    - mkdir -p "$CI_PROJECT_DIR/hex"
+    - |
+      cd "$HOME/ncs/v3.3.1"
+      for APP in bench-dut trace-demo; do
+        nrfutil sdk-manager toolchain launch --ncs-version v3.3.1 -- \
+          west build --board "$BOARD" --pristine=always \
+            --build-dir "$CI_PROJECT_DIR/build/$APP" "$CI_PROJECT_DIR/firmware/$APP"
+        cp "$CI_PROJECT_DIR/build/$APP/merged.hex" "$CI_PROJECT_DIR/hex/$APP-$DK.hex"
+      done
   artifacts:
     paths: [hex/]
     expire_in: 2 weeks
