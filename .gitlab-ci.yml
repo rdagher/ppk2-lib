@@ -7,6 +7,8 @@ stages: [lint, test, build, firmware, hil]
 
 variables:
   UV_LINK_MODE: copy
+  # uv installs strictly from the committed uv.lock; drift fails the job.
+  UV_LOCKED: "1"
 
 .uv:
   image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
