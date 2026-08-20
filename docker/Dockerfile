@@ -1,10 +1,9 @@
-# Prebaked NCS toolchain image for the firmware CI matrix.
+# Prebaked NCS toolchain + SDK image for the firmware CI matrix.
 #
-# Mirrors a local install: nrfutil sdk-manager owns the toolchain and
-# SDK. Baking it here replaces multi-GB per-run installs with an image
-# pull, is branch-agnostic, and freezes the env immutably. Rebuild +
-# push when NCS_VERSION bumps (docker/justfile or the docker-image
-# workflow).
+# Mirrors a local install: nrfutil sdk-manager owns both. Baking them
+# into an image turns multi-GB per-run installs into one pull and
+# freezes the build env. Rebuild + push on an NCS_VERSION bump
+# (docker/justfile locally, or the docker-image workflow).
 #
 # Build args:
 #   UBUNTU_VERSION: base image (default 24.04)
@@ -28,34 +27,29 @@ RUN curl -fsSL -o /usr/local/bin/nrfutil \
     && nrfutil self-upgrade \
     && nrfutil install sdk-manager
 
-# Toolchain via sdk-manager (mirrors local); SDK workspace via
-# shallow west clones — full git history is dead weight, but the
-# .git dirs themselves are load-bearing: NCS's manifest imports
-# zephyr's west.yml at a git revision, so depth-1 is the floor.
-# Cleanup in the same layer (layers are additive).
+# `sdk install` ships a ready west workspace (.west/ + zephyr/nrf/
+# modules) — no west init/update needed, at build time or in CI.
+# Cleanup must stay in the same layer (layers are additive).
 RUN nrfutil sdk-manager toolchain install --ncs-version ${NCS_VERSION} \
     && rm -rf /root/ncs/downloads /root/ncs/tmp
-RUN nrfutil sdk-manager toolchain launch --ncs-version ${NCS_VERSION} -- \
-      west init -m https://github.com/nrfconnect/sdk-nrf --mr ${NCS_VERSION} /root/ncs/${NCS_VERSION} \
-    && cd /root/ncs/${NCS_VERSION} \
-    && nrfutil sdk-manager toolchain launch --ncs-version ${NCS_VERSION} -- \
-      west update --narrow -o=--depth=1
+RUN nrfutil sdk-manager sdk install ${NCS_VERSION} \
+    && nrfutil sdk-manager sdk register ${NCS_VERSION} \
+    && rm -rf /root/ncs/downloads /root/ncs/tmp
 
 ENV NCS_VERSION=${NCS_VERSION}
 ENV NCS_ROOT=/root/ncs/${NCS_VERSION}
 ENV ZEPHYR_BASE=${NCS_ROOT}/zephyr
 
-# CI runners override HOME (GitHub containers set /github/home), but
-# nrfutil resolves its subcommands and config from $HOME/.nrfutil and
-# sdk-manager defaults its install dir to $HOME/ncs. Pin both so the
-# image works under any HOME.
+# CI runners override HOME, but nrfutil resolves its subcommands from
+# $HOME/.nrfutil and sdk-manager defaults its install dir to
+# $HOME/ncs. Pin both so the image works under any HOME.
 ENV NRFUTIL_HOME=/root/.nrfutil
 RUN nrfutil sdk-manager config install-dir set /root/ncs
 
-# Entrypoint launches through the toolchain env (ZEPHYR_BASE, PATH).
-# No args: interactive shell; with args: run the command.
-# Note: GitHub Actions `container:` jobs bypass the entrypoint (steps
-# use docker exec) — CI scripts keep the explicit launch prefix.
+# Entrypoint runs everything through the toolchain env (ZEPHYR_BASE,
+# PATH). No args: interactive shell; with args: run the command.
+# CI `container:` jobs bypass entrypoints (docker exec), so CI
+# scripts keep the explicit launch prefix.
 RUN cat <<'EOF' > /usr/local/bin/ncs-entrypoint && chmod +x /usr/local/bin/ncs-entrypoint
 #!/bin/bash
 if [ $# -eq 0 ]; then
@@ -65,8 +59,7 @@ else
 fi
 EOF
 
-# The image proves itself at build time — under a foreign HOME, to
-# mirror CI runners.
+# Build-time self-check, under a foreign HOME as CI runners set.
 RUN HOME=/tmp/ci-home nrfutil sdk-manager toolchain launch --ncs-version ${NCS_VERSION} -- west --version
 
 WORKDIR ${NCS_ROOT}
