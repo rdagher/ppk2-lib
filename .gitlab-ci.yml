@@ -43,12 +43,11 @@ wheel:
     paths: [dist/]
     expire_in: 2 weeks
 
-# One job per board, both apps; the hexes feed the HIL jobs.
-# The NCS env is installed by nrfutil on first run and kept in the
-# GitLab cache. Caches can only hold paths inside the project dir,
-# so the install lands in .ncs/ + .nrfutil/ (via NRFUTIL_HOME and
-# the sdk-manager install-dir config). Note the ~9 GB env needs a
-# runner whose cache limit allows it.
+# One job per board, both apps; the hexes feed the HIL jobs. The
+# NCS env installs on first run and lives in the GitLab cache —
+# caches only hold paths inside the project dir, hence .ncs/ +
+# .nrfutil/ (NRFUTIL_HOME + the sdk-manager install-dir config).
+# The ~9 GB env needs a runner cache limit to match.
 firmware:
   stage: firmware
   image: ubuntu:24.04
