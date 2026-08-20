@@ -106,10 +106,13 @@ jobs:
     steps:
       # The frozen toolchain env: NCS install, nrfutil binary, and its
       # sdk-manager command — one key restores everything downstream.
+      # lookup-only: a warm key is just an existence check (seconds);
+      # the multi-GB restore happens in the build jobs that use it.
       - name: Cache toolchain env
         id: cache
         uses: actions/cache@v4
         with:
+          lookup-only: true
           path: |
             ~/ncs
             ~/.nrfutil
