@@ -1,7 +1,8 @@
-# The active CI: fast tier (pyright/ruff, tests, wheel), toolchain
-# image rebuild, per-board firmware matrix, commented HIL
-# placeholders. .gitlab-ci.yml carries the same shape for a future
-# GitLab deployment.
+# The active CI: fast tier (pyright/ruff, tests, wheel) + per-board
+# firmware matrix + commented HIL placeholders. The NCS toolchain env
+# is installed once by prepare-ncs and frozen in the Actions cache —
+# no container images involved. .gitlab-ci.yml carries the same shape
+# for a future GitLab deployment.
 name: ci
 
 on:
@@ -85,7 +86,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       firmware: ${{ steps.filter.outputs.firmware }}
-      docker: ${{ steps.filter.outputs.docker }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -94,42 +94,48 @@ jobs:
           filters: |
             firmware:
               - 'firmware/**'
-              - 'docker/**'
               - '.github/workflows/ci.yml'
-            docker:
-              - 'docker/**'
-              - '.github/workflows/docker-image.yml'
 
-  # Rebuild + push the toolchain image when its inputs change, so the
-  # firmware matrix below always pulls a fresh tag (needs: gives the
-  # ordering GitHub can't express across separate workflows).
-  image:
+  # Seed the NCS cache once so the board matrix never stampedes a
+  # cold key with parallel multi-GB installs.
+  prepare-ncs:
     needs: changes
-    if: needs.changes.outputs.docker == 'true'
-    permissions:
-      contents: read
-      packages: write
-    uses: ./.github/workflows/docker-image.yml
+    if: needs.changes.outputs.firmware == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # The frozen toolchain env: NCS install, nrfutil binary, and its
+      # sdk-manager command — one key restores everything downstream.
+      - name: Cache toolchain env
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/ncs
+            ~/.nrfutil
+            ~/.local/bin/nrfutil
+          key: ncs-v3.3.1-toolchain
 
-  # One job per board, both apps, inside the prebaked NCS toolchain
-  # image — the image IS the frozen env: no setup steps, no cache
-  # (ccache not worth wiring: these apps compile in seconds).
-  # `!cancelled()` keeps this running when `image` is skipped
-  # (docker unchanged) — a plain `if` would skip with it.
+      - name: Install nrfutil + NCS v3.3.1 (cache miss only)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o "$HOME/.local/bin/nrfutil" \
+            https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
+          chmod +x "$HOME/.local/bin/nrfutil"
+          export PATH="$HOME/.local/bin:$PATH"
+          nrfutil install sdk-manager
+          nrfutil sdk-manager install v3.3.1
+          rm -rf "$HOME/ncs/downloads" "$HOME/ncs/tmp"
+
+  # One job per board, both apps — the artifact is the per-DK bundle
+  # the HIL bench consumes.
   firmware:
     name: fw ${{ matrix.board }}
-    needs: [changes, image]
-    if: >-
-      !cancelled()
-      && needs.changes.outputs.firmware == 'true'
-      && (needs.image.result == 'success' || needs.image.result == 'skipped')
+    needs: [changes, prepare-ncs]
+    if: needs.changes.outputs.firmware == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    container:
-      image: ghcr.io/rdagher/ppk2-lib-ncs:v3.3.1
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -140,13 +146,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Restore-only: the env was frozen by prepare-ncs; nothing is
+      # installed here.
+      - name: Restore toolchain env
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/ncs
+            ~/.nrfutil
+            ~/.local/bin/nrfutil
+          key: ncs-v3.3.1-toolchain
+          fail-on-cache-miss: true
+
       - name: Build both apps
         id: build
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
           DK=$(echo "${{ matrix.board }}" | cut -d/ -f1)
           echo "dk=$DK" >> "$GITHUB_OUTPUT"
           mkdir -p "$GITHUB_WORKSPACE/hex"
-          cd /root/ncs/v3.3.1
+          cd "$HOME/ncs/v3.3.1"
           for APP in bench-dut trace-demo; do
             nrfutil sdk-manager toolchain launch --ncs-version v3.3.1 -- \
               west build --board "${{ matrix.board }}" --pristine=always \
