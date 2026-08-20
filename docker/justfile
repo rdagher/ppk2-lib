@@ -25,11 +25,12 @@ login:
 push:
     docker push {{IMAGE}}
 
-# Smoke-test: build one app for one board inside the image.
+# Smoke-test: build one app for one board. The entrypoint runs the
+# command through the toolchain env, cwd is the SDK workspace.
 test:
     docker run --rm --platform linux/amd64 \
         -v {{justfile_directory()}}/..:/repo {{IMAGE}} \
-        bash -c "cd /root/ncs/{{NCS_VERSION}} && nrfutil sdk-manager toolchain launch --ncs-version {{NCS_VERSION}} -- west build --board nrf52840dk/nrf52840 --build-dir /tmp/b /repo/firmware/bench-dut && ls -la /tmp/b/merged.hex"
+        bash -c "west build --board nrf52840dk/nrf52840 --build-dir /tmp/b /repo/firmware/bench-dut && ls -l /tmp/b/merged.hex"
 
 # Print resolved settings.
 which:
