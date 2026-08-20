@@ -62,5 +62,9 @@ EOF
 # Build-time self-check, under a foreign HOME as CI runners set.
 RUN HOME=/tmp/ci-home nrfutil sdk-manager toolchain launch --ncs-version ${NCS_VERSION} -- west --version
 
+# Shown on the ghcr package page ("About") and in the packages list.
+LABEL org.opencontainers.image.source="https://github.com/rdagher/ppk2-lib" \
+      org.opencontainers.image.description="Prebaked nRF Connect SDK ${NCS_VERSION} toolchain + workspace for the ppk2-lib firmware CI matrix"
+
 WORKDIR ${NCS_ROOT}
 ENTRYPOINT ["/usr/local/bin/ncs-entrypoint"]
