@@ -41,7 +41,8 @@ with Session.open(find_ppk2().device) as s:
   against the Nordic Power Profiler GUI: Kolmogorov–Smirnov
   statistics below 0.005
   between stacks on 60 s captures — see the committed
-  comparison round in `validation/evidence/noise_floor_gui/`.
+  comparison round in
+  [`validation/evidence/noise_floor_gui/`](validation/evidence/noise_floor_gui/).
 - **Typed and tested.** pyright strict (one scoped, documented
   suppression), ruff, 150 fast tests + 8 hardware-in-the-loop
   tests, reference DUT firmware included for reproducing the
@@ -65,8 +66,12 @@ ppk2 capture --out idle.csv --seconds 30
 # 3. Source mode (PPK2 powers the DUT at 3.0 V):
 ppk2 capture --out boot.csv --seconds 10 --source --vdd 3.0
 
-# 4. Power the DUT and run a command against it:
+# 4. Hold DUT power until Ctrl-C (a bench supply while you flash/debug):
+ppk2 power on --hold --source --vdd 3.0
+
+# 5. Run a command with the DUT powered — capture is optional (--out):
 ppk2 run --source --vdd 3.0 -- west flash
+ppk2 run --source --vdd 3.0 --out run.csv -- pytest -m hardware
 ```
 
 The CSV format is the Nordic GUI's 11-column export:
@@ -99,22 +104,22 @@ just build       # wheel + sdist into dist/
 ```
 
 The HIL bench is reproducible from this repo alone:
-`firmware/bench-dut/` contains reference Zephyr firmware
+[`firmware/bench-dut/`](firmware/bench-dut/) contains reference Zephyr firmware
 (pre-built hex for the nRF52840 DK, nRF54L15 DK, and nRF54LM20
 DK) that toggles D0 at 5 Hz and D1 at 0.5 Hz — a deterministic
-signal the hardware tests assert against. See its README for
-wiring.
+signal the hardware tests assert against. See its
+[README](firmware/bench-dut/README.md) for wiring.
 
-`validation/` holds a port-agnostic A/B harness — capture the
+[`validation/`](validation/) holds a port-agnostic A/B harness — capture the
 same bench with any two ppk2-compatible binaries (or a GUI CSV
 export) and diff the results statistically — plus, under
-`validation/evidence/`, the committed comparison rounds (reports,
+[`validation/evidence/`](validation/evidence/), the committed comparison rounds (reports,
 gzipped reference captures, parity plots) behind this README's
 GUI-parity claims.
 
-Layout rule of thumb: `firmware/` holds the Zephyr apps —
-`bench-dut/` is test infrastructure (the reference DUT the HIL
-tier asserts against), `trace-demo/` is a worked example you
+Layout rule of thumb: [`firmware/`](firmware/) holds the Zephyr apps —
+[`bench-dut/`](firmware/bench-dut/) is test infrastructure (the reference DUT the HIL
+tier asserts against), [`trace-demo/`](firmware/trace-demo/) is a worked example you
 copy from.
 
 ## Status
@@ -136,9 +141,9 @@ GUI and IRNAS's
 - [Protocol notes](docs/PROTOCOL.md) — opcodes, metadata format,
   sample frame, stream reassembly, calibration formula, CSV
   format, known firmware caveats.
-- `firmware/bench-dut/README.md` — the reference DUT: wiring,
+- [`firmware/bench-dut/README.md`](firmware/bench-dut/README.md) — the reference DUT: wiring,
   per-board pins, build/flash recipes.
-- `validation/README.md` — the A/B capture-comparison harness.
+- [`validation/README.md`](validation/README.md) — the A/B capture-comparison harness.
 
 A full documentation site (mkdocs) is planned; these files are
 its seed chapters.
