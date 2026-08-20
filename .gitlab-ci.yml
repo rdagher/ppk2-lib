@@ -1,8 +1,9 @@
 # Future GitLab deployment of the pipeline (the active CI is GitHub
-# Actions, .github/workflows/). Same shape: fast tier, image rebuild,
-# per-board firmware matrix, HIL tier on self-hosted bench runners.
+# Actions, .github/workflows/). Same shape: fast tier, per-board
+# firmware matrix on a cached NCS toolchain env, HIL tier on
+# self-hosted bench runners.
 
-stages: [lint, test, build, docker, firmware, hil]
+stages: [lint, test, build, firmware, hil]
 
 variables:
   UV_LINK_MODE: copy
@@ -42,50 +43,48 @@ wheel:
     paths: [dist/]
     expire_in: 2 weeks
 
-# ── Image rebuild (mirrors .github/workflows/docker-image.yml) ──
-# The docker stage runs before firmware, so a docker/ change ships a
-# fresh image before the matrix pulls it — same ordering the GitHub
-# workflow gets via `needs: image`. docker-in-docker is GitLab's
-# documented image-build path (runner needs privileged=true); the
-# build line mirrors docker/justfile. Pushing to ghcr needs a PAT
-# with packages:write in $GHCR_TOKEN (the CI job token can't).
-#
-# docker-image:
-#   stage: docker
-#   image: docker:28
-#   services: [docker:28-dind]
-#   rules:
-#     - changes:
-#         paths: [docker/**/*]
-#   script:
-#     - echo "$GHCR_TOKEN" | docker login ghcr.io -u rdagher --password-stdin
-#     - docker build --platform linux/amd64
-#         --build-arg NCS_VERSION=v3.3.1
-#         -t ghcr.io/rdagher/ppk2-lib-ncs:v3.3.1 docker
-#     - docker push ghcr.io/rdagher/ppk2-lib-ncs:v3.3.1
-
-# One job per board, both apps; the hexes feed the HIL jobs. Runs in
-# the prebaked NCS toolchain image (docker/Dockerfile). First setup
-# or an NCS bump builds + pushes the tag once (docker stage above,
-# or docker/justfile). Pulling a private ghcr image needs
-# DOCKER_AUTH_CONFIG configured on the project.
+# One job per board, both apps; the hexes feed the HIL jobs.
+# The NCS env is installed by nrfutil on first run and kept in the
+# GitLab cache. Caches can only hold paths inside the project dir,
+# so the install lands in .ncs/ + .nrfutil/ (via NRFUTIL_HOME and
+# the sdk-manager install-dir config). Note the ~9 GB env needs a
+# runner whose cache limit allows it.
 firmware:
   stage: firmware
-  image: ghcr.io/rdagher/ppk2-lib-ncs:v3.3.1
+  image: ubuntu:24.04
   rules:
     - changes:
-        paths: [firmware/**/*, docker/**/*, .gitlab-ci.yml]
+        paths: [firmware/**/*, .gitlab-ci.yml]
+  cache:
+    key: ncs-v3.3.1-toolchain
+    paths: [.ncs/, .nrfutil/]
+  variables:
+    NRFUTIL_HOME: $CI_PROJECT_DIR/.nrfutil
   parallel:
     matrix:
       - BOARD:
           - nrf52840dk/nrf52840
           - nrf54l15dk/nrf54l15/cpuapp
           - nrf54lm20dk/nrf54lm20b/cpuapp
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates
+    - export PATH="$CI_PROJECT_DIR/.nrfutil/bin:$PATH"
+    - |
+      if [ ! -x .nrfutil/bin/nrfutil ]; then
+        mkdir -p .nrfutil/bin
+        curl -fsSL -o .nrfutil/bin/nrfutil \
+          https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
+        chmod +x .nrfutil/bin/nrfutil
+        nrfutil install sdk-manager
+        nrfutil sdk-manager config install-dir set "$CI_PROJECT_DIR/.ncs"
+        nrfutil sdk-manager install v3.3.1
+        rm -rf .ncs/downloads .ncs/tmp
+      fi
   script:
     - DK=$(echo "$BOARD" | cut -d/ -f1)
     - mkdir -p "$CI_PROJECT_DIR/hex"
     - |
-      cd /root/ncs/v3.3.1
+      cd "$CI_PROJECT_DIR/.ncs/v3.3.1"
       for APP in bench-dut trace-demo; do
         nrfutil sdk-manager toolchain launch --ncs-version v3.3.1 -- \
           west build --board "$BOARD" --pristine=always \
