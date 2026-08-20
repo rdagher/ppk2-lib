@@ -29,7 +29,7 @@ APP_PATH := justfile_directory()
 
 # Show available recipes.
 _default:
-    @just --list
+    @just --list --unsorted
 
 # Toolchain wrapper — runs args inside the NCS toolchain context with
 # CWD set to the workspace so west finds its manifest. Private (`_`
@@ -43,7 +43,8 @@ _tc *args:
 build board=BOARD_54LM20:
     @just _tc west build --board "{{board}}" --pristine=auto --build-dir "{{APP_PATH}}/build/$(echo '{{board}}' | cut -d/ -f1)" "{{APP_PATH}}"
 
-# Build, then refresh the committed trace-demo-<dk>.hex artefact.
+# Build, then refresh the local trace-demo-<dk>.hex artefact
+# (git-ignored; the CI firmware matrix builds these per push).
 hex board=BOARD_54LM20: (build board)
     @tag="$(echo '{{board}}' | cut -d/ -f1)" && cp "{{APP_PATH}}/build/$tag/merged.hex" "{{APP_PATH}}/trace-demo-$tag.hex" && echo "wrote trace-demo-$tag.hex"
 

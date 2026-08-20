@@ -24,9 +24,10 @@ One source tree, three supported dev kits — the board overlays under
 | nRF52840 DK (PCA10056) | `nrf52840dk/nrf52840` | P0.28 (A2) | P0.29 (A3) | Arduino R3 analog header; P0.29 claimed only by the disabled `spi0` group. Validated against the PCA10056 schematic. |
 
 Hex images are build artefacts, not committed: build them locally
-with `just hex [BOARD]` (a CI build matrix producing per-board hexes
-as release artifacts is planned). The builds are reproducible — the
-same source + NCS toolchain version yields byte-identical hexes.
+with `just hex [BOARD]`, or take them from the CI firmware matrix,
+which builds every board on firmware changes (`fw-<dk>` workflow
+artifacts). The builds are reproducible — the same source + NCS
+toolchain version yields byte-identical hexes.
 
 Verification status: the nRF54LM20DK image is bench-verified against
 a PPK2 capture (D0/D1 edge rates measured at 5.00 Hz / 0.50 Hz). The

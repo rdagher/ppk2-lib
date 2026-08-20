@@ -86,7 +86,7 @@ comparison reports, and plots under
 | Round | Bench | Headline result |
 |---|---|---|
 | [Noise floor](validation/evidence/noise_floor_gui/) | ammeter, open leads (sub-µA) | headers byte-identical, KS 0.0002 |
-| [Trace-demo workloads](validation/evidence/trace_demo/README.md) | nRF52840 DK source 3.0 V + nRF54LM20DK ammeter 3.3 V | per-region energy within 0.03–0.31 %, workload-region KS ≤ 0.014 |
+| [Trace-demo workloads](validation/evidence/trace_demo/README.md) | nRF52840 DK source 3.0 V + nRF54LM20DK ammeter 3.3 V | per-region energy within 0.31 %, workload-region KS ≤ 0.014 |
 
 ![GUI-vs-CLI parity on the nRF54LM20 DK: sync-aligned trace overlay and per-region ECDFs](validation/evidence/trace_demo/plots/nrf54lm20_ammeter_parity.png)
 
@@ -121,10 +121,11 @@ just build       # wheel + sdist into dist/
 ```
 
 The HIL bench is reproducible from this repo alone:
-[`firmware/bench-dut/`](firmware/bench-dut/) contains reference Zephyr firmware
-(pre-built hex for the nRF52840 DK, nRF54L15 DK, and nRF54LM20
-DK) that toggles D0 at 5 Hz and D1 at 0.5 Hz — a deterministic
-signal the hardware tests assert against. See its
+[`firmware/bench-dut/`](firmware/bench-dut/) contains reference
+Zephyr firmware for the nRF52840, nRF54L15, and nRF54LM20 DKs
+(hexes built locally with `just hex`, or by the CI firmware
+matrix) that toggles D0 at 5 Hz and D1 at 0.5 Hz — a
+deterministic signal the hardware tests assert against. See its
 [README](firmware/bench-dut/README.md) for wiring.
 
 [`validation/`](validation/) holds the A/B comparison harness and,

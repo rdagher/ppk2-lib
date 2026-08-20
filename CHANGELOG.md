@@ -51,11 +51,13 @@ Initial public release. Library + CLI, one install.
   (schema, sample rate, current statistics, KS test, per-pin
   duty/edge rates) with a pass/fail acceptance contract.
 - [`firmware/bench-dut/`](firmware/bench-dut/): reference Zephyr DUT (D0 5 Hz,
-  D1 0.5 Hz) with committed pre-built hexes for the nRF52840,
-  nRF54L15, and nRF54LM20 DKs.
+  D1 0.5 Hz) for the nRF52840, nRF54L15, and nRF54LM20 DKs —
+  hexes built with `just hex` or by the CI firmware matrix.
 - Cross-validated on live hardware against the Nordic Power
-  Profiler GUI (KS < 0.005; see the committed comparison rounds
-  under [`validation/evidence/`](validation/evidence/)).
+  Profiler GUI — noise floor KS 0.0002, workload-region KS
+  ≤ 0.014, per-region energy within 0.31 % (see the committed
+  comparison rounds under
+  [`validation/evidence/`](validation/evidence/)).
 
 ### Known limitations
 
