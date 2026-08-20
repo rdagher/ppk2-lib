@@ -45,6 +45,13 @@ ENV NCS_VERSION=${NCS_VERSION}
 ENV NCS_ROOT=/root/ncs/${NCS_VERSION}
 ENV ZEPHYR_BASE=${NCS_ROOT}/zephyr
 
+# CI runners override HOME (GitHub containers set /github/home), but
+# nrfutil resolves its subcommands and config from $HOME/.nrfutil and
+# sdk-manager defaults its install dir to $HOME/ncs. Pin both so the
+# image works under any HOME.
+ENV NRFUTIL_HOME=/root/.nrfutil
+RUN nrfutil sdk-manager config install-dir set /root/ncs
+
 # Entrypoint launches through the toolchain env (ZEPHYR_BASE, PATH).
 # No args: interactive shell; with args: run the command.
 # Note: GitHub Actions `container:` jobs bypass the entrypoint (steps
@@ -58,8 +65,9 @@ else
 fi
 EOF
 
-# The image proves itself at build time.
-RUN nrfutil sdk-manager toolchain launch --ncs-version ${NCS_VERSION} -- west --version
+# The image proves itself at build time — under a foreign HOME, to
+# mirror CI runners.
+RUN HOME=/tmp/ci-home nrfutil sdk-manager toolchain launch --ncs-version ${NCS_VERSION} -- west --version
 
 WORKDIR ${NCS_ROOT}
 ENTRYPOINT ["/usr/local/bin/ncs-entrypoint"]
