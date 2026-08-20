@@ -70,8 +70,9 @@ class Opcode(IntEnum):
     """
 
     REGULATOR_SET = 0x0D
-    """``0x0D`` — Source-mode VDD setpoint, also informational in
-    ammeter mode.
+    """``0x0D`` — Source-mode VDD setpoint. In ammeter mode the
+    regulator is inactive, but host-side calibration still uses the
+    last value sent (see [`current_micro_amps`][ppk2.protocol.current_micro_amps]).
 
     Wire format: ``[0x0D, vdd_mV >> 8, vdd_mV & 0xff]`` (big-endian 16-bit
     mV). Valid range 800..=5000 mV.

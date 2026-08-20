@@ -52,8 +52,9 @@ _VddOption = Annotated[
     typer.Option(
         "--vdd",
         help=(
-            "DUT VDD in volts. Ammeter mode: informational; "
-            "source mode: regulator setpoint. Clamped to [0.8, 5.0]."
+            "DUT VDD in volts. Source mode: regulator setpoint; ammeter mode: "
+            "feeds the calibration math, so set it to the DUT's real rail. "
+            "Clamped to [0.8, 5.0]."
         ),
     ),
 ]

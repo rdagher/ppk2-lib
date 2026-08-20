@@ -229,8 +229,9 @@ class Session:
     def set_source_voltage(self, mv: int) -> None:
         """Set the source-mode VDD setpoint in millivolts.
 
-        Also feeds the calibration formula's VDD-dependent term in
-        ammeter mode, where the setpoint is informational only.
+        In ammeter mode the regulator itself is inactive, but the value
+        still feeds the calibration formula's VDD-dependent term — set
+        it to the DUT's real rail voltage.
 
         Clamped to ``[VOLTAGE_LIMIT_HARDWARE_MIN_MV,
         VOLTAGE_LIMIT_HARDWARE_MAX_MV]`` (800 mV to 5000 mV) — the
