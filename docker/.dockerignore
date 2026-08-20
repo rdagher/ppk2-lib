@@ -1,0 +1,5 @@
+# Nothing from the build context enters the image (the Dockerfile has
+# no COPY/ADD). Deny-all so any future COPY must explicitly whitelist
+# (!pattern) what it needs — repo content can never leak into layers
+# by accident.
+*
