@@ -1,0 +1,37 @@
+# NCS toolchain image — local build/push recipes.
+#
+# The image feeds the CI firmware matrix (see .github/workflows/ci.yml
+# and .gitlab-ci.yml). CI can also rebuild it via the docker-image
+# workflow; these recipes are the local mirror of that.
+
+NCS_VERSION := env_var_or_default("NCS_VERSION", "v3.3.1")
+IMAGE       := "ghcr.io/rdagher/ppk2-lib-ncs:" + NCS_VERSION
+
+# Show available recipes.
+_default:
+    @just --list
+
+# Build the image for linux/amd64 (the CI runner arch).
+build:
+    docker build --platform linux/amd64 \
+        --build-arg NCS_VERSION={{NCS_VERSION}} \
+        -t {{IMAGE}} {{justfile_directory()}}
+
+# Log in to ghcr (needs a token with packages:write, e.g. a PAT).
+login:
+    @echo "docker login ghcr.io -u <github-user>  # password = PAT with packages:write"
+
+# Push the image to the repo registry.
+push:
+    docker push {{IMAGE}}
+
+# Smoke-test: build one app for one board inside the image.
+test:
+    docker run --rm --platform linux/amd64 \
+        -v {{justfile_directory()}}/..:/repo {{IMAGE}} \
+        bash -c "cd /root/ncs/{{NCS_VERSION}} && nrfutil sdk-manager toolchain launch --ncs-version {{NCS_VERSION}} -- west build --board nrf52840dk/nrf52840 --build-dir /tmp/b /repo/firmware/bench-dut && ls -la /tmp/b/merged.hex"
+
+# Print resolved settings.
+which:
+    @echo "NCS_VERSION = {{NCS_VERSION}}"
+    @echo "IMAGE       = {{IMAGE}}"

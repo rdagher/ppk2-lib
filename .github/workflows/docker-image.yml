@@ -1,0 +1,33 @@
+# Build + push the NCS toolchain image the firmware matrix runs in.
+# Triggered manually or when the Dockerfile changes. Local mirror:
+# docker/justfile (build / push).
+name: docker-image
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ["docker/**"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: docker
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/rdagher/ppk2-lib-ncs:v3.3.1

@@ -46,33 +46,28 @@ wheel:
 # One job per (app x board); each hex feeds the HIL job for that board.
 # Mirrors the local flow: nrfutil sdk-manager owns the NCS install
 # (default ~/ncs) and launches west.
+# Runs in the prebaked NCS toolchain image (docker/Dockerfile).
+# NOTE: pulls ghcr.io/rdagher/ppk2-lib-ncs:v3.3.1 — if the tag is
+# missing (first setup or NCS bump), build + push it first.
+# Note: pulling a private ghcr image from GitLab needs
+# DOCKER_AUTH_CONFIG configured on the project.
 firmware:
   stage: firmware
-  image: ubuntu:24.04
+  image: ghcr.io/rdagher/ppk2-lib-ncs:v3.3.1
   rules:
     - changes:
-        paths: [firmware/**/*, .gitlab-ci.yml]
+        paths: [firmware/**/*, docker/**/*, .gitlab-ci.yml]
   parallel:
     matrix:
       - BOARD:
           - nrf52840dk/nrf52840
           - nrf54l15dk/nrf54l15/cpuapp
           - nrf54lm20dk/nrf54lm20b/cpuapp
-  cache:
-    key: ncs-v3.3.1
-    paths: [.ncs/]
-  before_script:
-    - apt-get update -qq && apt-get install -y -qq curl git ca-certificates
-    - curl -fsSL -o /usr/local/bin/nrfutil https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
-    - chmod +x /usr/local/bin/nrfutil
-    - nrfutil install sdk-manager
-    - ln -sfn "$CI_PROJECT_DIR/.ncs" "$HOME/ncs"
-    - test -d "$HOME/ncs/v3.3.1" || (nrfutil sdk-manager install v3.3.1 && rm -rf "$HOME/ncs/downloads" "$HOME/ncs/tmp")
   script:
     - DK=$(echo "$BOARD" | cut -d/ -f1)
     - mkdir -p "$CI_PROJECT_DIR/hex"
     - |
-      cd "$HOME/ncs/v3.3.1"
+      cd /root/ncs/v3.3.1
       for APP in bench-dut trace-demo; do
         nrfutil sdk-manager toolchain launch --ncs-version v3.3.1 -- \
           west build --board "$BOARD" --pristine=always \
