@@ -1,9 +1,7 @@
-# Fast-tier CI: static analysis + hardware-free tests + wheel build.
-#
-# Fast tier + firmware build matrix. The canonical full pipeline
-# (including the HIL tier on self-hosted bench runners) is
-# .gitlab-ci.yml; the firmware jobs here mirror its matrix so the
-# shipped Zephyr apps stay green per board.
+# The active CI: fast tier (pyright/ruff, tests, wheel), toolchain
+# image rebuild, per-board firmware matrix, commented HIL
+# placeholders. .gitlab-ci.yml carries the same shape for a future
+# GitLab deployment.
 name: ci
 
 on:
@@ -12,10 +10,9 @@ on:
   pull_request:
   workflow_dispatch:
 
-# A new push cancels the previous in-flight run of the same ref.
-# Note: direct-push workflow — with a PR open, push + pull_request
-# events would both run (different refs, not deduped). If we adopt
-# PR-based review, restrict push back to [main].
+# A new push cancels the in-flight run of the same ref. push and
+# pull_request runs aren't deduped (different refs); if PR-based
+# review is ever adopted, restrict push back to [main].
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -88,6 +85,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       firmware: ${{ steps.filter.outputs.firmware }}
+      docker: ${{ steps.filter.outputs.docker }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -98,18 +96,33 @@ jobs:
               - 'firmware/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
+            docker:
+              - 'docker/**'
+              - '.github/workflows/docker-image.yml'
+
+  # Rebuild + push the toolchain image when its inputs change, so the
+  # firmware matrix below always pulls a fresh tag (needs: gives the
+  # ordering GitHub can't express across separate workflows).
+  image:
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker-image.yml
 
   # One job per board, both apps, inside the prebaked NCS toolchain
-  # image (docker/Dockerfile — built by the docker-image workflow).
-  # The image IS the frozen env: no setup steps, no cache.
-  # (ccache deliberately not wired: these apps compile in seconds;
-  # revisit if the firmware grows.)
-  # NOTE: pulls ghcr.io/rdagher/ppk2-lib-ncs:v3.3.1 — if the tag is
-  # missing (first setup or NCS bump), run the docker-image workflow first.
+  # image — the image IS the frozen env: no setup steps, no cache
+  # (ccache not worth wiring: these apps compile in seconds).
+  # `!cancelled()` keeps this running when `image` is skipped
+  # (docker unchanged) — a plain `if` would skip with it.
   firmware:
     name: fw ${{ matrix.board }}
-    needs: changes
-    if: needs.changes.outputs.firmware == 'true'
+    needs: [changes, image]
+    if: >-
+      !cancelled()
+      && needs.changes.outputs.firmware == 'true'
+      && (needs.image.result == 'success' || needs.image.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     container:

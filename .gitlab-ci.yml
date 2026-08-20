@@ -1,9 +1,8 @@
-# Canonical CI pipeline. The GitHub Actions workflow mirrors the
-# fast tier only; this file carries the full shape: fast tier,
-# per-board firmware build matrix, and the HIL tier that consumes
-# those firmware artifacts on self-hosted bench runners.
+# Future GitLab deployment of the pipeline (the active CI is GitHub
+# Actions, .github/workflows/). Same shape: fast tier, image rebuild,
+# per-board firmware matrix, HIL tier on self-hosted bench runners.
 
-stages: [lint, test, build, firmware, hil]
+stages: [lint, test, build, docker, firmware, hil]
 
 variables:
   UV_LINK_MODE: copy
@@ -43,13 +42,32 @@ wheel:
     paths: [dist/]
     expire_in: 2 weeks
 
-# One job per (app x board); each hex feeds the HIL job for that board.
-# Mirrors the local flow: nrfutil sdk-manager owns the NCS install
-# (default ~/ncs) and launches west.
-# Runs in the prebaked NCS toolchain image (docker/Dockerfile).
-# NOTE: pulls ghcr.io/rdagher/ppk2-lib-ncs:v3.3.1 — if the tag is
-# missing (first setup or NCS bump), build + push it first.
-# Note: pulling a private ghcr image from GitLab needs
+# ── Image rebuild (mirrors .github/workflows/docker-image.yml) ──
+# The docker stage runs before firmware, so a docker/ change ships a
+# fresh image before the matrix pulls it — same ordering the GitHub
+# workflow gets via `needs: image`. docker-in-docker is GitLab's
+# documented image-build path (runner needs privileged=true); the
+# build line mirrors docker/justfile. Pushing to ghcr needs a PAT
+# with packages:write in $GHCR_TOKEN (the CI job token can't).
+#
+# docker-image:
+#   stage: docker
+#   image: docker:28
+#   services: [docker:28-dind]
+#   rules:
+#     - changes:
+#         paths: [docker/**/*]
+#   script:
+#     - echo "$GHCR_TOKEN" | docker login ghcr.io -u rdagher --password-stdin
+#     - docker build --platform linux/amd64
+#         --build-arg NCS_VERSION=v3.3.1
+#         -t ghcr.io/rdagher/ppk2-lib-ncs:v3.3.1 docker
+#     - docker push ghcr.io/rdagher/ppk2-lib-ncs:v3.3.1
+
+# One job per board, both apps; the hexes feed the HIL jobs. Runs in
+# the prebaked NCS toolchain image (docker/Dockerfile). First setup
+# or an NCS bump builds + pushes the tag once (docker stage above,
+# or docker/justfile). Pulling a private ghcr image needs
 # DOCKER_AUTH_CONFIG configured on the project.
 firmware:
   stage: firmware
@@ -87,8 +105,7 @@ firmware:
 # hil-nrf52840:
 #   stage: hil
 #   tags: [ppk2-bench, nrf52840dk]
-#   needs: ["firmware: [bench-dut, nrf52840dk/nrf52840]",
-#           "firmware: [trace-demo, nrf52840dk/nrf52840]"]
+#   needs: ["firmware: [nrf52840dk/nrf52840]"]
 #   script:
 #     - uv sync --all-extras
 #     - uv run ppk2 run --source --vdd 3.0 --
@@ -98,8 +115,7 @@ firmware:
 # hil-nrf54lm20:
 #   stage: hil
 #   tags: [ppk2-bench, nrf54lm20dk]
-#   needs: ["firmware: [bench-dut, nrf54lm20dk/nrf54lm20b/cpuapp]",
-#           "firmware: [trace-demo, nrf54lm20dk/nrf54lm20b/cpuapp]"]
+#   needs: ["firmware: [nrf54lm20dk/nrf54lm20b/cpuapp]"]
 #   script:
 #     - uv sync --all-extras
 #     - uv run ppk2 run --vdd 3.3 --

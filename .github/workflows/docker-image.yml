@@ -1,12 +1,12 @@
 # Build + push the NCS toolchain image the firmware matrix runs in.
-# Triggered manually or when the Dockerfile changes. Local mirror:
-# docker/justfile (build / push).
+# Called by ci.yml when docker/ changes (so firmware jobs wait for
+# the fresh image), or triggered manually for first setup / an NCS
+# bump. Local mirror: docker/justfile (build / push).
 name: docker-image
 
 on:
   workflow_dispatch:
-  push:
-    paths: ["docker/**"]
+  workflow_call:
 
 permissions:
   contents: read
