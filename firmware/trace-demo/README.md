@@ -3,17 +3,17 @@
 A reference example for **energy attribution with the PPK2**: Zephyr
 firmware brackets code regions with GPIO markers wired to the PPK2's
 logic inputs, the `ppk2` CLI captures current + logic at 100 kSPS,
-and `attribute.py` turns the CSV into per-region energy numbers.
+and [`attribute.py`](attribute.py) turns the CSV into per-region energy numbers.
 
 Two tiny reusable headers do the firmware side:
 
 | Header | Language | Surface |
 |---|---|---|
-| `include/ppk2_trace.h` | C (works from C++ too) | `ppk2_trace_init()`, `ppk2_trace_set(ch, on)` |
-| `include/ppk2_trace.hpp` | C++17 | `ppk2::TraceScope` RAII guard, `ppk2::trace_scope(ch, lambda)` |
+| [`include/ppk2_trace.h`](include/ppk2_trace.h) | C (works from C++ too) | `ppk2_trace_init()`, `ppk2_trace_set(ch, on)` |
+| [`include/ppk2_trace.hpp`](include/ppk2_trace.hpp) | C++17 | `ppk2::TraceScope` RAII guard, `ppk2::trace_scope(ch, lambda)` |
 
 Drop them into any Zephyr app; the pins come from two `zephyr,user`
-devicetree properties (see `boards/*.overlay`).
+devicetree properties (see [`boards/*.overlay`](boards/)).
 
 ## What the demo firmware does
 
@@ -31,7 +31,7 @@ alignment is the whole demo.
 
 ## Boards
 
-Same trace pins as `firmware/bench-dut/` — one wiring for both:
+Same trace pins as [`firmware/bench-dut/`](../bench-dut/) — one wiring for both:
 
 | Dev kit | Board target | D0 | D1 |
 |---|---|---|---|
@@ -147,7 +147,8 @@ one-shot recipe: `ppk2 run --vdd 3.3 -- just flash` (or hold with
 
 nRF52840 DK cross-validated against a Nordic Power Profiler GUI
 capture of the same signal (per-region energies agree within
-0.3 %; see `validation/evidence/trace_demo/`).
+0.3 %; see
+[`validation/evidence/trace_demo/`](../../validation/evidence/trace_demo/)).
 
 | | nRF52840 DK (source 3.0 V) | nRF54LM20DK (ammeter, 3.3 V) |
 |---|---|---|
@@ -166,7 +167,7 @@ contrast there ≈340×).
 
 ## Reusing the headers in your app
 
-1. Copy `include/ppk2_trace.h` (+ `.hpp` if C++) into your app.
+1. Copy [`include/ppk2_trace.h`](include/ppk2_trace.h) (+ `.hpp` if C++) into your app.
 2. Add the two `zephyr,user` GPIO properties to your board overlay
    (pick any two free pins; wire them to the PPK2's D0/D1).
 3. `ppk2_trace_init()` once at boot, then mark regions:

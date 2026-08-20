@@ -47,15 +47,15 @@ Initial public release. Library + CLI, one install.
 
 ### Validation & bench
 
-- `validation/`: port-agnostic A/B capture comparison harness
+- [`validation/`](validation/): port-agnostic A/B capture comparison harness
   (schema, sample rate, current statistics, KS test, per-pin
   duty/edge rates) with a pass/fail acceptance contract.
-- `firmware/bench-dut/`: reference Zephyr DUT (D0 5 Hz,
+- [`firmware/bench-dut/`](firmware/bench-dut/): reference Zephyr DUT (D0 5 Hz,
   D1 0.5 Hz) with committed pre-built hexes for the nRF52840,
   nRF54L15, and nRF54LM20 DKs.
 - Cross-validated on live hardware against the Nordic Power
   Profiler GUI (KS < 0.005; see the committed comparison rounds
-  under `validation/evidence/`).
+  under [`validation/evidence/`](validation/evidence/)).
 
 ### Known limitations
 

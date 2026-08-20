@@ -4,7 +4,8 @@ A reference description of the PPK2's wire protocol as this
 package implements it: opcodes, sample frame layout, stream
 reassembly logic, the calibration formula, the CSV output
 format, and the gotchas worth knowing if you're implementing
-against it. Source-of-truth code is `src/ppk2/protocol/`; this
+against it. Source-of-truth code is
+[`src/ppk2/protocol/`](../src/ppk2/protocol/); this
 document is the human-readable narration around it.
 
 ## 1. What you're talking to
@@ -64,7 +65,7 @@ is its own protocol.
 lines terminated by a literal `END`. Each per-range coefficient
 is its **own indexed key** (`R0` … `R4`, `GS0` … `UG4`), one per
 line, in fixed-point decimal. Example from a real capture
-(`tests/fixtures/metadata.raw`), trimmed:
+([`tests/fixtures/metadata.raw`](../tests/fixtures/metadata.raw)), trimmed:
 
 ```text
 Calibrated: 0
@@ -195,7 +196,8 @@ constants.
 
 The per-sample math — turning a 14-bit ADC reading + a range
 index + the present VDD into a microamp value — lives in
-`src/ppk2/protocol/calibration.py` (`current_micro_amps`). It
+[`src/ppk2/protocol/calibration.py`](../src/ppk2/protocol/calibration.py)
+(`current_micro_amps`). It
 is stateless, matches Nordic's `getAdcResult` term-for-term,
 and consumes the seven per-range coefficient arrays from the
 metadata block (`R`, `GS`, `GI`, `O`, `S`, `I`, `UG`), indexed
@@ -234,7 +236,7 @@ current_micro_amps = corrected * 1e6
 
 With `adc_14 = 151`, `range = 0`, `vdd_mv = 3300`, and the
 range-0 coefficients from the captured fixture
-(`tests/fixtures/metadata.raw`):
+([`tests/fixtures/metadata.raw`](../tests/fixtures/metadata.raw)):
 
 | Coefficient | Value |
 |---|---|
@@ -258,8 +260,9 @@ step 3: current_micro_amps = 5.302145379685201 µA
 ```
 
 That exact result is regression-pinned by
-`tests/protocol/test_calibration.py` against
-`tests/fixtures/metadata.raw`.
+[`tests/protocol/test_calibration.py`](../tests/protocol/test_calibration.py)
+against
+[`tests/fixtures/metadata.raw`](../tests/fixtures/metadata.raw).
 
 ## 7. Spike filter
 
@@ -354,7 +357,8 @@ caveats](#10-known-caveats) for what breaks without them.
   GUI and IRNAS's Python lib forward it; the PPK2 firmware
   silently ignores it. The "sample rate slider" in the Nordic
   GUI is host-side decimation, not a wire-level rate change.
-  See the decimation notes in `src/ppk2/cli/csv.py`.
+  See the decimation notes in
+  [`src/ppk2/cli/csv.py`](../src/ppk2/cli/csv.py).
 
 - **`SET_USER_GAINS` (`0x25`) is dead on current firmware.** The
   opcode is accepted without error but provably ignored:
@@ -413,8 +417,9 @@ you three things:
 
 - **Cross-validation works directly.** Capture once with this
   CLI and once with the GUI on the same DUT, then diff the
-  files. The `validation/compare_cli.py` script automates the
-  body comparison.
+  files. The
+  [`validation/compare_cli.py`](../validation/compare_cli.py)
+  script automates the body comparison.
 - **A/B comparison is trustworthy.** A baseline captured before
   anyone wrote this CLI (say, by a colleague who used the GUI)
   compares correctly against a fresh capture from this CLI.
@@ -514,4 +519,4 @@ against two reference implementations:
   this project diverges from cleanly.
 
 For where each claim in this chapter sits in our code, read
-`src/ppk2/protocol/`.
+[`src/ppk2/protocol/`](../src/ppk2/protocol/).

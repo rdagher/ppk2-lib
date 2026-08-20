@@ -57,9 +57,10 @@ cycle — `ppk2 capture`'s built-in power cycle clears it.
 
 ## Energy attribution (trace markers)
 
-`firmware/trace-demo/` is the worked example: firmware brackets code
+[`firmware/trace-demo/`](../../../firmware/trace-demo/) is the worked example: firmware brackets code
 regions with GPIO markers wired to the PPK2's logic port
-(`include/ppk2_trace.h` C API, `include/ppk2_trace.hpp` C++ RAII
+([`include/ppk2_trace.h`](../../../firmware/trace-demo/include/ppk2_trace.h) C API,
+[`include/ppk2_trace.hpp`](../../../firmware/trace-demo/include/ppk2_trace.hpp) C++ RAII
 guard), then:
 
 ```sh
@@ -79,7 +80,8 @@ VCC to the DUT's VDD rail** (VCC is the logic-threshold reference).
   app; µA-scale floors with everything connected.
 - Idle-floor comparisons between separate captures drift (thermal);
   compare duty-cycled signals per-region, not full-trace
-  (see `validation/README.md` and `validation/evidence/`).
+  (see [`validation/README.md`](../../../validation/README.md) and
+  [`validation/evidence/`](../../../validation/evidence/)).
 
 ## Library (Python)
 
@@ -97,7 +99,8 @@ with Session.open(find_ppk2().device) as s:
 The capture callback must eventually return False — it is the loop's
 only exit. Layers: `ppk2.protocol` (stdlib-only wire primitives),
 `ppk2.client` (pyserial driver), `ppk2.cli`. Details:
-`docs/ARCHITECTURE.md`, `docs/PROTOCOL.md`.
+[`docs/ARCHITECTURE.md`](../../../docs/ARCHITECTURE.md),
+[`docs/PROTOCOL.md`](../../../docs/PROTOCOL.md).
 
 ## Validation harness
 

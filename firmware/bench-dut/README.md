@@ -15,7 +15,7 @@ toggles run in ISR context so there's no scheduler jitter on the
 edges. The main thread sleeps forever once the timers are armed.
 
 One source tree, three supported dev kits — the board overlays under
-`boards/` differ only in pin assignment:
+[`boards/`](boards/) differ only in pin assignment:
 
 | Dev kit | Board target | D0 pin | D1 pin | Pin rationale |
 |---|---|---|---|---|
@@ -84,9 +84,11 @@ should produce a CSV where:
 - Mean current is the DK's idle draw plus the two GPIO drivers'
   switching contribution (negligible at these rates).
 
-The `validation/compare_cli.py` harness can diff a capture of this
+The [`validation/compare_cli.py`](../../validation/compare_cli.py)
+harness can diff a capture of this
 signal against a stored baseline capture (or use
-`validation/cross_validate.py` to record both sides back-to-back).
+[`validation/cross_validate.py`](../../validation/cross_validate.py)
+to record both sides back-to-back).
 
 ## License
 

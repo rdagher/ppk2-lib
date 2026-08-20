@@ -49,12 +49,14 @@ A PPK2 plugged into the host, plus a DUT wired to it (ammeter mode
 during these captures — the harness doesn't toggle the regulator).
 Both binaries must accept `<binary> capture --out PATH --seconds N`
 with the same semantics — the GUI-parity 11-column CSV output is
-documented in `docs/PROTOCOL.md` (§ CSV format).
+documented in [`docs/PROTOCOL.md`](../docs/PROTOCOL.md#11-csv-format)
+(§ CSV format).
 
 ## Acceptance contract origin
 
 The ±1 % mean-current and KS < 0.05 thresholds match the committed
-GUI-parity comparison rounds (`validation/evidence/noise_floor_gui/`);
+GUI-parity comparison rounds
+([`validation/evidence/noise_floor_gui/`](evidence/noise_floor_gui/));
 they're tight enough to
 catch real calibration drift and loose enough that natural
 sample-to-sample variation between two independent captures of the
@@ -79,7 +81,9 @@ deterministic periodic bursts. Two situations break that assumption:
   per-pin duty + edge rates) and treat the mean as informational.
 
 The byte-level proof of implementation agreement is this repo's
-parity fixture (`tests/protocol/test_stream.py` + `tests/fixtures/`)
+parity fixture
+([`tests/protocol/test_stream.py`](../tests/protocol/test_stream.py)
++ [`tests/fixtures/`](../tests/fixtures/))
 — two implementations that pass it produce identical output for
 identical input; capture-level deltas beyond it measure the bench,
 not the code.
