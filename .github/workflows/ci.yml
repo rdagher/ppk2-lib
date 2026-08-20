@@ -10,6 +10,11 @@ on:
     branches: ["**"]   # all branches; tags are the release workflow's job
   pull_request:
   workflow_dispatch:
+    inputs:
+      build-firmware:
+        description: "Force the firmware matrix (reseed the NCS cache / refresh fw-<dk> artifacts)"
+        type: boolean
+        default: false
 
 # A new push cancels the in-flight run of the same ref. push and
 # pull_request runs aren't deduped (different refs); if PR-based
@@ -20,8 +25,12 @@ concurrency:
 
 # Every uv command installs strictly from the committed uv.lock and
 # fails if pyproject drifted from it — CI never re-resolves.
+# NCS_VERSION is the single source for the toolchain version: cache
+# key, install, and build paths all derive from it, so a bump can't
+# leave a stale key pointing at an old SDK.
 env:
   UV_LOCKED: "1"
+  NCS_VERSION: v3.3.1
 
 jobs:
   lint:
@@ -86,21 +95,29 @@ jobs:
     timeout-minutes: 5
     outputs:
       firmware: ${{ steps.filter.outputs.firmware }}
+      hil: ${{ steps.filter.outputs.hil }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      # hil additionally tracks the Python stack: the hardware tier
+      # tests it, so src/tests changes must reach the bench too.
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.4
         id: filter
         with:
           filters: |
             firmware:
               - 'firmware/**'
               - '.github/workflows/ci.yml'
+            hil:
+              - 'firmware/**'
+              - 'src/**'
+              - 'tests/**'
+              - '.github/workflows/ci.yml'
 
   # Seed the NCS cache once so the board matrix never stampedes a
   # cold key with parallel multi-GB installs.
   prepare-ncs:
     needs: changes
-    if: needs.changes.outputs.firmware == 'true'
+    if: needs.changes.outputs.firmware == 'true' || inputs.build-firmware
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -116,9 +133,9 @@ jobs:
             ~/ncs
             ~/.nrfutil
             ~/.local/bin/nrfutil
-          key: ncs-v3.3.1-toolchain
+          key: ncs-${{ env.NCS_VERSION }}-toolchain
 
-      - name: Install nrfutil + NCS v3.3.1 (cache miss only)
+      - name: Install nrfutil + NCS (cache miss only)
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p "$HOME/.local/bin"
@@ -127,7 +144,7 @@ jobs:
           chmod +x "$HOME/.local/bin/nrfutil"
           export PATH="$HOME/.local/bin:$PATH"
           nrfutil install sdk-manager
-          nrfutil sdk-manager install v3.3.1
+          nrfutil sdk-manager install "$NCS_VERSION"
           rm -rf "$HOME/ncs/downloads" "$HOME/ncs/tmp"
 
   # One job per board, both apps — the artifact is the per-DK bundle
@@ -135,7 +152,7 @@ jobs:
   firmware:
     name: fw ${{ matrix.board }}
     needs: [changes, prepare-ncs]
-    if: needs.changes.outputs.firmware == 'true'
+    if: needs.changes.outputs.firmware == 'true' || inputs.build-firmware
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -149,7 +166,9 @@ jobs:
       - uses: actions/checkout@v4
 
       # Restore-only: the env was frozen by prepare-ncs; nothing is
-      # installed here.
+      # installed here. A miss here means prepare-ncs's save failed
+      # (cache saves are warning-only) or the key was evicted mid-run
+      # — re-run the workflow.
       - name: Restore toolchain env
         uses: actions/cache/restore@v4
         with:
@@ -157,7 +176,7 @@ jobs:
             ~/ncs
             ~/.nrfutil
             ~/.local/bin/nrfutil
-          key: ncs-v3.3.1-toolchain
+          key: ncs-${{ env.NCS_VERSION }}-toolchain
           fail-on-cache-miss: true
 
       - name: Build both apps
@@ -167,9 +186,9 @@ jobs:
           DK=$(echo "${{ matrix.board }}" | cut -d/ -f1)
           echo "dk=$DK" >> "$GITHUB_OUTPUT"
           mkdir -p "$GITHUB_WORKSPACE/hex"
-          cd "$HOME/ncs/v3.3.1"
+          cd "$HOME/ncs/$NCS_VERSION"
           for APP in bench-dut trace-demo; do
-            nrfutil sdk-manager toolchain launch --ncs-version v3.3.1 -- \
+            nrfutil sdk-manager toolchain launch --ncs-version "$NCS_VERSION" -- \
               west build --board "${{ matrix.board }}" --pristine=always \
                 --build-dir "$GITHUB_WORKSPACE/build/$APP" \
                 "$GITHUB_WORKSPACE/firmware/$APP"
@@ -189,10 +208,14 @@ jobs:
   # with a PPK2 wired to one DK. Runner labels select the hardware;
   # the fw-<dk> artifact from the matrix supplies the hexes: flash
   # bench-dut under PPK2 power, then run the hardware-marked tier.
+  # Gated on `hil` (firmware + src + tests): the bench tests the
+  # Python stack too. NOTE on activation: switch the firmware job's
+  # gate to `outputs.hil` as well, so python-only changes still
+  # produce the artifacts these jobs download.
   #
   # hil-nrf52840:
   #   needs: [changes, firmware]
-  #   if: needs.changes.outputs.firmware == 'true'
+  #   if: needs.changes.outputs.hil == 'true'
   #   runs-on: [self-hosted, ppk2-bench, nrf52840dk]
   #   timeout-minutes: 20
   #   steps:
@@ -207,7 +230,7 @@ jobs:
   #
   # hil-nrf54lm20:
   #   needs: [changes, firmware]
-  #   if: needs.changes.outputs.firmware == 'true'
+  #   if: needs.changes.outputs.hil == 'true'
   #   runs-on: [self-hosted, ppk2-bench, nrf54lm20dk]
   #   timeout-minutes: 20
   #   steps:

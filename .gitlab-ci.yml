@@ -3,12 +3,15 @@
 # firmware matrix on a cached NCS toolchain env, HIL tier on
 # self-hosted bench runners.
 
-stages: [lint, test, build, firmware, hil]
+stages: [lint, test, build, prepare, firmware, hil]
 
 variables:
   UV_LINK_MODE: copy
   # uv installs strictly from the committed uv.lock; drift fails the job.
   UV_LOCKED: "1"
+  # Single source for the toolchain version: cache key, install, and
+  # build paths all derive from it.
+  NCS_VERSION: "v3.3.1"
 
 .uv:
   image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
@@ -43,11 +46,43 @@ wheel:
     paths: [dist/]
     expire_in: 2 weeks
 
-# One job per board, both apps; the hexes feed the HIL jobs. The
-# NCS env installs on first run and lives in the GitLab cache —
-# caches only hold paths inside the project dir, hence .ncs/ +
-# .nrfutil/ (NRFUTIL_HOME + the sdk-manager install-dir config).
-# The ~9 GB env needs a runner cache limit to match.
+# Seed the NCS cache once per cold key so the board matrix doesn't
+# stampede three parallel ~9 GB installs. The env lives in the
+# GitLab cache — caches only hold paths inside the project dir,
+# hence .ncs/ + .nrfutil/ (NRFUTIL_HOME + the sdk-manager
+# install-dir config). The ~9 GB env needs a runner cache limit to
+# match. Guard is the install's terminal artifact, so a partial
+# install re-installs instead of wedging the key.
+prepare-ncs:
+  stage: prepare
+  image: ubuntu:24.04
+  rules:
+    - changes:
+        paths: [firmware/**/*, .gitlab-ci.yml]
+  cache:
+    key: ncs-$NCS_VERSION-toolchain
+    paths: [.ncs/, .nrfutil/]
+    policy: pull-push
+  variables:
+    NRFUTIL_HOME: $CI_PROJECT_DIR/.nrfutil
+  script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates
+    - export PATH="$CI_PROJECT_DIR/.nrfutil/bin:$PATH"
+    - |
+      if [ ! -d ".ncs/$NCS_VERSION/zephyr" ]; then
+        mkdir -p .nrfutil/bin
+        curl -fsSL -o .nrfutil/bin/nrfutil \
+          https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
+        chmod +x .nrfutil/bin/nrfutil
+        nrfutil install sdk-manager
+        nrfutil sdk-manager config install-dir set "$CI_PROJECT_DIR/.ncs"
+        nrfutil sdk-manager install "$NCS_VERSION"
+        rm -rf .ncs/downloads .ncs/tmp
+      fi
+
+# One job per board, both apps; the hexes feed the HIL jobs.
+# pull-only cache: the env was frozen by prepare-ncs; nothing is
+# installed or re-uploaded here.
 firmware:
   stage: firmware
   image: ubuntu:24.04
@@ -55,8 +90,9 @@ firmware:
     - changes:
         paths: [firmware/**/*, .gitlab-ci.yml]
   cache:
-    key: ncs-v3.3.1-toolchain
+    key: ncs-$NCS_VERSION-toolchain
     paths: [.ncs/, .nrfutil/]
+    policy: pull
   variables:
     NRFUTIL_HOME: $CI_PROJECT_DIR/.nrfutil
   parallel:
@@ -66,26 +102,14 @@ firmware:
           - nrf54l15dk/nrf54l15/cpuapp
           - nrf54lm20dk/nrf54lm20b/cpuapp
   before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates
     - export PATH="$CI_PROJECT_DIR/.nrfutil/bin:$PATH"
-    - |
-      if [ ! -x .nrfutil/bin/nrfutil ]; then
-        mkdir -p .nrfutil/bin
-        curl -fsSL -o .nrfutil/bin/nrfutil \
-          https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/x86_64-unknown-linux-gnu/nrfutil
-        chmod +x .nrfutil/bin/nrfutil
-        nrfutil install sdk-manager
-        nrfutil sdk-manager config install-dir set "$CI_PROJECT_DIR/.ncs"
-        nrfutil sdk-manager install v3.3.1
-        rm -rf .ncs/downloads .ncs/tmp
-      fi
   script:
     - DK=$(echo "$BOARD" | cut -d/ -f1)
     - mkdir -p "$CI_PROJECT_DIR/hex"
     - |
-      cd "$CI_PROJECT_DIR/.ncs/v3.3.1"
+      cd "$CI_PROJECT_DIR/.ncs/$NCS_VERSION"
       for APP in bench-dut trace-demo; do
-        nrfutil sdk-manager toolchain launch --ncs-version v3.3.1 -- \
+        nrfutil sdk-manager toolchain launch --ncs-version "$NCS_VERSION" -- \
           west build --board "$BOARD" --pristine=always \
             --build-dir "$CI_PROJECT_DIR/build/$APP" "$CI_PROJECT_DIR/firmware/$APP"
         cp "$CI_PROJECT_DIR/build/$APP/merged.hex" "$CI_PROJECT_DIR/hex/$APP-$DK.hex"
@@ -99,10 +123,18 @@ firmware:
 # a PPK2 wired to one DK. Runner tags select the hardware; `needs`
 # pulls the matching hexes from the firmware matrix. Flash bench-dut
 # under PPK2 power, then run the hardware-marked pytest tier.
+# The rules track firmware + the Python stack (the bench tests both)
+# and must stay a subset of the firmware job's rules — `needs` on a
+# rule-excluded job makes the pipeline invalid. NOTE on activation:
+# widen the prepare-ncs + firmware rules with src/**/* and tests/**/*
+# for the same reason.
 #
 # hil-nrf52840:
 #   stage: hil
 #   tags: [ppk2-bench, nrf52840dk]
+#   rules:
+#     - changes:
+#         paths: [firmware/**/*, src/**/*, tests/**/*, .gitlab-ci.yml]
 #   needs: ["firmware: [nrf52840dk/nrf52840]"]
 #   script:
 #     - uv sync --all-extras
@@ -113,6 +145,9 @@ firmware:
 # hil-nrf54lm20:
 #   stage: hil
 #   tags: [ppk2-bench, nrf54lm20dk]
+#   rules:
+#     - changes:
+#         paths: [firmware/**/*, src/**/*, tests/**/*, .gitlab-ci.yml]
 #   needs: ["firmware: [nrf54lm20dk/nrf54lm20b/cpuapp]"]
 #   script:
 #     - uv sync --all-extras
