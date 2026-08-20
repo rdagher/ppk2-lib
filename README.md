@@ -31,11 +31,6 @@ with Session.open(find_ppk2().device) as s:
 
 ## Why this exists
 
-- **GUI-parity output.** CSV captures are byte-format-identical
-  to the Nordic Power Profiler GUI's export — same 11 columns,
-  same calibration math, same spike filter, same noise-floor
-  clamp. A capture from this tool and one from the GUI diff
-  cleanly.
 - **Scriptable end-to-end.** Discovery, session lifecycle, DUT
   power (source and ammeter modes), capture, and per-sample
   callbacks are all plain sync Python. `ppk2 run -- <cmd>`
@@ -48,9 +43,14 @@ with Session.open(find_ppk2().device) as s:
   between stacks on 60 s captures — see the committed
   comparison round in `validation/evidence/noise_floor_gui/`.
 - **Typed and tested.** pyright strict (one scoped, documented
-  suppression), ruff, 154 fast tests + 8 hardware-in-the-loop
+  suppression), ruff, 150 fast tests + 8 hardware-in-the-loop
   tests, reference DUT firmware included for reproducing the
   HIL bench.
+- **GUI-parity output.** CSV captures are byte-format-identical
+  to the Nordic Power Profiler GUI's export — same 11 columns,
+  same calibration math, same spike filter, same noise-floor
+  clamp. A capture from this tool and one from the GUI diff
+  cleanly.
 
 ## Quick start
 
