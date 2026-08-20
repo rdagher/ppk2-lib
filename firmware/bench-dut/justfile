@@ -27,8 +27,8 @@ BOARD_52840  := "nrf52840dk/nrf52840"
 
 APP_PATH := justfile_directory()
 
-# Default recipe: print available recipes.
-default:
+# Show available recipes.
+_default:
     @just --list
 
 # Toolchain wrapper — runs args inside the NCS toolchain context with
