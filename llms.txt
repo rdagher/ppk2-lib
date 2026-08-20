@@ -28,7 +28,8 @@ capturing. Captures are boot-inclusive (DUT power-cycles at t=0).
 ## Validation
 
 - [A/B harness](validation/README.md): statistical capture comparison (means, KS, per-pin rates) + acceptance contract
-- [Committed evidence](validation/evidence/trace_demo/README.md): GUI-vs-CLI parity rounds with reference captures and plots
+- [Trace-demo evidence](validation/evidence/trace_demo/README.md): GUI-vs-CLI parity rounds with reference captures and plots
+- [Noise-floor evidence](validation/evidence/noise_floor_gui/README.md): sub-µA clamp parity against the GUI (KS 0.0002)
 
 ## Optional
 

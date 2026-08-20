@@ -36,13 +36,11 @@ with Session.open(find_ppk2().device) as s:
   callbacks are all plain sync Python. `ppk2 run -- <cmd>`
   powers your DUT, runs a command (flash, benchmark, test),
   and optionally captures the whole thing.
-- **Verified against the wire.** The protocol layer is a
-  clean-room implementation cross-validated on live hardware
-  against the Nordic Power Profiler GUI: Kolmogorov–Smirnov
-  statistics below 0.005
-  between stacks on 60 s captures — see the committed
-  comparison round in
-  [`validation/evidence/noise_floor_gui/`](validation/evidence/noise_floor_gui/).
+- **Verified against the wire.** A clean-room protocol
+  implementation cross-validated on live hardware against the
+  Nordic Power Profiler GUI — committed evidence rounds in
+  [Validated against the Nordic GUI](#validated-against-the-nordic-gui)
+  below.
 - **Typed and tested.** pyright strict (one scoped, documented
   suppression), ruff, 150 fast tests + 8 hardware-in-the-loop
   tests, reference DUT firmware included for reproducing the
@@ -78,6 +76,25 @@ The CSV format is the Nordic GUI's 11-column export:
 `Timestamp(ms),Current(uA),D0-D7,D0..D7` — logic channels
 decoded per sample, D0 leftmost in the bit string.
 
+## Validated against the Nordic GUI
+
+Every parity claim above is backed by committed back-to-back
+GUI-vs-CLI capture rounds on real hardware — raw captures,
+comparison reports, and plots under
+[`validation/evidence/`](validation/evidence/):
+
+| Round | Bench | Headline result |
+|---|---|---|
+| [Noise floor](validation/evidence/noise_floor_gui/) | ammeter, open leads (sub-µA) | headers byte-identical, KS 0.0002 |
+| [Trace-demo workloads](validation/evidence/trace_demo/README.md) | nRF52840 DK source 3.0 V + nRF54LM20DK ammeter 3.3 V | per-region energy within 0.03–0.31 %, workload-region KS ≤ 0.014 |
+
+![GUI-vs-CLI parity on the nRF54LM20 DK: sync-aligned trace overlay and per-region ECDFs](validation/evidence/trace_demo/plots/nrf54lm20_ammeter_parity.png)
+
+The harness behind these rounds ships in the repo
+([`validation/README.md`](validation/README.md)): capture the same
+bench with any two ppk2-compatible binaries — or a GUI CSV export —
+and diff them statistically.
+
 ## Library layers
 
 | Layer | Import | Depends on |
@@ -110,12 +127,9 @@ DK) that toggles D0 at 5 Hz and D1 at 0.5 Hz — a deterministic
 signal the hardware tests assert against. See its
 [README](firmware/bench-dut/README.md) for wiring.
 
-[`validation/`](validation/) holds a port-agnostic A/B harness — capture the
-same bench with any two ppk2-compatible binaries (or a GUI CSV
-export) and diff the results statistically — plus, under
-[`validation/evidence/`](validation/evidence/), the committed comparison rounds (reports,
-gzipped reference captures, parity plots) behind this README's
-GUI-parity claims.
+[`validation/`](validation/) holds the A/B comparison harness and,
+under [`validation/evidence/`](validation/evidence/), the committed
+GUI-parity rounds shown above.
 
 Layout rule of thumb: [`firmware/`](firmware/) holds the Zephyr apps —
 [`bench-dut/`](firmware/bench-dut/) is test infrastructure (the reference DUT the HIL
