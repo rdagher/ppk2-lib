@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Discovery: recovery-grade probe escalation. For a window after any
+  session ends (clean close or killed process), the firmware stops
+  answering `GET_METADATA` and the CDC driver can transiently refuse
+  opens — the quick probe then misreported the data port as idle/busy
+  (`ppk2 list`, `find_ppk2`). When the quick pass finds no data port,
+  discovery now escalates once per candidate: stop + `RESET`, ride out
+  the USB re-enumeration, reopen with retry, and query with the
+  session's metadata budget. Healthy-path cost unchanged.
+
 ## 0.1.0 — first experimental release (2026-08)
 
 Initial public release. Library + CLI, one install.

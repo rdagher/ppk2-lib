@@ -303,3 +303,76 @@ def test_not_found_message_cites_vid_pid_not_product_strings() -> None:
     message = str(exc.value)
     assert "1915" in message and "C00A" in message
     assert "product" not in message.lower()
+
+
+def test_probe_data_port_escalates_to_recovery_when_quick_pass_misses() -> None:
+    calls: list[tuple[str, str]] = []
+
+    def quick(path: str) -> PortStatus:
+        calls.append(("quick", path))
+        return "idle"
+
+    def recovering(path: str) -> PortStatus:
+        calls.append(("recover", path))
+        return "data" if path == "/dev/a" else "idle"
+
+    assert probe_data_port(("/dev/b", "/dev/a"), quick, recovering) == "/dev/a"
+    assert calls == [
+        ("quick", "/dev/a"),
+        ("quick", "/dev/b"),
+        ("recover", "/dev/a"),
+    ]
+
+
+def test_probe_data_port_skips_recovery_after_quick_hit() -> None:
+    def quick(path: str) -> PortStatus:
+        return "data"
+
+    def recovering(path: str) -> PortStatus:
+        raise AssertionError("recovery must not run after a quick hit")
+
+    assert probe_data_port(("/dev/a",), quick, recovering) == "/dev/a"
+
+
+def test_classify_ports_recovery_upgrades_idle_but_not_busy() -> None:
+    def quick(path: str) -> PortStatus:
+        return "busy" if path == "/dev/a" else "idle"
+
+    recovered: list[str] = []
+
+    def recovering(path: str) -> PortStatus:
+        recovered.append(path)
+        return "data"
+
+    statuses = classify_ports(("/dev/a", "/dev/b"), quick, recovering)
+    assert statuses == {"/dev/a": "busy", "/dev/b": "data"}
+    assert recovered == ["/dev/b"]
+
+
+def test_classify_ports_without_recover_probe_keeps_quick_result() -> None:
+    statuses = classify_ports(("/dev/a",), lambda _path: "idle")
+    assert statuses == {"/dev/a": "idle"}
+
+
+def test_resolve_probes_pairs_real_probe_with_recovery() -> None:
+    quick, recover = discovery.resolve_probes(None)
+    assert quick is discovery.probe_port
+    assert recover is discovery.probe_port_recover
+
+
+def test_resolve_probes_keeps_injected_probe_unescalated() -> None:
+    def fake(_path: str) -> PortStatus:
+        return "idle"
+
+    assert discovery.resolve_probes(fake) == (fake, None)
+
+
+def test_classify_ports_recovery_reaches_busy_when_no_idle() -> None:
+    def quick(_path: str) -> PortStatus:
+        return "busy"
+
+    def recovering(path: str) -> PortStatus:
+        return "data" if path == "/dev/a" else "busy"
+
+    statuses = classify_ports(("/dev/a", "/dev/b"), quick, recovering)
+    assert statuses == {"/dev/a": "data", "/dev/b": "busy"}
