@@ -1,6 +1,0 @@
-build/
-build-*/
-.west/
-*.o
-*.elf
-*.map

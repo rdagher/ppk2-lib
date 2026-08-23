@@ -187,7 +187,7 @@ jobs:
           echo "dk=$DK" >> "$GITHUB_OUTPUT"
           mkdir -p "$GITHUB_WORKSPACE/hex"
           cd "$HOME/ncs/$NCS_VERSION"
-          for APP in bench-dut trace-demo; do
+          for APP in bench-dut; do
             nrfutil sdk-manager toolchain launch --ncs-version "$NCS_VERSION" -- \
               west build --board "${{ matrix.board }}" --pristine=always \
                 --build-dir "$GITHUB_WORKSPACE/build/$APP" \

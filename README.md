@@ -5,9 +5,8 @@
 > between 0.x versions. Feedback and issues welcome.
 
 Python library + CLI for Nordic Semiconductor's **Power Profiler
-Kit II (PPK2)** — capture calibrated current traces and digital
-logic channels at 100 kSPS, from scripts, from the terminal, or
-from CI.
+Kit II (PPK2)** — calibrated current traces and eight digital logic
+channels at 100 kSPS, from scripts, from the terminal, or from CI.
 
 One install, both surfaces:
 
@@ -29,27 +28,30 @@ with Session.open(find_ppk2().device) as s:
     s.capture(lambda sample: sample.current_micro_amps < 1000)
 ```
 
-## Why this exists
+## Why trust the numbers
 
-- **Scriptable end-to-end.** Discovery, session lifecycle, DUT
-  power (source and ammeter modes), capture, and per-sample
-  callbacks are all plain sync Python. `ppk2 run -- <cmd>`
-  powers your DUT, runs a command (flash, benchmark, test),
-  and optionally captures the whole thing.
-- **Verified against the wire.** A clean-room protocol
-  implementation cross-validated on live hardware against the
-  Nordic Power Profiler GUI — committed evidence rounds in
-  [Validated against the Nordic GUI](#validated-against-the-nordic-gui)
-  below.
-- **Typed and tested.** pyright strict (one scoped, documented
-  suppression), ruff, 150 fast tests + 8 hardware-in-the-loop
-  tests, reference DUT firmware included for reproducing the
-  HIL bench.
-- **GUI-parity output.** CSV captures are byte-format-identical
-  to the Nordic Power Profiler GUI's export — same 11 columns,
-  same calibration math, same spike filter, same noise-floor
-  clamp. A capture from this tool and one from the GUI diff
-  cleanly.
+- **Clean-room protocol implementation**, cross-validated on live
+  hardware against Nordic's own Power Profiler GUI — committed
+  evidence rounds below.
+- **GUI-parity output** — CSV captures are byte-format-identical to
+  the GUI's export: same columns, calibration math, spike filter, and
+  noise-floor clamp. A capture from this tool and one from the GUI
+  diff cleanly.
+- **Typed and tested** — pyright strict, ruff, 150+ fast tests and a
+  hardware-in-the-loop tier, with the reference DUT firmware in-repo
+  ([`firmware/bench-dut/`](firmware/bench-dut/)).
+
+| Round | Bench | Headline result |
+|---|---|---|
+| [Noise floor](validation/evidence/noise_floor_gui/) | ammeter, open leads (sub-µA) | headers byte-identical, KS 0.0002 |
+| [Trace-demo workloads](validation/evidence/trace_demo/README.md) | nRF52840 DK source 3.0 V + nRF54LM20DK ammeter 3.3 V | per-region energy within 0.31 %, workload-region KS ≤ 0.014 |
+
+![GUI-vs-CLI parity on the nRF54LM20 DK: sync-aligned trace overlay and per-region ECDFs](validation/evidence/trace_demo/plots/nrf54lm20_ammeter_parity.png)
+
+The harness behind these rounds ships in the repo
+([`validation/README.md`](validation/README.md)): capture the same
+bench with any two ppk2-compatible binaries — or a GUI CSV export —
+and diff them statistically.
 
 ## Quick start
 
@@ -76,24 +78,16 @@ The CSV format is the Nordic GUI's 11-column export:
 `Timestamp(ms),Current(uA),D0-D7,D0..D7` — logic channels
 decoded per sample, D0 leftmost in the bit string.
 
-## Validated against the Nordic GUI
+## Zephyr companion
 
-Every parity claim above is backed by committed back-to-back
-GUI-vs-CLI capture rounds on real hardware — raw captures,
-comparison reports, and plots under
-[`validation/evidence/`](validation/evidence/):
-
-| Round | Bench | Headline result |
-|---|---|---|
-| [Noise floor](validation/evidence/noise_floor_gui/) | ammeter, open leads (sub-µA) | headers byte-identical, KS 0.0002 |
-| [Trace-demo workloads](validation/evidence/trace_demo/README.md) | nRF52840 DK source 3.0 V + nRF54LM20DK ammeter 3.3 V | per-region energy within 0.31 %, workload-region KS ≤ 0.014 |
-
-![GUI-vs-CLI parity on the nRF54LM20 DK: sync-aligned trace overlay and per-region ECDFs](validation/evidence/trace_demo/plots/nrf54lm20_ammeter_parity.png)
-
-The harness behind these rounds ships in the repo
-([`validation/README.md`](validation/README.md)): capture the same
-bench with any two ppk2-compatible binaries — or a GUI CSV export —
-and diff them statistically.
+Firmware-side integration lives in
+[zephyr-ppk2](https://github.com/rdagher/zephyr-ppk2): bracket code
+regions on the PPK2's logic channels (link-time wrapping or in-source
+annotations), attribute energy, width, and current per region with
+channel names read from the built ELF, and gate CI on per-region
+budgets. Its `west ppk2 …` commands drive this library from the west
+workspace, and its samples are the successors of the trace-demo
+firmware behind the evidence round above.
 
 ## Library layers
 
@@ -132,11 +126,6 @@ deterministic signal the hardware tests assert against. See its
 under [`validation/evidence/`](validation/evidence/), the committed
 GUI-parity rounds shown above.
 
-Layout rule of thumb: [`firmware/`](firmware/) holds the Zephyr apps —
-[`bench-dut/`](firmware/bench-dut/) is test infrastructure (the reference DUT the HIL
-tier asserts against), [`trace-demo/`](firmware/trace-demo/) is a worked example you
-copy from.
-
 ## Status
 
 Experimental (`0.1.0`). Works on macOS and Linux; Windows is
@@ -159,9 +148,6 @@ GUI and IRNAS's
 - [`firmware/bench-dut/README.md`](firmware/bench-dut/README.md) — the reference DUT: wiring,
   per-board pins, build/flash recipes.
 - [`validation/README.md`](validation/README.md) — the A/B capture-comparison harness.
-
-A full documentation site (mkdocs) is planned; these files are
-its seed chapters.
 
 ## License
 
