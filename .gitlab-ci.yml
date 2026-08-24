@@ -108,7 +108,7 @@ firmware:
     - mkdir -p "$CI_PROJECT_DIR/hex"
     - |
       cd "$CI_PROJECT_DIR/.ncs/$NCS_VERSION"
-      for APP in bench-dut trace-demo; do
+      for APP in bench-dut; do
         nrfutil sdk-manager toolchain launch --ncs-version "$NCS_VERSION" -- \
           west build --board "$BOARD" --pristine=always \
             --build-dir "$CI_PROJECT_DIR/build/$APP" "$CI_PROJECT_DIR/firmware/$APP"

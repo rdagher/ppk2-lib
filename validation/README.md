@@ -87,3 +87,15 @@ parity fixture
 — two implementations that pass it produce identical output for
 identical input; capture-level deltas beyond it measure the bench,
 not the code.
+
+## DUTs for new rounds
+
+- **No DUT** — open leads validate the noise floor and clamp (see
+  [`evidence/noise_floor_gui/`](evidence/noise_floor_gui/)); needs
+  nothing but the PPK2.
+- **[`firmware/bench-dut/`](../firmware/bench-dut/)** — deterministic
+  logic (D0 5 Hz, D1 0.5 Hz) for duty-cycle, edge-rate, and
+  distribution parity; reproducible from this repo alone.
+- The committed [`evidence/trace_demo/`](evidence/trace_demo/) round
+  used a retired workload firmware for wide-dynamic-range per-region
+  energy parity; its source is archived inside the round.
