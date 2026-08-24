@@ -345,13 +345,24 @@ caveats](#10-known-caveats) for what breaks without them.
   then 1.0 s between attempts, which clears most wedges. If it
   doesn't, unplug and replug.
 
+- **Post-session unresponsive window.** For up to ~a minute after
+  any session ends (clean close or killed process), the firmware
+  stops answering `GET_METADATA` until reset, and right after a
+  kill the CDC driver can refuse opens for a second or two.
+  Discovery handles both: when the quick probe finds no data
+  port, it escalates to a recovery probe — stop + `RESET`, ride
+  out the re-enumeration, reopen with retry, query with the
+  session budget (`probe_port_recover`).
+
 - **`RESET` (`0x20`) is a trap on close.** It triggers a
   ~200–500 ms USB CDC re-enumeration on macOS and frequently
   wedges the next session worse than leaving the port "stale"
   does. The Nordic GUI never sends `RESET` at any point (open,
   close, or recovery) and works fine without it. This library
-  sends it only on a *failed* handshake retry attempt, as a
-  forced-state-machine reset escalation.
+  sends it in exactly two places, both of which stay around to
+  absorb the re-enumeration: a *failed* handshake retry attempt,
+  and discovery's recovery probe (which closes, waits out the
+  re-enum, and reopens with retry).
 
 - **`AVG_NUM_SET` (`0x02`) is dead in firmware.** Both Nordic's
   GUI and IRNAS's Python lib forward it; the PPK2 firmware
