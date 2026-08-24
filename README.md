@@ -78,17 +78,6 @@ The CSV format is the Nordic GUI's 11-column export:
 `Timestamp(ms),Current(uA),D0-D7,D0..D7` — logic channels
 decoded per sample, D0 leftmost in the bit string.
 
-## Zephyr companion
-
-Firmware-side integration lives in
-[zephyr-ppk2](https://github.com/rdagher/zephyr-ppk2): bracket code
-regions on the PPK2's logic channels (link-time wrapping or in-source
-annotations), attribute energy, width, and current per region with
-channel names read from the built ELF, and gate CI on per-region
-budgets. Its `west ppk2 …` commands drive this library from the west
-workspace, and its samples are the successors of the trace-demo
-firmware behind the evidence round above.
-
 ## Library layers
 
 | Layer | Import | Depends on |
