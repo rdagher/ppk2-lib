@@ -19,6 +19,11 @@ the wire protocol. Strategy:
    Power Profiler GUI) fails to open at all. The probe runs *inside*
    the discovery retry loop, so a half-enumerated device is re-probed
    on the next poll tick instead of failing discovery outright.
+6. When the quick pass finds no data port, escalate once with the
+   session-style **recovery probe** (``RESET`` after the stop, the
+   session's metadata budget). For a window after any session closes,
+   the firmware stops answering ``GET_METADATA`` until reset — without
+   the escalation the quick probe misclassifies the data port as idle.
 """
 
 from collections import defaultdict
@@ -197,9 +202,10 @@ def list_ppk2s(*, probe: ProbeFn | None = None) -> list[Ppk2Listing]:
 
     Args:
         probe: Port-probe override for tests. ``None`` uses the real
-            serial probe ([`probe_port`][]).
+            serial probe ([`probe_port`][]) with recovery escalation.
     """
-    return build_listings(enumerate_ports(), probe if probe is not None else probe_port)
+    quick, recover = resolve_probes(probe)
+    return build_listings(enumerate_ports(), quick, recover)
 
 
 # ─── composition primitives ────────────────────────────────────────────
@@ -322,9 +328,12 @@ _PROBE_READ_TIMEOUT_S = 0.1
 _PROBE_SETTLE_S = 0.1  # let AVERAGE_STOP take effect before draining
 _PROBE_DRAIN_S = 0.3  # budget for flushing a still-streaming backlog
 _PROBE_METADATA_TIMEOUT_S = 1.0  # accumulate-until-END budget
+_RECOVER_REENUM_S = 1.0  # ride out the post-RESET USB CDC re-enumeration
+_RECOVER_OPEN_RETRY_S = 2.0  # ride out the post-kill CDC lock-release lag
+_RECOVER_METADATA_TIMEOUT_S = 2.5  # mirror _METADATA_READ_TIMEOUT_S
 
 
-def probe_port(device: str) -> PortStatus:
+def probe_port(device: str, *, recover: bool = False) -> PortStatus:
     """Classify one VCOM path by active protocol probe.
 
     Single attempt, short budgets, no ``RESET``: open, send
@@ -333,6 +342,11 @@ def probe_port(device: str) -> PortStatus:
     ``GET_METADATA`` and accumulate the response until ``END``
     (~1.0 s budget), then parse it. The port is closed before
     returning, whatever the outcome.
+
+    With ``recover=True`` the probe runs the session-style recovery
+    instead — see [`probe_port_recover`][]. Escalation only: it costs
+    seconds on a silent VCOM, so callers run it just when the quick
+    pass found nothing.
 
     Returns:
         ``"data"`` when the port answered with parseable metadata,
@@ -354,6 +368,8 @@ def probe_port(device: str) -> PortStatus:
         )
     except (serial.SerialException, OSError):
         return "busy"
+    if recover:
+        return probe_port_recover(device)
     try:
         port.write(bytes([Opcode.AVERAGE_STOP.byte()]))
         sleep(_PROBE_SETTLE_S)
@@ -374,6 +390,77 @@ def probe_port(device: str) -> PortStatus:
             port.close()
 
 
+def probe_port_recover(device: str) -> PortStatus:
+    """The escalation tier: session-style recovery, then the metadata probe.
+
+    For the post-session window where the firmware stops answering
+    ``GET_METADATA`` until reset. ``RESET`` makes the device drop off
+    USB and re-enumerate (~200-500 ms on macOS), killing whatever port
+    is open — so unlike the session handshake this runs in two opens:
+    stop + ``RESET``, close, ride out the re-enum, reopen fresh, then
+    query metadata with the session's 2.5 s budget. The device path
+    survives re-enumeration (it derives from the USB serial). Both
+    opens retry for a bounded window: right after a killed session the
+    CDC driver can refuse opens for a second or two before the
+    opens-but-silent phase begins.
+
+    ``RESET`` at teardown is banned for good reason (see
+    ``Session.close``): fired and abandoned, the re-enum wedges the
+    next opener. Here the sender absorbs it — the wait + reopen-retry
+    are what make the reset safe; do not remove them. Side effect: a
+    reset drops any latched DUT power, which only matters in the
+    killed-``--hold`` state this probe exists to repair.
+    """
+    port = _open_with_retry(device, _RECOVER_OPEN_RETRY_S)
+    if port is None:
+        return "busy"
+    try:
+        with suppress(serial.SerialException, OSError):
+            port.write(bytes([Opcode.AVERAGE_STOP.byte()]))
+            sleep(_PROBE_SETTLE_S)
+            port.write(bytes([Opcode.RESET.byte()]))
+    finally:
+        with suppress(serial.SerialException, OSError):
+            port.close()
+    sleep(_RECOVER_REENUM_S)
+
+    port = _open_with_retry(device, _RECOVER_OPEN_RETRY_S)
+    if port is None:
+        return "busy"
+    try:
+        with suppress(serial.SerialException, OSError):
+            port.reset_input_buffer()
+        _drain_input(port, _PROBE_DRAIN_S)
+        port.write(bytes([Opcode.GET_METADATA.byte()]))
+        buf = read_until_end(port, _RECOVER_METADATA_TIMEOUT_S)
+        parse_metadata(buf)
+    except (OSError, MetadataError):
+        return "idle"
+    else:
+        return "data"
+    finally:
+        with suppress(serial.SerialException, OSError):
+            port.close()
+
+
+def _open_with_retry(device: str, budget_s: float) -> serial.Serial | None:
+    """Open ``device`` exclusively, retrying failures up to ``budget_s``."""
+    deadline = monotonic() + budget_s
+    while True:
+        try:
+            return serial.Serial(
+                device,
+                baudrate=_PROBE_BAUD,
+                timeout=_PROBE_READ_TIMEOUT_S,
+                write_timeout=_PROBE_READ_TIMEOUT_S,
+                exclusive=True,
+            )
+        except (serial.SerialException, OSError):
+            if monotonic() >= deadline:
+                return None
+            sleep(0.25)
+
+
 def _drain_input(port: serial.Serial, budget_s: float) -> None:
     """Read and discard whatever is in the input buffer, up to ``budget_s``."""
     deadline = monotonic() + budget_s
@@ -391,21 +478,41 @@ def _drain_input(port: serial.Serial, budget_s: float) -> None:
         sleep(0.02)
 
 
-def probe_data_port(paths: tuple[str, ...], probe: ProbeFn) -> str | None:
-    """Return the first path (lex-lowest first) that answers the probe, else None."""
+def probe_data_port(
+    paths: tuple[str, ...],
+    probe: ProbeFn,
+    recover_probe: ProbeFn | None = None,
+) -> str | None:
+    """Return the first path (lex-lowest first) that answers the probe, else None.
+
+    When the quick pass finds nothing and ``recover_probe`` is given,
+    the candidates get a second, recovery-grade pass.
+    """
     for path in sorted(paths):
         if probe(path) == "data":
             return path
+    if recover_probe is not None:
+        for path in sorted(paths):
+            if recover_probe(path) == "data":
+                return path
     return None
 
 
-def classify_ports(paths: tuple[str, ...], probe: ProbeFn) -> dict[str, PortStatus]:
+def classify_ports(
+    paths: tuple[str, ...],
+    probe: ProbeFn,
+    recover_probe: ProbeFn | None = None,
+) -> dict[str, PortStatus]:
     """Probe ``paths`` in order until a data port answers; mark the rest idle.
 
     Stopping at the first data hit keeps the common case to one port
     open — the remaining VCOMs of that device are idle by definition.
     When nothing answers, every path ends up probed, so the caller can
-    distinguish ``busy`` (held elsewhere) from ``idle`` (silent).
+    distinguish ``busy`` (held elsewhere) from ``idle`` (silent) — and,
+    if ``recover_probe`` is given, the paths get a second,
+    recovery-grade pass: idle ones first (the likelier mislabelled
+    data port), then busy ones (post-kill lock-release lag also reads
+    as busy; a truly held port stays busy after the recovery retry).
     """
     statuses: dict[str, PortStatus] = {}
     for path in paths:
@@ -414,15 +521,27 @@ def classify_ports(paths: tuple[str, ...], probe: ProbeFn) -> dict[str, PortStat
             break
     for path in paths:
         statuses.setdefault(path, "idle")
+    if recover_probe is not None and "data" not in statuses.values():
+        by_priority = [p for p in paths if statuses[p] == "idle"] + [
+            p for p in paths if statuses[p] == "busy"
+        ]
+        for path in by_priority:
+            statuses[path] = recover_probe(path)
+            if statuses[path] == "data":
+                break
     return statuses
 
 
-def build_listings(ports: list[RawPort], probe: ProbeFn) -> list[Ppk2Listing]:
+def build_listings(
+    ports: list[RawPort],
+    probe: ProbeFn,
+    recover_probe: ProbeFn | None = None,
+) -> list[Ppk2Listing]:
     """Assemble [`Ppk2Listing`][] rows from an enumeration snapshot + probe."""
     out: list[Ppk2Listing] = []
     for usb_serial, paths in sorted(group_ppk2s(ports).items()):
         ordered = tuple(sorted(paths))
-        statuses = classify_ports(ordered, probe)
+        statuses = classify_ports(ordered, probe, recover_probe)
         data_port = next((p for p in ordered if statuses[p] == "data"), None)
         out.append(
             Ppk2Listing(
@@ -433,6 +552,18 @@ def build_listings(ports: list[RawPort], probe: ProbeFn) -> list[Ppk2Listing]:
             )
         )
     return out
+
+
+def resolve_probes(probe: ProbeFn | None) -> tuple[ProbeFn, ProbeFn | None]:
+    """Real probe pair when none injected; injected probe alone otherwise.
+
+    Test doubles come in through ``probe``; escalation stays off for
+    them unless the test wires ``recover_probe`` explicitly at the
+    composition-primitive level.
+    """
+    if probe is None:
+        return probe_port, probe_port_recover
+    return probe, None
 
 
 def _poll_until_found(
@@ -448,7 +579,7 @@ def _poll_until_found(
     the loop so a half-enumerated device (its VCOMs registered but the
     firmware not yet answering) resolves on a later tick.
     """
-    chosen_probe = probe if probe is not None else probe_port
+    quick, recover = resolve_probes(probe)
     deadline = monotonic() + timeout_s
     while True:
         ports = enumerate_ports()
@@ -460,7 +591,7 @@ def _poll_until_found(
             if monotonic() >= deadline:
                 raise
         else:
-            device = probe_data_port(paths, chosen_probe)
+            device = probe_data_port(paths, quick, recover)
             if device is not None:
                 return PortInfo(device=device, usb_serial=serial_str)
             if monotonic() >= deadline:
