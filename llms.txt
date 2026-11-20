@@ -1,36 +1,53 @@
 # ppk2-lib
 
-> Python library + CLI for Nordic's Power Profiler Kit II (PPK2):
-> calibrated current + logic captures at 100 kSPS, GUI-parity CSV
-> output, source/ammeter modes, scriptable DUT power control, and
-> energy attribution via GPIO trace markers. EXPERIMENTAL — the API
-> may change between 0.x versions; not yet on PyPI (install from
-> git).
+> A Python library and command-line tool for Nordic's Power Profiler
+> Kit II (PPK2). It records current and eight digital inputs at 100,000
+> samples per second, to a CSV identical to the Power Profiler app's
+> export or to a session file in the app's `.ppk2` format, in Ampere meter or
+> Source meter mode, and it switches power to the device under test
+> (DUT) from a script.
+> Experimental: the API may change between 0.x versions. Not on PyPI
+> yet; install from git.
 
-Import name and binary are `ppk2`; the distribution is `ppk2-lib`.
-Three layers: `ppk2.protocol` (stdlib-only wire primitives),
-`ppk2.client` (pyserial session driver), `ppk2.cli` (typer binary).
-One process owns the PPK2 at a time; quit the Nordic GUI before
-capturing. Captures are boot-inclusive (DUT power-cycles at t=0).
+The command and the import name are `ppk2`; the distribution is
+`ppk2-lib`. Three layers: `ppk2.protocol` (standard library only),
+`ppk2.client` (pyserial) and `ppk2.cli` (typer). Only one program can
+hold the PPK2: close Nordic's app before capturing. A capture switches
+the DUT on as it starts; the boot is about 0.1 s into the file. Power
+ends with the command; `ppk2 power on --hold` keeps it. The modes, the
+DUT and the digital inputs are named as in Nordic's app and user guide.
 
 ## Docs
 
-- [README](README.md): install, quick start, layer table, dev workflow
-- [Architecture](docs/ARCHITECTURE.md): three-layer design, session lifecycle (sequence diagram), threading model
-- [Protocol notes](docs/PROTOCOL.md): opcodes, metadata format, sample frame, stream reassembly, calibration formula, CSV format, firmware caveats
-- [Changelog](CHANGELOG.md): 0.1.0 feature list and known limitations
+Three parts: using it, how it measures, validation against Nordic's app.
 
-## Firmware
+- [README](README.md): install, a first capture, where everything is
+- [Introduction](docs/index.md): the three parts, what it is good for and what it is not for
+- [Getting started](docs/use/getting-started.md): install, the two wirings, the digital inputs, a first capture, reading the file
+- [The ppk2 command](docs/use/command.md): every command and option, exit codes, signals
+- [Recipes](docs/use/recipes.md): flashing a DUT powered by the PPK2, energy of a marked region, long captures, comparing two builds
+- [Architecture](docs/use/architecture.md): the three layers, the life of a session, the capture callback, settings, threads, design choices
+- [API reference](docs/use/api.md): discovery, Session, stream parser, calibration, commands
+- [Troubleshooting](docs/use/troubleshooting.md): every error line and what to do
+- [Measurement principle](docs/measure/principle.md): modes, ranges, calibration formula, spike filter, the 0.2 µA floor, time, digital inputs, accuracy
+- [Protocol](docs/measure/protocol.md): the bytes and the behaviour of the PPK2, a session on the wire, known caveats
+- [File formats](docs/measure/formats.md): the CSV and the `.ppk2` session file
+- [Validation, method](docs/validation/method.md): the three levels of comparison with Nordic's app, the bench procedure
+- [Validation, results](docs/validation/results.md): tables and plots per round, differences from the app, limits
+- [Doc patterns](docs/contributing/doc-patterns.md): where each kind of documentation goes, Nordic's wording
+- [Changelog](CHANGELOG.md)
 
-- [Reference bench DUT](firmware/bench-dut/README.md): deterministic D0/D1 signal for HIL tests; wiring + per-board pins (nRF52840/nRF54L15/nRF54LM20 DKs)
-- [Trace-marker demo](firmware/trace-demo/README.md): C + C++ RAII markers for energy attribution, both-mode flash/capture recipes, reference measurements
+## Hardware tests
+
+- [Running them](tests/hil/README.md): what the bench needs, in Ampere meter or Source meter mode
+- [Bench firmware](tests/hil/bench-dut/README.md): the signal the tests expect, pins per dev kit, build and flash
 
 ## Validation
 
-- [A/B harness](validation/README.md): statistical capture comparison (means, KS, per-pin rates) + acceptance contract
-- [Trace-demo evidence](validation/evidence/trace_demo/README.md): GUI-vs-CLI parity rounds with reference captures and plots
-- [Noise-floor evidence](validation/evidence/noise_floor_gui/README.md): sub-µA clamp parity against the GUI (KS 0.0002)
+- [Comparison scripts](validation/README.md): statistics of two captures, and when the limits fit
+- [Workload round](validation/evidence/trace_demo/README.md): the app against `ppk2 capture` on two dev kits, energy per region
+- [Noise-floor round](validation/evidence/noise_floor_gui/README.md): the 0.2 µA floor against the app
 
 ## Optional
 
-- [Claude Code skill](.claude/skills/ppk2/SKILL.md): operational recipes for driving the PPK2 from an AI coding agent
+- [Claude Code skill](.claude/skills/ppk2/SKILL.md): recipes for driving the PPK2 from a coding assistant

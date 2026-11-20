@@ -1,143 +1,128 @@
 # ppk2-lib
 
-> **Experimental release.** The API is functional and
-> bench-validated but not yet frozen — expect breaking changes
-> between 0.x versions. Feedback and issues welcome.
+A Python library and command-line tool for Nordic's Power Profiler
+Kit II (PPK2). It records current and the eight digital inputs at
+100,000 samples per second from a script, a terminal or a CI job,
+without the Power Profiler app.
 
-Python library + CLI for Nordic Semiconductor's **Power Profiler
-Kit II (PPK2)** — calibrated current traces and eight digital logic
-channels at 100 kSPS, from scripts, from the terminal, or from CI.
+This is an experimental release (0.1.0). It works and is checked on
+hardware, but the API may still change between 0.x versions.
 
-One install, both surfaces:
+## Install
 
 ```sh
 pip install "git+https://github.com/rdagher/ppk2-lib"
 ```
 
-```sh
-ppk2 capture --out trace.csv --seconds 30     # CLI
+You need Python 3.11 or newer. The unit tests run on Linux, macOS and
+Windows with Python 3.11 and 3.13. The hardware tests have only run on
+macOS 26, so Windows and Linux are untested on a bench. On Windows,
+`ppk2 power on --hold` and Ctrl-C handling in `ppk2 run` use POSIX
+calls that Windows does not have.
+
+## A first capture
+
+Wire the PPK2 as you would for the app, quit the app, and run:
+
+```console
+$ ppk2 list
+PPK2  serial=A1B2C3D4E5F6
+  /dev/cu.usbmodemA1B2C3D4E5F62   [data port]
+  /dev/cu.usbmodemA1B2C3D4E5F64   [idle]
+
+$ ppk2 capture --out boot.csv --seconds 3 --source --vdd 3.3
+opening session (Source meter mode, vdd=3300 mV)
+capturing 3.00 s -> boot.csv (Ctrl-C to stop early)
+  [  1.0s]      109569 samples  mean  867.30 µA
+  [  2.0s]      209921 samples  mean  786.57 µA
+captured 310272 samples over 3.01 s (103208 Hz)
 ```
+
+This is Source meter mode: the PPK2 powers the device under test (DUT)
+at 3.3 V. `boot.csv` has the same 11 columns as the app's export, and
+the DUT's boot is at the start of it. Without `--source` the PPK2 is in
+Ampere meter mode and measures a DUT that has its own supply.
+
+The file starts about 0.1 s before the power comes up, which is why the
+summary shows more than 100,000 samples per second. The
+[protocol page](docs/measure/protocol.md#10-known-caveats) has the
+measurements.
+
+A few more commands:
+
+```sh
+ppk2 capture --out idle.ppk2 --seconds 30    # a session file in the app's format
+ppk2 convert boot.csv boot.ppk2              # the same, from a CSV
+ppk2 power on --hold --source --vdd 3.3      # keep the DUT powered until Ctrl-C
+ppk2 run --source --vdd 3.3 -- west flash    # power the DUT for one command
+```
+
+And from Python:
 
 ```python
-from ppk2 import Session, Mode, find_ppk2      # library
+from ppk2 import Mode, Session, find_ppk2
 
-with Session.open(find_ppk2().device) as s:
-    s.set_mode(Mode.AMPERE)
-    s.start_measuring()
-    s.power_on()
-    s.capture(lambda sample: sample.current_micro_amps < 1000)
+with Session.open(find_ppk2().device) as session:
+    session.set_mode(Mode.AMPERE)
+    session.start_measuring()
+    session.power_on()
+    session.capture(lambda sample: sample.current_micro_amps < 1000)
 ```
 
-## Why trust the numbers
-
-- **Clean-room protocol implementation**, cross-validated on live
-  hardware against Nordic's own Power Profiler GUI — committed
-  evidence rounds below.
-- **GUI-parity output** — CSV captures are byte-format-identical to
-  the GUI's export: same columns, calibration math, spike filter, and
-  noise-floor clamp. A capture from this tool and one from the GUI
-  diff cleanly.
-- **Typed and tested** — pyright strict, ruff, 150+ fast tests and a
-  hardware-in-the-loop tier, with the reference DUT firmware in-repo
-  ([`firmware/bench-dut/`](firmware/bench-dut/)).
-
-| Round | Bench | Headline result |
-|---|---|---|
-| [Noise floor](validation/evidence/noise_floor_gui/) | ammeter, open leads (sub-µA) | headers byte-identical, KS 0.0002 |
-| [Trace-demo workloads](validation/evidence/trace_demo/README.md) | nRF52840 DK source 3.0 V + nRF54LM20DK ammeter 3.3 V | per-region energy within 0.31 %, workload-region KS ≤ 0.014 |
-
-![GUI-vs-CLI parity on the nRF54LM20 DK: sync-aligned trace overlay and per-region ECDFs](validation/evidence/trace_demo/plots/nrf54lm20_ammeter_parity.png)
-
-The harness behind these rounds ships in the repo
-([`validation/README.md`](validation/README.md)): capture the same
-bench with any two ppk2-compatible binaries — or a GUI CSV export —
-and diff them statistically.
-
-## Quick start
-
-```sh
-# 1. Plug in a PPK2 (USB), then:
-ppk2 list                 # every connected PPK2 + port status
-ppk2 metadata             # per-device calibration block
-
-# 2. Ammeter mode (PPK2 in series with your DUT's supply):
-ppk2 capture --out idle.csv --seconds 30
-
-# 3. Source mode (PPK2 powers the DUT at 3.0 V):
-ppk2 capture --out boot.csv --seconds 10 --source --vdd 3.0
-
-# 4. Hold DUT power until Ctrl-C (a bench supply while you flash/debug):
-ppk2 power on --hold --source --vdd 3.0
-
-# 5. Run a command with the DUT powered — capture is optional (--out):
-ppk2 run --source --vdd 3.0 -- west flash
-ppk2 run --source --vdd 3.0 --out run.csv -- pytest -m hardware
-```
-
-The CSV format is the Nordic GUI's 11-column export:
-`Timestamp(ms),Current(uA),D0-D7,D0..D7` — logic channels
-decoded per sample, D0 leftmost in the bit string.
-
-## Library layers
-
-| Layer | Import | Depends on |
-|---|---|---|
-| `ppk2.protocol` | opcodes, metadata parser, sample decoder, calibration formula, stream parser | stdlib only |
-| `ppk2.client` | discovery (`find_ppk2`, `list_ppk2s`) + `Session` state machine | pyserial |
-| `ppk2.cli` | the `ppk2` binary (typer) | both |
-
-Everything public re-exports from the top-level `ppk2` package.
-The protocol layer being stdlib-only means you can re-decode a
-saved byte stream (or build your own transport) without pulling
-in serial-port machinery.
-
-## Development
-
-Tooling: [uv](https://docs.astral.sh/uv/) +
-[just](https://github.com/casey/just).
-
-```sh
-just sync        # install all deps into .venv
-just ci          # pyright strict + ruff + fast test tier
-just test-hw     # HIL tier — needs a PPK2 + the bench DUT
-just build       # wheel + sdist into dist/
-```
-
-The HIL bench is reproducible from this repo alone:
-[`firmware/bench-dut/`](firmware/bench-dut/) contains reference
-Zephyr firmware for the nRF52840, nRF54L15, and nRF54LM20 DKs
-(hexes built locally with `just hex`, or by the CI firmware
-matrix) that toggles D0 at 5 Hz and D1 at 0.5 Hz — a
-deterministic signal the hardware tests assert against. See its
-[README](firmware/bench-dut/README.md) for wiring.
-
-[`validation/`](validation/) holds the A/B comparison harness and,
-under [`validation/evidence/`](validation/evidence/), the committed
-GUI-parity rounds shown above.
-
-## Status
-
-Experimental (`0.1.0`). Works on macOS and Linux; Windows is
-CI-tested at the fast tier but not yet bench-validated. Not
-published to PyPI yet — install from git.
-
-Upstream references (protocol semantics are cited, never
-vendored): Nordic's
-[pc-nrfconnect-ppk](https://github.com/NordicSemiconductor/pc-nrfconnect-ppk)
-GUI and IRNAS's
-[ppk2-api-python](https://github.com/IRNAS/ppk2-api-python).
+`capture` calls your function for every sample and stops when it
+returns `False`.
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) — the three layers, the
-  session lifecycle (with sequence diagram), the threading model.
-- [Protocol notes](docs/PROTOCOL.md) — opcodes, metadata format,
-  sample frame, stream reassembly, calibration formula, CSV
-  format, known firmware caveats.
-- [`firmware/bench-dut/README.md`](firmware/bench-dut/README.md) — the reference DUT: wiring,
-  per-board pins, build/flash recipes.
-- [`validation/README.md`](validation/README.md) — the A/B capture-comparison harness.
+The documentation is in [`docs/`](docs/index.md) and builds into a site
+with `just docs`. It has three parts.
 
-## License
+| Part | Pages |
+|---|---|
+| Using it | [Getting started](docs/use/getting-started.md), [the `ppk2` command](docs/use/command.md), [recipes](docs/use/recipes.md), [architecture](docs/use/architecture.md), [API reference](docs/use/api.md), [troubleshooting](docs/use/troubleshooting.md) |
+| How it measures | [Measurement principle](docs/measure/principle.md), [protocol](docs/measure/protocol.md), [file formats](docs/measure/formats.md) |
+| Validation against Nordic's app | [Method](docs/validation/method.md), [results](docs/validation/results.md) |
 
-Apache-2.0 OR MIT, at your option.
+The package has three layers, each usable alone: `ppk2.protocol` for
+the bytes, `ppk2.client` for the device, `ppk2.cli` for the command.
+The [changelog](CHANGELOG.md) lists what 0.1.0 contains and its limits.
+
+## How the numbers are checked, in short
+
+The parser gives the same samples as the parser of Nordic's app on a
+recorded stream that crosses all five measurement ranges. Captures of
+the same bench by the app and by `ppk2 capture` agree within 0.31 % on
+the energy of each marked region.
+
+![The app's capture and this tool's, overlaid, on the nRF54LM20 DK](validation/evidence/trace_demo/plots/nrf54lm20_ampere_parity.png)
+
+All of this was measured on one PPK2. The reference is Nordic's app,
+not a calibrated instrument.
+
+## Development
+
+```sh
+just sync        # install into .venv (needs uv and just)
+just ci          # type check, lint, unit tests
+just test-hw     # hardware tests: needs a PPK2 and the bench firmware
+just docs        # build the documentation site into site/
+```
+
+## Origin and licence
+
+The protocol code was written from a reading of the source of Nordic's
+app ([pc-nrfconnect-ppk](https://github.com/nordicsemi/pc-nrfconnect-ppk))
+and from measurements on a bench. It contains none of that source,
+whose licence allows reading and running it but not redistributing it.
+The same goes for IRNAS's
+[ppk2-api-python](https://github.com/IRNAS/ppk2-api-python), which is
+GPL-2.0.
+
+Nordic also has a PPK2 script of its own, the `ppk2` skill of Nordic
+MCP: a local server that lets an AI assistant drive the kit and watch a
+live trace. It is a separate program with a different aim.
+
+ppk2-lib is not affiliated with or endorsed by Nordic Semiconductor.
+PPK2, Power Profiler Kit and nRF are Nordic's product names.
+
+Licensed under Apache-2.0 or MIT, at your option.

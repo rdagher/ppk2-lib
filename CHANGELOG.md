@@ -1,78 +1,57 @@
 # Changelog
 
-## Unreleased
+## 0.1.0
 
-- Discovery: recovery-grade probe escalation. For a window after any
-  session ends (clean close or killed process), the firmware stops
-  answering `GET_METADATA` and the CDC driver can transiently refuse
-  opens — the quick probe then misreported the data port as idle/busy
-  (`ppk2 list`, `find_ppk2`). When the quick pass finds no data port,
-  discovery now escalates once per candidate: stop + `RESET`, ride out
-  the USB re-enumeration, reopen with retry, and query with the
-  session's metadata budget. Healthy-path cost unchanged.
+First public release. Experimental: the API may change between 0.x
+versions.
 
-## 0.1.0 — first experimental release (2026-08)
+### Command line
 
-Initial public release. Library + CLI, one install.
+- `ppk2 list`, `discover` and `metadata` find a PPK2 and show its
+  calibration.
+- `ppk2 capture` records current and digital inputs in Ampere meter or
+  Source meter mode, to the 11-column CSV that Nordic's Power Profiler
+  app exports, or to a session file in the app's `.ppk2` format.
+- `ppk2 convert` turns a CSV capture into a `.ppk2` file.
+- `ppk2 power on|off` switches power to the device under test (DUT),
+  and `--hold` keeps it on until Ctrl-C.
+- `ppk2 run -- <command>` powers the DUT for the duration of a command
+  and can record meanwhile.
+- Exit codes: 1 for a device or session error with a one-line message,
+  2 for a usage error, 130 after Ctrl-C. `run` returns the command's
+  code.
 
-### Protocol layer (`ppk2.protocol`, stdlib-only)
+### Library
 
-- Opcode table with wire-byte semantics documented per member.
-- Metadata parser: indexed per-range keys (`R0`…`UG4`),
-  chunk-tolerant accumulation, strict calibration-field
-  validation (missing → `MissingField`, unparseable or
-  non-finite → `InvalidValue`), soft defaults for the two
-  runtime-state keys (VDD, mode).
-- Sample decoder for the 4-byte word (14-bit ADC, 3-bit range,
-  6-bit counter, 8 logic channels).
-- Calibration formula matching Nordic's `getAdcResult`
-  term-for-term; regression-pinned against a captured device.
-- Stream parser: 4-byte alignment with cross-read remainder,
-  counter-resync with corruption buffering and NaN data-loss
-  placeholders, GUI noise-floor clamp, post-range-change EMA
-  spike filter with tunable knobs (`SpikeFilter`).
+- `ppk2.protocol`: commands, calibration text, sample decoding,
+  calibration formula and stream parser, on the standard library
+  alone.
+- `ppk2.client`: discovery of the data port, and a `Session` with
+  Ampere meter and Source meter modes, power switching, user gain, a
+  voltage limit and spike-filter settings.
+- Lost samples are reported and keep their place in the trace.
+- A session leaves the PPK2 quiet for the next program, and opens a
+  PPK2 that another program left streaming.
 
-### Client layer (`ppk2.client`)
+### Checked against Nordic's app
 
-- Probe-based discovery: VID/PID filter (`1915:c00a`), data-port
-  identification by metadata probe, `list_ppk2s` with per-VCOM
-  status, exclusive serial opens.
-- `Session` context manager: recover-and-negotiate handshake
-  with retry/backoff, source + ammeter modes, DUT power FET
-  control with boot-inclusive t=0 capture support, host-side
-  per-range user gain, host-enforced voltage limit ceiling,
-  spike-filter configuration, data-loss notification hook.
+- The parser gives the same samples as the app's on a recorded stream
+  that crosses all five measurement ranges.
+- Captures of the same bench by the app and by `ppk2 capture` agree:
+  energy per marked region within 0.31 %, and the same distribution at
+  the noise floor. See [`validation/evidence/`](validation/evidence/).
+- Hardware tests and their bench firmware are in
+  [`tests/hil/`](tests/hil/README.md).
 
-### CLI (`ppk2`)
+### Limits
 
-- `list`, `discover`, `metadata`, `power on|off [--hold]`,
-  `capture`, `run -- <cmd>`, `version`.
-- GUI-parity 11-column CSV output (byte-format-identical to the
-  Nordic Power Profiler's export).
-- `--source/--vdd` modes, `--serial`/`--port` selection,
-  repeatable `--user-gain RANGE:GAIN`.
-- Deterministic exit codes: device/session errors → 1 with a
-  one-line stderr message, usage errors → 2, SIGINT → 130,
-  `run` propagates the child's code (127 not-found, 128+N
-  signal-killed).
-
-### Validation & bench
-
-- [`validation/`](validation/): port-agnostic A/B capture comparison harness
-  (schema, sample rate, current statistics, KS test, per-pin
-  duty/edge rates) with a pass/fail acceptance contract.
-- [`firmware/bench-dut/`](firmware/bench-dut/): reference Zephyr DUT (D0 5 Hz,
-  D1 0.5 Hz) for the nRF52840, nRF54L15, and nRF54LM20 DKs —
-  hexes built with `just hex` or by the CI firmware matrix.
-- Cross-validated on live hardware against the Nordic Power
-  Profiler GUI — noise floor KS 0.0002, workload-region KS
-  ≤ 0.014, per-region energy within 0.31 % (see the committed
-  comparison rounds under
-  [`validation/evidence/`](validation/evidence/)).
-
-### Known limitations
-
-- Experimental API — breaking changes possible between 0.x.
-- Sync only (no asyncio surface).
-- Windows: fast-tier tested, not yet bench-validated.
-- Trigger-mode protocol not implemented (sampling mode only).
+- Synchronous only.
+- Windows runs the unit tests but has not been tried on a bench, and
+  `power on --hold` and Ctrl-C handling in `run` use POSIX calls.
+- Only the sampling mode of the PPK2 is covered, not its trigger mode.
+- A capture starts about 0.1 s before the DUT's power comes up, and
+  the rate in its summary reads high on short captures. The
+  [protocol page](docs/measure/protocol.md#10-known-caveats) has
+  the measurements.
+- `.ppk2` files follow the layout the app documents. Loading one in the
+  app itself is still to be confirmed.

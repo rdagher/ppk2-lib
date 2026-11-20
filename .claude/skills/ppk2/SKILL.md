@@ -1,114 +1,99 @@
 ---
 name: ppk2
-description: Drive a Nordic PPK2 power profiler with the ppk2-lib CLI/library — discover devices, capture current+logic traces (source or ammeter mode), flash a DUT powered through the PPK2, and attribute energy to firmware regions via GPIO trace markers. Use when working with PPK2 hardware, power measurements, or energy attribution in this repo.
+description: Drive a Nordic PPK2 with the ppk2 command or library. Find the device, capture current and digital inputs in Ampere meter or Source meter mode, power the DUT while it is flashed. Use when working with PPK2 hardware or power measurements in this repo.
 ---
 
-# ppk2 — capture, flash, attribute
+# ppk2
 
-> **Experimental repo.** APIs may change between 0.x versions.
-> Verify claims against `--help` and the docs before relying on them.
+This package is experimental: check options against `ppk2 --help`
+before relying on them.
 
-## Ground rules
+## Rules
 
-- One process owns the PPK2 at a time (exclusive serial open). If the
-  Nordic Power Profiler GUI is running, captures fail with
-  `DataPortNotFound` — quit the GUI first (or pass `--port`).
-- Start every session with `ppk2 list` — shows each PPK2's USB serial
-  and per-VCOM status (`data` / `idle` / `busy`).
-- Exit codes: device/session errors → 1 (one-line stderr), usage → 2,
-  Ctrl-C → 130, `ppk2 run` propagates the child's code (127 = not
-  found, 128+N = signal-killed).
-- All configuration (`--user-gain`, library `set_spike_filter`,
-  `set_voltage_limit`, `set_user_gain`) must happen **before**
-  `start_measuring()`; nothing persists across sessions except the
-  firmware's VDD + mode.
+- Only one program can hold the PPK2. If Nordic's Power Profiler app is
+  open, captures fail with `DataPortNotFound`. Close the app first.
+- Begin with `ppk2 list`. It shows each PPK2's USB serial and whether
+  each port is `data`, `idle` or `busy`.
+- Exit codes: 1 for a device or session error with a one-line message,
+  2 for a usage error, 130 after Ctrl-C. `ppk2 run` returns the
+  command's code (127 not found, 128+N killed by signal N).
+- Power to the device under test (DUT) ends with the command. The PPK2
+  cuts it when its port closes. Only `ppk2 power on --hold` or a
+  running `ppk2 run` keeps a DUT up.
+- Use Nordic's names: Ampere meter mode, Source meter mode, DUT,
+  digital inputs (D0 to D7, on the logic port), supply voltage.
+- Settings (`--user-gain`, `set_spike_filter`, `set_voltage_limit`,
+  `set_user_gain`) go before `start_measuring()`. Nothing survives a
+  session except the PPK2's own voltage and mode.
 
 ## Capture
 
 ```sh
-# Ammeter mode (PPK2 in series with the DUT's supply):
-ppk2 capture --out trace.csv --seconds 30
-
-# Source mode (PPK2 supplies the DUT):
-ppk2 capture --source --vdd 3.0 --out trace.csv --seconds 30
+ppk2 capture --out trace.csv --seconds 30                       # Ampere meter mode
+ppk2 capture --source --vdd 3.0 --out trace.csv --seconds 30    # Source meter mode: the PPK2 powers the DUT
+ppk2 capture --out trace.ppk2 --seconds 30                      # a file in the app's .ppk2 format
+ppk2 convert trace.csv trace.ppk2                               # the same, from a CSV
 ```
 
-Captures are boot-inclusive: the DUT power-cycles at t=0, so boot
-inrush lands at the start of the file. Output is the Nordic GUI's
-11-column CSV (`Timestamp(ms),Current(uA),D0-D7,D0..D7`, D0 leftmost
-in the bit string, 100 kSPS). In ammeter mode `--vdd` still matters:
-it feeds the calibration formula's VDD term — set it to the DUT's
-real rail voltage.
+A capture switches the DUT on as it starts, so the boot is at the start
+of the file, about 0.1 s in. The CSV has the 11 columns of the app's
+export,
+`Timestamp(ms),Current(uA),D0-D7,D0..D7`, with D0 the leftmost
+character of `D0-D7`, at 100,000 samples per second. In Ampere meter
+mode `--vdd` feeds the calibration: give the DUT's real supply voltage.
+
+Digital inputs: on the logic port, D0 to D7 to GPIOs, `GND` to the
+DUT's ground, `VCC` to the DUT's VDD.
 
 ## Flash a DUT powered through the PPK2
 
-The PPK2's output switch defaults open → the DUT is dark and SWD is
-dead ("debug port unavailable" errors). Two recipes:
+Until a command switches power on, the DUT is off and its debug port
+does not answer.
 
 ```sh
-ppk2 run --source --vdd 3.0 -- west flash          # one-shot
-ppk2 power on --source --vdd 3.0 --hold            # hold in shell 1,
-# flash from shell 2, Ctrl-C to release
+ppk2 run --source --vdd 3.0 -- west flash    # power it for one command
+ppk2 power on --source --vdd 3.0 --hold      # or hold it, and flash from another shell
 ```
 
-Ammeter mode: same recipes without `--source`. After flashing,
-nRF chips stay in debug-interface mode (~1 mA extra) until a power
-cycle — `ppk2 capture`'s built-in power cycle clears it.
+In Ampere meter mode, drop `--source`. After flashing, an nRF chip stays in
+debug mode and draws about 1 mA more until it is power-cycled. A
+capture power-cycles it.
 
-## Energy attribution (trace markers)
+## Bench notes
 
-[`firmware/trace-demo/`](../../../firmware/trace-demo/) is the worked example: firmware brackets code
-regions with GPIO markers wired to the PPK2's logic port
-([`include/ppk2_trace.h`](../../../firmware/trace-demo/include/ppk2_trace.h) C API,
-[`include/ppk2_trace.hpp`](../../../firmware/trace-demo/include/ppk2_trace.hpp) C++ RAII
-guard), then:
+- nRF52840 DK: measure with SW6 on "nRF only". Otherwise the interface
+  chip adds about 85 mA.
+- nRF54L15 and nRF54LM20 DKs: PPK2 in series at the current-measurement
+  header. The nRF54LM20 DK idled at about 4 µA with everything
+  connected; the nRF54L15 DK has not been measured.
+- Idle currents drift between captures. Compare a signal with two
+  levels region by region, not over the whole trace
+  ([`validation/README.md`](../../../validation/README.md)).
 
-```sh
-python firmware/trace-demo/attribute.py trace.csv --vdd 3.0
-```
-
-reports per-region energy (D0/D1-marked pulses, sleep floor).
-Wiring: logic-port D0/D1 to the marker pins, **GND to DUT ground and
-VCC to the DUT's VDD rail** (VCC is the logic-threshold reference).
-
-## Bench specifics worth knowing
-
-- nRF52840 DK: measure with SW6 = "nRF only" (else ~85 mA of
-  interface-MCU floor); LEDs are disconnected in that position.
-- nRF54L15/LM20 DKs: PPK2 in series at the current-measurement
-  header; board routing configured via Nordic's Board Configurator
-  app; µA-scale floors with everything connected.
-- Idle-floor comparisons between separate captures drift (thermal);
-  compare duty-cycled signals per-region, not full-trace
-  (see [`validation/README.md`](../../../validation/README.md) and
-  [`validation/evidence/`](../../../validation/evidence/)).
-
-## Library (Python)
+## From Python
 
 ```python
-from ppk2 import Session, Mode, find_ppk2
+from ppk2 import Mode, Session, find_ppk2
 
-with Session.open(find_ppk2().device) as s:
-    s.set_mode(Mode.AMPERE)          # or Mode.SOURCE
-    s.set_source_voltage(3000)       # mV
-    s.start_measuring()
-    s.power_on()
-    s.capture(lambda sample: keep_going)   # False stops the loop
+with Session.open(find_ppk2().device) as session:
+    session.set_mode(Mode.AMPERE)        # or Mode.SOURCE
+    session.set_source_voltage(3000)     # mV
+    session.start_measuring()
+    session.power_on()
+    session.capture(lambda sample: keep_going)   # returning False ends the capture
 ```
 
-The capture callback must eventually return False — it is the loop's
-only exit. Layers: `ppk2.protocol` (stdlib-only wire primitives),
-`ppk2.client` (pyserial driver), `ppk2.cli`. Details:
-[`docs/ARCHITECTURE.md`](../../../docs/ARCHITECTURE.md),
-[`docs/PROTOCOL.md`](../../../docs/PROTOCOL.md).
+The callback is the only way out of `capture`: it must return `False`
+at some point. More in
+[`docs/use/architecture.md`](../../../docs/use/architecture.md) and
+[`docs/measure/protocol.md`](../../../docs/measure/protocol.md).
 
-## Validation harness
+## Compare two captures
 
 ```sh
-just compare-cli A.csv B.csv        # statistical diff of two captures
-just cross-validate BIN_A BIN_B     # capture with two binaries + diff
+just compare-cli A.csv B.csv        # statistics of two captures, side by side
+just cross-validate BIN_A BIN_B     # capture with two binaries, then compare
 ```
 
-Acceptance contract: headers byte-identical, mean Δ ±1 %, KS < 0.05
-(calibrated for steady signals — condition on regions for
-duty-cycled ones).
+It passes when the headers are identical, the means are within 1 % and
+the KS statistic is below 0.05.

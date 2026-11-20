@@ -1,0 +1,132 @@
+# Validation: results
+
+What the three levels of the [method](method.md) found.
+
+| Level | Result | Run on |
+|---|---|---|
+| The parser, 600 samples | Every current equal to three decimals, every digital byte identical | The current code |
+| Noise floor, 60 s | Same header, same distribution (KS 0.0002) | The build of 2026-07-17 |
+| Workload on an nRF52840 DK | Energy per marked region within 0.31 % | The build of 2026-08-19 |
+| Workload on an nRF54LM20 DK | Energy per marked region within 0.03 % | The build of 2026-08-19 |
+| Ten hardware tests | All pass | The current code, 2026-11-20 |
+
+## The parser
+
+On the 600 recorded samples, this package and the app's parser give
+the same current to three decimals for every sample, and the same
+digital inputs. The stream crosses all five measurement ranges, so the
+calibration of each range and the spike filter are part of what agrees.
+
+## Noise floor
+
+A PPK2 in Ampere meter mode with nothing connected, 60 s with each
+tool. The app reports any current below 0.2 µA as zero, and so must
+`ppk2 capture`.
+
+| Capture | Samples at zero | Samples above zero | Their maximum | Their mean | Negative | Between 0 and 0.2 µA |
+|---|---:|---:|---:|---:|---:|---:|
+| App | 99.852 % | 8,880 | 0.347 µA | 0.240 µA | 0 | 0 |
+| `ppk2 capture` | 99.868 % | 7,955 | 0.435 µA | 0.241 µA | 0 | 0 |
+
+The headers are identical and the KS statistic between the two is
+0.0002. The few samples above the floor are noise spikes, and their
+number varies from one capture to the next. The two files of this round
+were too large to keep; the comparison report is stored.
+
+## Workload firmware
+
+The same firmware on two dev kits, captured for about 30 s with each
+tool. It raises D0 around a 600 ms workload and D1 around a sweep of
+ten workloads.
+
+### nRF52840 DK, Source meter mode at 3.0 V
+
+| | App | `ppk2 capture` | Difference |
+|---|---|---|---|
+| D0 workloads | 31 × 6,734.06 ± 4.27 µJ, 596.96 ms | 31 × 6,715.35 ± 19.78 µJ, 596.69 ms | 0.28 % |
+| D1 sweeps | 3 × 70,264.10 ± 37.69 µJ, 7,470.81 ms | 3 × 70,046.36 ± 7.88 µJ, 7,468.04 ms | 0.31 % |
+| Pulses at boot | 3 | 3 | |
+| Idle mean | 646.01 µA | 636.86 µA | 1.4 % |
+
+After the first 2.5 s, the KS statistic inside the workload is 0.0253,
+with means of 3,760.6 and 3,752.5 µA. At idle it is 0.1460: the idle
+level moved by about 9 µA in the minutes between the two captures.
+
+Over the whole trace, the means are 0.51 % apart and the KS statistic
+is 0.0506, just over the 0.05 limit. That is the effect of the two
+levels and of the idle drift, which is why the round is judged per
+region.
+
+![Both captures of the nRF52840 DK, overlaid, and the distribution of the current per region](../img/parity_nrf52840.png)
+
+### nRF54LM20 DK, Ampere meter mode at 3.3 V
+
+| | App | `ppk2 capture` | Difference |
+|---|---|---|---|
+| D0 workloads | 30 × 2,860.85 ± 2.40 µJ, 599.71 ms | 31 × 2,861.75 ± 3.85 µJ, 599.97 ms | 0.03 % |
+| D1 sweeps | 3 × 28,693.75 ± 15.23 µJ, 7,497.86 ms | 3 × 28,688.56 ± 27.49 µJ, 7,500.58 ms | 0.02 % |
+| Idle median | 4.25 µA | 4.29 µA | |
+
+After the first 2.5 s, the KS statistic is 0.0065 inside the workload
+and 0.0091 at idle. Over the whole trace the means are 0.35 % apart and
+the KS statistic is 0.0048.
+
+![Both captures of the nRF54LM20 DK, overlaid, and the distribution of the current per region](../img/parity_nrf54lm20.png)
+
+## Hardware tests
+
+All ten pass. They were last run on 2026-11-20 with the current code,
+in Source meter mode at 3.3 V on an nRF54LM20 DK. The run in Ampere
+meter mode of the same day predates the last changes to how a session
+closes.
+
+## Where this package differs from the app
+
+On purpose, and outside what the comparisons above exercise:
+
+- Lost samples. The app's code duplicates held samples, counts a lost
+  gap one short, and places the samples received after a gap before
+  it. This package emits each sample once, counts the full gap, and
+  keeps the order. The
+  [protocol page](../measure/protocol.md#5-putting-the-stream-back-together)
+  has the four points with their line references.
+- Where a capture starts. In the app you start the capture and enable
+  power by hand. `ppk2 capture` does both, and its file begins about
+  0.1 s before the power comes up.
+
+And one comparison that has not been made: a `.ppk2` file written by
+this package has not yet been opened in the app.
+
+## Limits
+
+- One PPK2, under macOS.
+- The reference is the app. Agreement with it says nothing about the
+  absolute accuracy of the PPK2, which Nordic gives as better than
+  ±20 %.
+- The whole-capture rounds were taken with the builds of their day,
+  three and four months before this release. The parser check and the
+  hardware tests run on the current code. A fresh round with the
+  current build is still to be done.
+
+## Do it again
+
+The captures, the firmware and the scripts of the rounds are in
+[`validation/evidence/`](https://github.com/rdagher/ppk2-lib/tree/main/validation/evidence),
+the recording and its reference in
+[`tests/fixtures/`](https://github.com/rdagher/ppk2-lib/tree/main/tests/fixtures).
+From a checkout:
+
+```sh
+# the parser against the stored reference
+just test
+
+# energy per marked region of a stored capture
+python validation/evidence/trace_demo/firmware/attribute.py \
+    validation/evidence/trace_demo/captures/nrf54lm20_ampere_cli.csv.gz --vdd 3.3
+
+# the plots above, and the KS statistic and mean per region
+just plots
+
+# two captures of your own bench
+uv run --group validation python -m validation.compare_cli app.csv ours.csv --skip-initial-s 2
+```
