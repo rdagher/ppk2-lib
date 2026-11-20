@@ -1,4 +1,4 @@
-# ppk2-lib — task runner.
+# ppk2-lib: task runner.
 #
 # `just <recipe>`; `just --list` enumerates. Recipes wrap uv,
 # pytest, ruff, pyright, and the validation harness.
@@ -9,9 +9,9 @@ _default:
 
 # ─── Setup ──────────────────────────────────────────────────────
 
-# Install everything: runtime deps, dev deps, optional fast extra.
+# Install runtime + dev deps into .venv.
 sync:
-    uv sync --all-extras
+    uv sync
 
 # ─── Fast tier (no hardware) ────────────────────────────────────
 
@@ -34,7 +34,8 @@ ci: check test
 
 # ─── HIL tier (bench machine, PPK2 plugged in) ─────────────────
 
-# Run the @pytest.mark.hardware tests (real PPK2 required).
+# Run the @pytest.mark.hardware tests (real PPK2 + bench DUT required).
+# Ampere meter mode by default; PPK2_HIL_SOURCE_MV=3300 for Source meter mode.
 test-hw:
     uv run pytest -m hardware -s
 
@@ -43,7 +44,12 @@ ci-hil: ci test-hw
 
 # ─── Validation (port-agnostic A/B captures) ───────────────────
 
-# Compare two GUI-parity CSVs and emit a Markdown report (no hardware).
+# Redraw the validation plots from the stored captures (no hardware).
+# `git status` is clean afterwards if the plots are up to date.
+plots:
+    uv run --group validation python validation/evidence/trace_demo/make_plots.py
+
+# Compare two CSV captures and write a Markdown report (no hardware).
 compare-cli a b:
     uv run --group validation python -m validation.compare_cli {{a}} {{b}}
 
@@ -58,6 +64,14 @@ cross-validate binary_a binary_b seconds="60":
 # Build wheels + sdist into ./dist/.
 build:
     uv build
+
+# Build the documentation site into ./site/.
+docs:
+    uv run --group docs zensical build --clean
+
+# Preview the documentation site on localhost:8000.
+docs-serve:
+    uv run --group docs zensical serve
 
 # Wipe build / cache artefacts (keep .venv).
 clean:

@@ -1,4 +1,4 @@
-"""``ppk2 list`` — enumerate connected PPK2s and tag each VCOM's probe status."""
+"""``ppk2 list``: enumerate connected PPK2s and mark each port's probe status."""
 
 import typer
 
@@ -8,12 +8,12 @@ from ppk2.client.discovery import PortStatus
 _STATUS_TAGS: dict[PortStatus, str] = {
     "data": "[data port]",
     "idle": "[idle]",
-    "busy": "[busy — held by another process?]",
+    "busy": "[busy: held by another process?]",
 }
 
 
 def list_devices() -> None:
-    """Print one block per physical PPK2 with each VCOM's probe status.
+    """Print one block per physical PPK2 with each port's probe status.
 
     Exit code 0 when every enumerated device has an identified data
     port; 1 when none is plugged in or when a device's data port could
@@ -31,7 +31,7 @@ def list_devices() -> None:
         if dev.data_port is None:
             unidentified = True
             typer.echo(
-                "  (data port not identified — close the nRF Connect Power "
+                "  (data port not identified: close the nRF Connect Power "
                 "Profiler if it's open, else pass --port)"
             )
     if unidentified:

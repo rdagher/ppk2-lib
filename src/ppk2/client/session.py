@@ -1,16 +1,14 @@
-"""PPK2 session lifecycle — open, mode, stream, teardown.
+"""PPK2 session lifecycle: open, configure, stream, tear down.
 
-Implements the PPK2 setup and teardown sequence (recover -> negotiate
-metadata -> mode -> stream -> close). The Python idiom for "automatic
-teardown on scope exit" is a context manager — [`Session`][] is
-designed to be used with ``with``.
+``Session`` is a context manager; leaving the block stops the stream,
+switches the DUT off and closes the port.
 
 >>> with Session.open(port) as s:
 ...     s.set_mode(Mode.AMPERE)
 ...     s.set_source_voltage(3300)
 ...     s.start_measuring()
 ...     s.power_on()
-...     s.capture(lambda sample: True)
+...     s.capture(on_sample)  # until on_sample returns False
 """
 
 from collections.abc import Callable
@@ -37,19 +35,19 @@ _BAUD_RATE = 115_200
 _READ_TIMEOUT_S = 0.1
 _OPEN_SETTLE_S = 0.05
 _START_MEASURING_SETTLE_S = 0.2  # see Session.start_measuring for what this guards against
-_POWER_ON_PRE_DRAIN_S = 0.3  # clear the backlog so the FET toggle lands on a live stream
+_POWER_ON_PRE_DRAIN_S = 0.3  # clear the backlog so the power switch lands on a live stream
 _METADATA_READ_TIMEOUT_S = 2.5
+_QUIET_S = 0.05  # no byte for this long: the stream has ended
+_QUIET_CAP_S = 0.5  # how long to wait for that, at most
 _HANDSHAKE_ATTEMPTS = 3
 _OPEN_ATTEMPTS = 3
 
-#: Lower bound the firmware accepts for ``REGULATOR_SET``, in millivolts.
-#: Below this and the on-board LDO won't regulate cleanly.
+#: Lowest ``REGULATOR_SET`` value the firmware accepts, in millivolts.
+#: Below it the on-board LDO does not regulate cleanly.
 VOLTAGE_LIMIT_HARDWARE_MIN_MV: int = 800
 
-#: Upper bound the PPK2 hardware can supply via the on-board regulator,
-#: in millivolts. Wired to the LDO; this is a true hard ceiling. Any
-#: [`Session.set_voltage_limit`][] call is itself clamped to this bound
-#: — the user-set limit is purely a lower-the-ceiling knob.
+#: Highest voltage the on-board regulator can supply, in millivolts: a
+#: hard ceiling. ``Session.set_voltage_limit`` can only lower it.
 VOLTAGE_LIMIT_HARDWARE_MAX_MV: int = 5000
 
 
@@ -61,60 +59,51 @@ class SerialIOError(SessionError):
     """Underlying serial I/O failed."""
 
 
-class MetadataParseError(SessionError):
-    """Metadata bytes arrived but didn't parse."""
-
-    def __init__(self, cause: MetadataError) -> None:
-        """Wrap the underlying [`ppk2.protocol.metadata.MetadataError`][] cause for diagnostics."""
-        super().__init__(f"metadata parse failed: {cause}")
-        self.cause = cause
-
-
 class HandshakeFailed(SessionError):
-    """The metadata recovery loop exhausted all attempts.
+    """The metadata handshake ran out of attempts.
 
-    ``attempts`` is the number tried; ``last`` is a human-readable
-    diagnostic for the final failure (write failure, no END, parse error).
+    ``attempts`` is how many were made; ``last`` describes the final
+    failure (write error, no END, parse error).
     """
 
     def __init__(self, attempts: int, last: str) -> None:
-        """Build a HandshakeFailed error, recording the attempt count and last diagnostic."""
         super().__init__(f"metadata recovery failed after {attempts} attempts; last: {last}")
         self.attempts = attempts
         self.last = last
 
 
 class Mode(IntEnum):
-    """PPK2 measurement mode. Discriminant is the wire byte."""
+    """PPK2 measurement mode; the value is the wire byte.
+
+    ``AMPERE`` is the Ampere meter mode of Nordic's app: the DUT has its
+    own supply and the PPK2 sits in series. ``SOURCE`` is its Source
+    meter mode: the PPK2 supplies the DUT.
+    """
 
     AMPERE = 0x01
     SOURCE = 0x02
 
 
 class Session:
-    """An open PPK2 session.
+    """An open PPK2 session: the serial port plus the device's calibration.
 
-    Wraps the serial port plus the parsed per-device calibration. Use as
-    a context manager (``with Session.open(port) as s: …``) so the
-    teardown (stop streaming + open FET + close port) runs even on
-    exception.
+    Use it as a context manager (``with Session.open(port) as s:``) so
+    the teardown runs even on an exception.
 
-    Threading: one [`Session`][] per thread. The underlying serial
-    port is not shareable by reference across threads.
+    One ``Session`` per thread: the serial port underneath is not safe
+    to share.
     """
 
     def __init__(self, port: serial.Serial, coeffs: CalibrationCoefficients) -> None:
-        """Wrap a pre-opened serial port and its parsed calibration.
+        """Wrap an already-open port and its parsed calibration.
 
-        Most callers should use [`Session.open`][] instead, which runs
-        the open + handshake. This constructor exists for tests that
-        wire in a pre-built mock port + coefficients.
+        Prefer ``Session.open``, which opens the port and runs the
+        handshake.
 
-        The initial VDD setpoint is seeded from ``coeffs.vdd_mv`` — the
-        value the firmware reported at metadata-read time, which
-        survives across host disconnects. A PPK2 last left in source
-        mode at 1800 mV starts the next session at 1800 mV; a subsequent
-        [`set_source_voltage`][] overrides it. Matches the Nordic GUI.
+        The supply voltage starts at ``coeffs.vdd_mv``, the value the
+        firmware reported and keeps across host disconnects: a PPK2
+        left at 1800 mV starts the next session at 1800 mV until
+        ``set_source_voltage`` says otherwise. Same as Nordic's app.
         """
         self._port = port
         self._coeffs = coeffs
@@ -128,13 +117,11 @@ class Session:
 
     @classmethod
     def open(cls, device: str) -> "Session":
-        """Open ``device`` and run the recover-and-negotiate handshake.
+        """Open ``device`` and run the metadata handshake.
 
-        Up to 3 attempts, with 0.5 s / 1.0 s backoffs between them
-        (no sleep after the final failure — 1.5 s total backoff).
-        Designed to handle the macOS USB CDC wedge that sometimes
-        follows a peer process's previous capture, especially if that
-        capture sent ``RESET`` on close.
+        Up to 3 attempts, 0.5 s then 1.0 s apart. The retries are for
+        the macOS USB CDC wedge that can follow another process's
+        capture, especially one that sent ``RESET`` on close.
         """
         last_err: SessionError = SerialIOError("open: never attempted")
         for attempt in range(_OPEN_ATTEMPTS):
@@ -144,7 +131,7 @@ class Session:
                 last_err = exc
                 if attempt == _OPEN_ATTEMPTS - 1:
                     break
-                # 0.5 s then 1.0 s — 1.5 s total backoff across 3 attempts.
+                # 0.5 s then 1.0 s: 1.5 s total backoff across 3 attempts.
                 sleep(0.5 * (1 << attempt))
                 continue
             else:
@@ -153,14 +140,13 @@ class Session:
 
     @staticmethod
     def _try_open_once(device: str) -> tuple[serial.Serial, CalibrationCoefficients]:
-        """One open + handshake attempt. Caller retries on failure."""
+        """One open + handshake attempt."""
         try:
-            # exclusive=True (POSIX: flock LOCK_EX | LOCK_NB) makes
-            # contention visible both ways: this open fails if any
-            # lock-respecting process holds the port, and while the
-            # session lives, lock-respecting openers fail against us.
-            # Kernel-enforced exclusivity (the Nordic GUI's TIOCEXCL)
-            # already rejects the open unconditionally.
+            # exclusive=True (POSIX flock) makes contention visible both
+            # ways: this open fails if a lock-respecting process holds
+            # the port, and theirs fail while this session lives. When
+            # Nordic's app holds it, its TIOCEXCL rejects the open at
+            # the kernel.
             port = serial.Serial(
                 device,
                 baudrate=_BAUD_RATE,
@@ -171,34 +157,40 @@ class Session:
         except serial.SerialException as exc:
             raise SerialIOError(f"serial open: {exc}") from exc
         sleep(_OPEN_SETTLE_S)
-        _empty_serial(port)
-        coeffs = _recover_and_negotiate(port)
+        try:
+            _empty_serial(port)
+            coeffs = _recover_and_negotiate(port)
+        except BaseException:
+            # Left open, the port would keep its lock and fail the next attempt.
+            with suppress(Exception):
+                port.close()
+            raise
         return port, coeffs
 
     # ── Context manager protocol ───────────────────────────────────────
 
     def __enter__(self) -> "Session":
-        """Enter the with-block; the open + handshake already ran in [`open`][]."""
         return self
 
     def __exit__(self, *_args: object) -> None:
-        """Exit the with-block by running [`close`][]."""
         self.close()
 
     def close(self) -> None:
-        """Tear down the session: stop streaming, best-effort FET-open, close the port.
+        """Stop the stream, cut power to the DUT, wait for the stream to end, close the port.
 
-        Idempotent. Errors during teardown are silenced — we deliberately
-        do NOT send ``RESET`` because that triggers a ~200-500 ms USB CDC
-        re-enumeration on macOS that frequently wedges the next session.
+        Idempotent; errors are swallowed. No ``RESET`` is sent: on macOS it
+        triggers a USB re-enumeration (~200-500 ms) that often wedges the next
+        session.
 
-        The ``DEVICE_RUNNING_SET(off)`` here is best-effort only: it is
-        sent right after ``AVERAGE_STOP``, and the firmware is known to
-        silently drop FET toggles when no sample stream is active (see
-        [`Opcode.DEVICE_RUNNING_SET`][ppk2.protocol.opcode.Opcode.DEVICE_RUNNING_SET]).
-        Callers that must guarantee the FET opens should call
-        [`power_off`][] while still measuring — the order
-        [`capture`][] and ``ppk2 power`` use.
+        The port is not closed while samples still arrive. Closed right
+        after ``AVERAGE_STOP``, the PPK2 can miss the command and keep
+        streaming, and what was in flight goes to whoever opens the port
+        next: a client that asks for the metadata first, like Nordic's
+        own tools, then gets no usable answer.
+
+        DUT power does not outlive the session: the PPK2 cuts it by itself
+        when the port closes (it follows the DTR line), so this holds even
+        when the process is killed and this method never runs.
         """
         if self._closed:
             return
@@ -207,54 +199,47 @@ class Session:
             self._port.write(bytes([Opcode.AVERAGE_STOP.byte()]))
         with suppress(serial.SerialException):
             self._port.write(bytes([Opcode.DEVICE_RUNNING_SET.byte(), 0x00]))
+        self._wait_for_quiet()
         with suppress(serial.SerialException):
             self._port.close()
 
     # ── Accessors ──────────────────────────────────────────────────────
 
     def coefficients(self) -> CalibrationCoefficients:
-        """Per-device calibration block read at session open."""
+        """Per-device calibration read at session open."""
         return self._coeffs
 
     # ── Configuration ──────────────────────────────────────────────────
 
     def set_mode(self, mode: Mode) -> None:
-        """Select the PPK2's measurement mode.
+        """Select the measurement mode.
 
-        The firmware accepts ``SET_POWER_MODE`` only while no sample
-        stream is active. Call this BEFORE [`start_measuring`][].
+        Call it before ``start_measuring``. A change sent during a
+        stream was once reported as ignored; on the unit tested it was
+        applied, but nothing here relies on it.
         """
         self._write(bytes([Opcode.SET_POWER_MODE.byte(), int(mode)]))
 
     def set_source_voltage(self, mv: int) -> None:
-        """Set the source-mode VDD setpoint in millivolts.
+        """Set the supply voltage in millivolts.
 
-        In ammeter mode the regulator itself is inactive, but the value
-        still feeds the calibration formula's VDD-dependent term — set
-        it to the DUT's real rail voltage.
+        In Source meter mode this is what the PPK2 outputs. In Ampere
+        meter mode the regulator is inactive, but the value still feeds
+        the calibration: set it to the DUT's real supply voltage.
 
-        Clamped to ``[VOLTAGE_LIMIT_HARDWARE_MIN_MV,
-        VOLTAGE_LIMIT_HARDWARE_MAX_MV]`` (800 mV to 5000 mV) — the
-        firmware ignores values outside that band, so the host clamp
-        gives the caller a defined behaviour.
-
-        If the requested voltage exceeds the host-side ceiling set by
-        [`set_voltage_limit`][], raises `ValueError` instead of
-        silently truncating. The ceiling defaults to the hardware max,
-        so this only kicks in when a caller has explicitly tightened it.
-
-        Args:
-            mv: Requested setpoint in millivolts.
+        Values outside 800-5000 mV are clamped; the firmware ignores
+        them otherwise.
 
         Raises:
-            ValueError: If ``mv`` exceeds the configured ceiling.
-            SerialIOError: If the underlying serial write fails.
+            ValueError: If ``mv`` exceeds the cap set with
+                ``set_voltage_limit``.
+            SerialIOError: If the serial write fails.
         """
         clamped = max(VOLTAGE_LIMIT_HARDWARE_MIN_MV, min(VOLTAGE_LIMIT_HARDWARE_MAX_MV, mv))
         if clamped > self._voltage_limit_mv:
             raise ValueError(
                 f"requested {mv} mV exceeds voltage limit "
-                f"{self._voltage_limit_mv} mV — call set_voltage_limit "
+                f"{self._voltage_limit_mv} mV: call set_voltage_limit "
                 f"first if you want to raise the ceiling"
             )
         wire = bytes(
@@ -268,37 +253,16 @@ class Session:
         self._vdd_mv = clamped
 
     def set_voltage_limit(self, mv: int) -> None:
-        """Set the host-enforced maximum source voltage, in millivolts.
+        """Cap what ``set_source_voltage`` will accept, in millivolts.
 
-        Acts as a software safety interlock — any future
-        [`set_source_voltage`][] call requesting a value above this
-        limit raises `ValueError` rather than writing the wire
-        frame. Designed to prevent fat-fingering a DUT-damaging
-        voltage during interactive scripting.
-
-        The limit is itself clamped to
-        ``[VOLTAGE_LIMIT_HARDWARE_MIN_MV,
-        VOLTAGE_LIMIT_HARDWARE_MAX_MV]`` so a caller can't accidentally
-        raise it above what the on-board regulator can produce.
-
-        If the new limit is lower than the currently-set VDD, the
-        existing setpoint is NOT changed — the limit only constrains
-        future writes. Call [`set_source_voltage`][] afterwards if you
-        need to bring the present voltage down too.
-
-        Mirrors the Nordic GUI's "Maximum supply voltage" knob under
-        Advanced Configuration.
-
-        Args:
-            mv: New ceiling in millivolts. Will be clamped to the
-                hardware-supported band.
+        A host-side guard against typing a DUT-damaging voltage, like
+        the app's voltage limit ("Set max supply voltage to"). The cap
+        is itself clamped to 800-5000 mV, and it does not change a
+        supply voltage already above it.
 
         Raises:
-            RuntimeError: If called after [`start_measuring`][] — the
-                new ceiling could conflict with the present setpoint
-                and we'd rather surface that explicitly than at the
-                next user write. Same lifecycle guard as
-                [`set_user_gain`][] and [`set_spike_filter`][].
+            RuntimeError: If called while a stream runs, between
+                ``start_measuring`` and ``stop_measuring``.
         """
         if self._measuring:
             raise RuntimeError("set_voltage_limit must be called before start_measuring()")
@@ -308,74 +272,70 @@ class Session:
         )
 
     def voltage_limit(self) -> int:
-        """Return the host-enforced maximum source voltage, in millivolts."""
+        """The cap set by ``set_voltage_limit``, in millivolts."""
         return self._voltage_limit_mv
 
     # ── Stream control ─────────────────────────────────────────────────
 
     def start_measuring(self) -> None:
-        """Start the 100 kSPS sample stream and wait 200 ms for settle.
+        """Start the 100 kSPS sample stream, then wait 200 ms.
 
-        The settle is load-bearing — a firmware quirk silently drops
-        ``DEVICE_RUNNING_SET`` calls that arrive within ~150 ms after
-        ``AVERAGE_START``.
+        The wait is a precaution: a ``DEVICE_RUNNING_SET`` sent within
+        about 150 ms of ``AVERAGE_START`` has been seen ignored, though
+        not on the unit tested (the protocol page, Known caveats).
         """
         self._write(bytes([Opcode.AVERAGE_START.byte()]))
         sleep(_START_MEASURING_SETTLE_S)
         self._measuring = True
 
     def stop_measuring(self) -> None:
-        """Send ``AVERAGE_STOP``. Safe to call when no stream is active."""
-        self._write(bytes([Opcode.AVERAGE_STOP.byte()]))
+        """Send ``AVERAGE_STOP`` and read the stream out to its end.
 
-    # ── FET toggle ─────────────────────────────────────────────────────
+        Left unread, the end of the stream would lead the next one: a
+        few milliseconds of samples from before the stop. Safe to call
+        when no stream is active.
+        """
+        self._write(bytes([Opcode.AVERAGE_STOP.byte()]))
+        self._wait_for_quiet()
+        self._measuring = False
+
+    # ── DUT power ──────────────────────────────────────────────────────
 
     def power_on(self, latch_s: float = 1.0) -> None:
-        """Close the DUT-power FET, draining the stream around the toggle.
+        """Switch power to the DUT on, as the app's "Enable power output" does.
 
-        Requires [`start_measuring`][] to have run already — the
-        firmware silently drops ``DEVICE_RUNNING_SET`` without an
-        active stream.
-
-        The drains are load-bearing: the PPK2 only latches the FET
-        after the host has kept reading for a stretch. The pending
-        backlog is drained first (~0.3 s) so the toggle lands on a
-        live, caught-up stream; then the stream is drained for
-        ``latch_s`` more.
+        Call ``start_measuring`` first. The command is sent on a running
+        stream, with the backlog read for ~0.3 s before it and the
+        stream for ``latch_s`` after it. These are precautions: a
+        command sent without a stream, or with the host not reading,
+        has been seen ignored, though not on the unit tested (the
+        protocol page, Known caveats).
 
         Args:
-            latch_s: Post-toggle drain duration in seconds. The
-                default (1.0) latches the FET before this call
-                returns — right for one-shot power-on (``ppk2 power
-                on``). Capture paths pass ``0.0`` and let the capture
-                loop's own reads finish the latch, so t=0 in the
-                trace ≈ FET-on and the DUT's boot inrush lands in the
-                CSV; pair that with [`drop_pending_backlog`][] at
-                capture-loop start.
+            latch_s: How long to keep reading after the command, in
+                seconds. The default (1.0) gives the switch time to
+                take effect before returning. A capture passes 0.0 and
+                lets its own reads cover that time, so the boot inrush
+                is in the trace.
         """
         self._drain_stream(_POWER_ON_PRE_DRAIN_S)
         self._write(bytes([Opcode.DEVICE_RUNNING_SET.byte(), 0x01]))
         self._drain_stream(latch_s)
 
     def power_off(self) -> None:
-        """Open the DUT-power FET. Idempotent."""
+        """Switch power to the DUT off. Idempotent."""
         self._write(bytes([Opcode.DEVICE_RUNNING_SET.byte(), 0x00]))
 
     def drop_pending_backlog(self) -> int:
-        """Discard whatever is sitting in the input buffer — one read, not a loop.
+        """Discard what the OS reports as waiting; return the byte count.
 
-        Deliberately bounded to a single ``in_waiting``-sized read:
-        once the stream is running it never goes empty, so a
-        drain-until-empty loop would hang. Call once at capture-loop
-        start (after ``power_on(latch_s=0.0)``) so the first parsed
-        sample is ≈ now ≈ FET-on rather than the oldest byte the OS
-        buffered during session setup.
-
-        Returns:
-            The number of bytes discarded.
+        One read, not a loop: a running stream never goes empty, so
+        draining until empty would hang. It does not bring the reads up
+        to the present: on macOS ``in_waiting`` reports about 1 kB while
+        some 40 kB are queued (the protocol page, Known caveats).
 
         Raises:
-            SerialIOError: If the underlying serial I/O fails.
+            SerialIOError: If the serial read fails.
         """
         try:
             waiting = self._port.in_waiting
@@ -388,30 +348,22 @@ class Session:
     # ── User gain override ─────────────────────────────────────────────
 
     def set_user_gain(self, range_idx: int, gain: float) -> None:
-        """Override the per-range user gain (UG) for this session.
+        """Override the user gain of one range for this session.
 
-        Applied host-side: the in-session [`CalibrationCoefficients`][]
-        is rebuilt with the new ``ug[range_idx]``, and the next
-        [`capture`][] builds its [`StreamParser`][] from the updated
-        block. No wire write is issued — testing against current PPK2
-        firmware shows it silently ignores ``SET_USER_GAINS`` (0x25),
-        and the Nordic GUI's calibration likewise reads only its
-        in-memory ``ug`` array, so the host-side rebuild is the only
-        behaviour with any effect.
-
-        Call **before** [`start_measuring`][]; the active capture's
-        parser holds the coefficients it was built with. The override
-        does not persist across [`close`][] — the next
-        [`Session.open`][] re-reads the firmware's stored UG.
+        Host-side only: the calibration used by the next ``capture`` is
+        rebuilt with the new gain and nothing is sent. Current firmware
+        ignores ``SET_USER_GAINS``, and Nordic's app applies the gain
+        host-side too. The override is gone at ``close``.
 
         Args:
-            range_idx: 0..=4. Which of the five hardware shunt ranges
-                the gain applies to.
-            gain: User gain. Typically near 1.0.
+            range_idx: Which of the five measurement ranges, 0-4. The
+                app numbers them 1 to 5.
+            gain: The gain, typically near 1.0.
 
         Raises:
-            ValueError: If ``range_idx`` is outside 0..=4.
-            RuntimeError: If called after [`start_measuring`][].
+            ValueError: If ``range_idx`` is not 0-4.
+            RuntimeError: If called while a stream runs, between
+                ``start_measuring`` and ``stop_measuring``.
         """
         if self._measuring:
             raise RuntimeError(
@@ -420,9 +372,7 @@ class Session:
                 "captured at init time."
             )
         if not 0 <= range_idx <= 4:
-            raise ValueError(f"range_idx must be 0..=4, got {range_idx}")
-        # Host-side only: rebuild self._coeffs with the new ug[range_idx].
-        # No wire write — see docstring; the firmware ignores 0x25.
+            raise ValueError(f"range_idx must be 0 to 4, got {range_idx}")
         old_ug = self._coeffs.ug
         new_ug: RangeArray = (
             gain if range_idx == 0 else old_ug[0],
@@ -442,36 +392,16 @@ class Session:
         alpha: float | None = None,
         alpha5: float | None = None,
     ) -> None:
-        """Tweak the post-range-change EMA spike filter.
+        """Change spike-filter knobs; the ones not passed keep their value.
 
-        Keyword-only partial update — pass just the knob(s) you want to
-        change; the rest keep their current values. Defaults are
-        documented on [`ppk2.protocol.SpikeFilter`][].
-
-        The filter is applied **host-side** inside
-        [`ppk2.protocol.StreamParser`][]. There is no corresponding wire
-        opcode — the Nordic GUI applies the same knobs host-side too.
-        The next [`Session.capture`][ppk2.client.session.Session.capture] constructs its
-        [`StreamParser`][] with the updated filter; the active
-        capture's parser captures the filter by value at construction
-        time, so a mid-capture change can't take effect — we raise
-        rather than silently no-op.
-
-        The override **does not persist** across [`close`][]. The next
-        [`Session.open`][] starts a fresh session with defaults.
-
-        Args:
-            samples: New post-range-change smoothing window length, in
-                samples. ``None`` leaves the existing value.
-            alpha: New EMA coefficient for ranges 0..=3. ``None`` leaves
-                the existing value.
-            alpha5: New EMA coefficient for range 4. ``None`` leaves the
-                existing value.
+        Host-side, like Nordic's app: the next ``capture`` builds its
+        parser with these. See ``SpikeFilter`` for what each knob does
+        and its limits. The change is gone at ``close``.
 
         Raises:
-            ValueError: If any new knob is outside its valid range — see
-                [`ppk2.protocol.SpikeFilter`][] for the constraints.
-            RuntimeError: If called after [`start_measuring`][].
+            ValueError: If a knob is out of range.
+            RuntimeError: If called while a stream runs, between
+                ``start_measuring`` and ``stop_measuring``.
         """
         if self._measuring:
             raise RuntimeError(
@@ -487,11 +417,7 @@ class Session:
         )
 
     def spike_filter(self) -> SpikeFilter:
-        """Return the spike-filter knobs the next capture loop will use.
-
-        The active capture's parser captured them at construction time
-        — see [`Session.capture`][ppk2.client.session.Session.capture].
-        """
+        """The spike-filter knobs the next ``capture`` will use."""
         return self._spike_filter
 
     # ── Capture loop ───────────────────────────────────────────────────
@@ -501,22 +427,12 @@ class Session:
         emit: Callable[[Sample], bool],
         on_dataloss: Callable[[int], None] | None = None,
     ) -> None:
-        """Read bytes, parse them, invoke ``emit`` once per sample.
-
-        ``emit`` returns ``True`` to keep going, ``False`` to stop. The
-        method returns when the caller stops, or never (open-ended).
+        """Read the stream and call ``emit`` per sample until it returns ``False``.
 
         Args:
-            emit: Callback invoked per [`ppk2.protocol.Sample`][].
-                Return ``False`` to break the capture loop.
-            on_dataloss: Optional callback invoked when the stream
-                parser's cumulative data-loss count grows during a
-                ``push_bytes`` iteration. Receives the post-event total
-                (monotonically non-decreasing across the capture's
-                lifetime). Use to surface a stderr warning, increment a
-                metric, etc. Called at most once per ``push_bytes``
-                invocation regardless of how many NaN placeholders the
-                parser emitted in that batch.
+            emit: Called with each ``Sample``; return ``False`` to stop.
+            on_dataloss: Called with the running total of lost samples
+                whenever a read adds to it (at most once per read).
         """
         parser = StreamParser(self._coeffs, self._vdd_mv, self._spike_filter)
         scratch = bytearray(4096)
@@ -545,6 +461,22 @@ class Session:
         while monotonic() < deadline:
             self._read_into(scratch)
 
+    def _wait_for_quiet(self) -> None:
+        """Read and discard until no byte arrives for ``_QUIET_S``.
+
+        Gives up after ``_QUIET_CAP_S``. Best effort: the port may
+        already be gone.
+        """
+        deadline = monotonic() + _QUIET_CAP_S
+        with suppress(Exception):
+            read_timeout = self._port.timeout
+            self._port.timeout = _QUIET_S
+            try:
+                while monotonic() < deadline and self._port.read(4096):
+                    pass
+            finally:
+                self._port.timeout = read_timeout
+
     def _write(self, payload: bytes) -> None:
         try:
             self._port.write(payload)
@@ -552,11 +484,7 @@ class Session:
             raise SerialIOError(f"serial write: {exc}") from exc
 
     def _read_into(self, buf: bytearray) -> int:
-        """Read up to ``len(buf)`` bytes; return the actual count.
-
-        Treats timeouts as "no bytes yet" (returns 0) so the caller's
-        capture loop can check its own stop condition.
-        """
+        """Read up to ``len(buf)`` bytes into ``buf``; return the count, 0 on timeout."""
         try:
             chunk = self._port.read(len(buf))
         except serial.SerialException as exc:
@@ -568,6 +496,18 @@ class Session:
 
 
 # ─── module-private helpers ────────────────────────────────────────────
+
+
+def flush_input(port: serial.Serial) -> None:
+    """Discard buffered input, best effort.
+
+    On a port that has just dropped off USB (the device re-enumerates
+    after a ``RESET``), pyserial lets a bare ``termios.error`` through:
+    neither ``SerialException`` nor ``OSError``. The next write or read
+    reports the dead port properly.
+    """
+    with suppress(Exception):
+        port.reset_input_buffer()
 
 
 def _empty_serial(port: serial.Serial) -> None:
@@ -587,12 +527,7 @@ def _empty_serial(port: serial.Serial) -> None:
 
 
 class BytesReader(Protocol):
-    """Minimal ``.read(n) -> bytes`` shape used by [`read_until_end`][].
-
-    pyserial's ``Serial.read`` and tests' in-memory fakes both match
-    this. Defined as a Protocol so callers don't have to inherit
-    anything to be accepted.
-    """
+    """Anything with ``read(n) -> bytes``: pyserial's ``Serial``, or a test fake."""
 
     def read(self, n: int, /) -> bytes:
         """Read up to ``n`` bytes; return ``b""`` if none are ready."""
@@ -600,13 +535,9 @@ class BytesReader(Protocol):
 
 
 def read_until_end(reader: BytesReader, total_timeout_s: float) -> bytes:
-    """Accumulating read until the buffer contains ``b"END"`` or timeout.
+    """Read until the data contains ``b"END"``, or raise ``TimeoutError``.
 
-    Tolerates chunked I/O — covers the case where the metadata response
-    arrives in two pyserial reads (header then tail). Module-public so
-    tests can drive the chunked-accumulation logic with an in-memory
-    fake; intentionally absent from ``ppk2.client.__all__`` because it's
-    an internal composition primitive, not part of the documented API.
+    The metadata response can arrive split across several reads.
     """
     deadline = monotonic() + total_timeout_s
     buf = bytearray()
@@ -624,12 +555,11 @@ def read_until_end(reader: BytesReader, total_timeout_s: float) -> bytes:
 
 
 def _recover_and_negotiate(port: serial.Serial) -> CalibrationCoefficients:
-    """Stop any prior stream, (on retry) reset, read metadata, parse.
+    """Stop any stream, reset on retries, read and parse the metadata.
 
-    Up to 3 attempts. Writes that fail are captured into ``last_failure``
-    rather than silently dropped — under a macOS CDC wedge every write
-    errors out, and burying that behind a downstream parse failure
-    would mask the real cause.
+    Up to 3 attempts. A failed write is recorded as the failure instead
+    of being skipped: under a macOS CDC wedge every write errors out,
+    and reporting a later parse failure would hide the real cause.
     """
     last_failure = "(no attempts made)"
 
@@ -642,7 +572,7 @@ def _recover_and_negotiate(port: serial.Serial) -> CalibrationCoefficients:
             continue
         sleep(0.1)
 
-        # RESET on retry attempts only — it costs a USB CDC re-enum on
+        # RESET on retry attempts only: it costs a USB CDC re-enum on
         # macOS, so we want a clean attempt first.
         if attempt > 0:
             try:
@@ -654,8 +584,7 @@ def _recover_and_negotiate(port: serial.Serial) -> CalibrationCoefficients:
 
         # Clear pyserial's input buffer + drain whatever the firmware
         # was still emitting.
-        with suppress(serial.SerialException):
-            port.reset_input_buffer()
+        flush_input(port)
         _empty_serial(port)
 
         # Request metadata + accumulate until END.
@@ -665,8 +594,6 @@ def _recover_and_negotiate(port: serial.Serial) -> CalibrationCoefficients:
             last_failure = f"write GET_META_DATA: {exc}"
             continue
 
-        # pyserial's Serial already matches the BytesReader shape
-        # (read(n) -> b"" on timeout).
         try:
             buf = read_until_end(port, _METADATA_READ_TIMEOUT_S)
         except (TimeoutError, OSError) as exc:

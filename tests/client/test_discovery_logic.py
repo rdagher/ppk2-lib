@@ -1,10 +1,10 @@
-"""Pure-logic tests for discovery — covers the dual-VCOM cases without pyserial.
+"""Pure-logic tests for discovery: covers the two-port cases without pyserial.
 
 The pure ``find_group_in``/``find_group_in_by_serial``/``group_ppk2s``
 helpers take a list of ``RawPort`` rows so we can test the macOS-style
-dual-VCOM enumeration ambiguity without touching real hardware; the
+two-port enumeration ambiguity without touching real hardware; the
 probe-driven paths take an injected probe function (and a monkeypatched
-``enumerate_ports``) for the same reason — no serial port is ever
+``enumerate_ports``) for the same reason: no serial port is ever
 opened in this file.
 """
 
@@ -27,7 +27,6 @@ from ppk2.client.discovery import (
     find_ppk2,
     find_ppk2_by_serial,
     group_ppk2s,
-    lex_lowest,
     looks_like_ppk2,
     probe_data_port,
 )
@@ -45,7 +44,7 @@ def _ppk2_port(device: str, serial_number: str) -> RawPort:
 
 def _segger_jlink_port(device: str) -> RawPort:
     """Synthesise a SEGGER J-Link port (e.g., the embedded debugger on an
-    nRF DK) — must be filtered out even though it shares OS-level
+    nRF DK): must be filtered out even though it shares OS-level
     metadata patterns with the PPK2.
     """
     return RawPort(
@@ -62,9 +61,9 @@ def test_empty_port_list_is_not_found() -> None:
 
 
 def test_single_ppk2_with_two_vcoms_returns_lex_lowest() -> None:
-    """macOS dual-VCOM: both ports map to the same physical PPK2; pick lex-lowest.
+    """macOS two-port: both ports map to the same physical PPK2; pick lex-lowest.
 
-    Path values mirror a real macOS dual-VCOM enumeration. ``A12``
+    Path values mirror a real macOS two-port enumeration. ``A12``
     (lex-lower) is the 100 kSPS data port; ``A14`` is the idle /
     control interface.
     """
@@ -74,7 +73,7 @@ def test_single_ppk2_with_two_vcoms_returns_lex_lowest() -> None:
         _segger_jlink_port("/dev/cu.usbmodem0001234567891"),
     ]
     serial_str, paths = find_group_in(ports)
-    info = PortInfo(device=lex_lowest(list(paths)), usb_serial=serial_str)
+    info = PortInfo(device=paths[0], usb_serial=serial_str)
     assert info.device == "/dev/cu.usbmodemA1B2C3D4E5F62"
     assert info.usb_serial == "A1B2C3D4E5F6"
 
@@ -115,7 +114,7 @@ def test_by_serial_picks_the_named_device() -> None:
         _ppk2_port("/dev/cu.usbmodemBBB1", "BBB"),
     ]
     serial_str, paths = find_group_in_by_serial(ports, "BBB")
-    info = PortInfo(device=lex_lowest(list(paths)), usb_serial=serial_str)
+    info = PortInfo(device=paths[0], usb_serial=serial_str)
     assert info.device == "/dev/cu.usbmodemBBB1"
     assert info.usb_serial == "BBB"
 
@@ -127,7 +126,7 @@ def test_by_serial_missing_raises_not_found() -> None:
 
 
 def test_ports_without_usb_serial_are_skipped() -> None:
-    """A PPK2-VID/PID port with no USB serial can't be grouped — dropped silently."""
+    """A PPK2-VID/PID port with no USB serial can't be grouped: dropped silently."""
     ports = [
         RawPort(
             device="/dev/cu.usbmodemX",
@@ -138,7 +137,7 @@ def test_ports_without_usb_serial_are_skipped() -> None:
         _ppk2_port("/dev/cu.usbmodemAAA1", "AAA"),
     ]
     serial_str, paths = find_group_in(ports)
-    info = PortInfo(device=lex_lowest(list(paths)), usb_serial=serial_str)
+    info = PortInfo(device=paths[0], usb_serial=serial_str)
     assert info.usb_serial == "AAA"
 
 
@@ -154,11 +153,11 @@ def test_group_ppk2s_returns_serial_keyed_dict() -> None:
     assert sorted(groups["AAA"]) == ["/dev/cu.usbmodemAAA1", "/dev/cu.usbmodemAAA2"]
 
 
-# ─── active data-port probe (injected probe fn — no serial I/O) ─────────
+# ─── active data-port probe (injected probe fn: no serial I/O) ─────────
 
 
 class _ScriptedProbe:
-    """Probe double: answers from a path→status map, records call order."""
+    """Probe double: answers from a path->status map, records call order."""
 
     def __init__(self, statuses: dict[str, PortStatus]) -> None:
         self.statuses = statuses
@@ -170,7 +169,7 @@ class _ScriptedProbe:
 
 
 def test_probe_data_port_stops_at_lex_lowest_data_hit() -> None:
-    """The lex-lowest candidate answers → the second VCOM is never opened."""
+    """The lex-lowest candidate answers -> the second port is never opened."""
     probe = _ScriptedProbe({"/dev/A12": "data", "/dev/A14": "idle"})
     got = probe_data_port(("/dev/A14", "/dev/A12"), probe)
     assert got == "/dev/A12"
@@ -191,7 +190,7 @@ def test_probe_data_port_returns_none_when_nothing_answers() -> None:
 
 
 def test_classify_ports_marks_unprobed_rest_idle_after_data_hit() -> None:
-    """Stop-at-first-data: the remaining VCOMs are idle by definition, unprobed."""
+    """Stop-at-first-data: the remaining ports are idle by definition, unprobed."""
     probe = _ScriptedProbe({"/dev/A12": "data", "/dev/A14": "busy"})
     statuses = classify_ports(("/dev/A12", "/dev/A14"), probe)
     assert statuses == {"/dev/A12": "data", "/dev/A14": "idle"}
@@ -199,7 +198,7 @@ def test_classify_ports_marks_unprobed_rest_idle_after_data_hit() -> None:
 
 
 def test_classify_ports_probes_everything_when_no_data_port() -> None:
-    """No data hit → every path probed so busy and idle separate in the output."""
+    """No data hit -> every path probed so busy and idle separate in the output."""
     probe = _ScriptedProbe({"/dev/A12": "busy", "/dev/A14": "idle"})
     statuses = classify_ports(("/dev/A12", "/dev/A14"), probe)
     assert statuses == {"/dev/A12": "busy", "/dev/A14": "idle"}
@@ -239,7 +238,7 @@ def test_build_listings_one_block_per_device_sorted_by_serial() -> None:
 def test_find_ppk2_probes_inside_the_poll_loop(monkeypatch: pytest.MonkeyPatch) -> None:
     """A device that enumerates but answers only on a later tick still resolves.
 
-    Tick 1: both VCOMs probe idle (firmware not up yet). Tick 2: the
+    Tick 1: both ports probe idle (firmware not up yet). Tick 2: the
     lex-lowest answers. Probing inside the retry loop lets a device
     that enumerates before its firmware answers still resolve.
     """
@@ -266,7 +265,7 @@ def test_find_ppk2_probes_inside_the_poll_loop(monkeypatch: pytest.MonkeyPatch) 
 def test_find_ppk2_raises_data_port_not_found_with_gui_hint(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Enumerated-but-silent device → DataPortNotFound with the actionable hint."""
+    """Enumerated-but-silent device -> DataPortNotFound with the actionable hint."""
     ports = [
         _ppk2_port("/dev/cu.usbmodemX2", "XXX"),
         _ppk2_port("/dev/cu.usbmodemX4", "XXX"),

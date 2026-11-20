@@ -34,11 +34,15 @@ ppk2 = "ppk2.cli.main:main"
 [project.urls]
 Homepage = "https://github.com/rdagher/ppk2-lib"
 Repository = "https://github.com/rdagher/ppk2-lib"
+Issues = "https://github.com/rdagher/ppk2-lib/issues"
 
 [dependency-groups]
-# The A/B capture-comparison harness (validation/) — not needed for
-# the library, the CLI, or the fast test tier.
+# The A/B capture-comparison harness (validation/): not needed for
+# the library, the CLI, or the fast test tier. matplotlib draws the
+# plots of the evidence; uv.lock fixes its version, so they come out
+# the same on every machine.
 validation = [
+    "matplotlib>=3.9",
     "pandas>=2",
     "scipy>=1.11",
 ]
@@ -46,6 +50,11 @@ dev = [
     "pytest>=8",
     "pyright>=1.1.380",
     "ruff>=0.7",
+]
+# The documentation site (mkdocs.yml, built with Zensical).
+docs = [
+    "zensical>=0.1.3",
+    "mkdocstrings-python>=1.16",
 ]
 
 [tool.hatch.version]
@@ -57,6 +66,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ppk2"]
+
+[tool.hatch.build.targets.sdist]
+# Source, tests, and docs only: the validation captures alone are ~50 MB.
+include = ["/src", "/tests", "/docs", "/CHANGELOG.md"]
 
 [tool.pytest.ini_options]
 minversion = "8"
@@ -73,6 +86,7 @@ addopts = [
 [tool.pyright]
 include = ["src", "tests"]
 strict = ["src", "tests"]
+exclude = ["**/__pycache__", "**/.*", "tests/hil/bench-dut"]  # a Zephyr app and its build tree
 pythonVersion = "3.11"
 pythonPlatform = "All"
 venvPath = "."
@@ -104,13 +118,15 @@ select = [
 ignore = [
     "D100",  # module-level docstring not required everywhere
     "D104",  # __init__.py docstring not required
+    "D105",  # dunder methods rarely need one
+    "D107",  # __init__: the class docstring covers it
     "D203",  # incompatible with D211
     "D213",  # incompatible with D212
 ]
 # Domain-specific Unicode that's intentional and unambiguous in context:
-# µ (micro) in µA / µJ / µC, → (state-machine flow), σ (statistics).
+# µ (micro) in µA / µJ / µC, -> (state-machine flow), σ (statistics).
 # RUF002/RUF003 still catch genuine ASCII-vs-Unicode confusables.
-allowed-confusables = ["µ", "→", "σ"]
+allowed-confusables = ["µ", "σ"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"]  # tests don't need pydocstyle

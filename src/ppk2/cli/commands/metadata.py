@@ -1,9 +1,9 @@
-"""``ppk2 metadata`` — print the per-device calibration coefficients."""
+"""``ppk2 metadata``: print the per-device calibration coefficients."""
 
 import typer
 
 from ppk2 import CalibrationCoefficients, Session
-from ppk2.cli.commands import resolve_device
+from ppk2.cli.commands import MODE_LABELS, resolve_device
 from ppk2.cli.signals import signals_to_systemexit
 
 
@@ -17,7 +17,7 @@ def metadata(serial: str | None, port: str | None) -> None:
 
 def _print_coefficients(c: CalibrationCoefficients) -> None:
     """Render the coefficient block as a human-readable table."""
-    mode_name = {1: "ammeter", 2: "source"}.get(c.mode, f"unknown ({c.mode})")
+    mode_name = MODE_LABELS.get(c.mode, "unknown")
     typer.echo(f"Calibrated: {'true' if c.calibrated else 'false'}")
     typer.echo(f"HW:         {c.hw}")
     typer.echo(f"IA:         {c.ia}")

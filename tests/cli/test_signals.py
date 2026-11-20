@@ -1,4 +1,4 @@
-"""signals_to_systemexit tests — real signals delivered in-process, no hardware."""
+"""signals_to_systemexit tests: real signals delivered in-process, no hardware."""
 
 import signal
 import threading
@@ -43,7 +43,7 @@ def test_absent_signal_names_are_skipped() -> None:
 
 
 def test_off_main_thread_installation_is_tolerated() -> None:
-    """signal.signal raises ValueError off the main thread — the CM must still yield."""
+    """signal.signal raises ValueError off the main thread: the CM must still yield."""
     outcome: list[str] = []
 
     def body() -> None:

@@ -1,23 +1,19 @@
 """Per-sample current calibration.
 
-[`current_micro_amps`][] is the pure mathematical conversion from one
-raw 14-bit ADC count + range index + per-device coefficients + the
-present VDD setpoint to a calibrated current value in microamperes.
-
-It does NOT apply the post-range-change rolling-average / spike filter —
-that lives in the stream parser, which is stateful. This function is
-stateless and matches Nordic's ``getAdcResult`` term-for-term.
+``current_micro_amps`` turns one raw ADC count into microamperes, given
+the range, the per-device coefficients, and the present supply voltage.
+It is stateless and computes the same formula as Nordic's ``getAdcResult``;
+the spike filter that follows a range change lives in the stream
+parser.
 
 Regression-tested against a sample word from a real PPK2 with its
-captured coefficients: ``0x015c0097`` → ``5.302145379685201`` µA.
+captured coefficients: ``0x015c0097`` gives ``5.302145379685201`` µA.
 """
 
 from ppk2.protocol.metadata import CalibrationCoefficients
 
-# PPK2 firmware quirk: converts ADC counts into volts-per-ohm-equivalent
-# before per-range scaling. 1.8 is the ADC reference; 163840 = 2^14 * 10
-# is the firmware's chosen scaling base (post-decimation 14-bit ADC,
-# then *10 internal headroom).
+# The firmware's ADC scaling: a 1.8 V reference over 2^14 * 10 (the
+# 14-bit count, with *10 of internal headroom).
 _ADC_MULT: float = 1.8 / 163_840.0
 
 
@@ -27,41 +23,29 @@ def current_micro_amps(
     vdd_mv: int,
     coeffs: CalibrationCoefficients,
 ) -> float:
-    """Convert one calibrated ADC reading into microamps.
-
-    The ADC *4 rescale (line 1 of the formula: ``adc_16 = adc_14 * 4``)
-    is done internally. Callers pass the raw 14-bit value directly from
-    [`ppk2.protocol.sample.RawSample`][]'s ``adc_14`` field.
+    """Convert one raw ADC reading into microamperes.
 
     Args:
-        adc_14: 14-bit ADC value (0..=16_383).
-        range_idx: 3-bit auto-range index. Must be 0..=4; stream parser
-            callers drop out-of-range samples via
-            [`ppk2.protocol.sample.RawSample.range_valid`][].
-        vdd_mv: Present VDD setpoint in millivolts (whatever was last sent
-            via ``REGULATOR_SET``). Used by the VDD-dependent term —
-            required even in ammeter mode.
-        coeffs: Per-device calibration from [`parse_metadata`][].
-
-    Returns:
-        Calibrated current in microamperes.
+        adc_14: 14-bit ADC value, straight from ``RawSample.adc_14``
+            (the *4 rescale happens here).
+        range_idx: Range index, 0-4.
+        vdd_mv: Present supply voltage in millivolts (the last
+            ``REGULATOR_SET``). Needed in Ampere meter mode too.
+        coeffs: Per-device calibration from ``parse_metadata``.
 
     Raises:
-        IndexError: If ``range_idx`` is outside the 0..=4 range of
-            calibration arrays.
+        IndexError: If ``range_idx`` is above 4.
     """
     r = range_idx
 
-    # Step 1 — rescale to 16-bit, subtract per-range offset, scale to volts-per-ohm.
-    adc_16 = float(adc_14) * 4.0
-    result_without_gain = (adc_16 - coeffs.o[r]) * (_ADC_MULT / coeffs.r[r])
+    # Measured voltage over the range's resistance: the current before correction, in amperes.
+    counts = float(adc_14) * 4.0 - coeffs.o[r]
+    raw_amps = counts * (_ADC_MULT / coeffs.r[r])
 
-    # Step 2 — quadratic gain correction + VDD-dependent linear term.
-    rwg = result_without_gain
+    # The per-range correction: a quadratic in the raw current, plus a
+    # term that follows the supply voltage.
     vdd_volts = float(vdd_mv) / 1000.0
-    corrected = coeffs.ug[r] * (
-        rwg * (coeffs.gs[r] * rwg + coeffs.gi[r]) + coeffs.s[r] * vdd_volts + coeffs.i[r]
+    amps = coeffs.ug[r] * (
+        raw_amps * (coeffs.gs[r] * raw_amps + coeffs.gi[r]) + coeffs.s[r] * vdd_volts + coeffs.i[r]
     )
-
-    # Step 3 — amperes → microamperes.
-    return corrected * 1e6
+    return amps * 1e6

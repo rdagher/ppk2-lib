@@ -1,12 +1,12 @@
 """Python library + CLI for Nordic's Power Profiler Kit II (PPK2).
 
-The package is structured in three internal layers:
+Three layers:
 
-- [`ppk2.protocol`][] — pure wire-protocol primitives, stdlib-only.
-- [`ppk2.client`][] — sync host driver on top of ``pyserial``.
-- [`ppk2.cli`][] — the ``ppk2`` binary, internal to the package.
+- ``ppk2.protocol``: pure wire-protocol primitives, stdlib-only.
+- ``ppk2.client``: sync host driver on top of ``pyserial``.
+- ``ppk2.cli``: the ``ppk2`` binary, internal to the package.
 
-For day-to-day library use, import from this top level:
+For library use, import from this top level:
 
 >>> from ppk2 import StreamParser, parse_metadata, Sample  # protocol layer
 >>> from ppk2 import Session, find_ppk2  # client layer
@@ -19,7 +19,6 @@ from ppk2.client import (
     DataPortNotFound,
     DiscoveryError,
     HandshakeFailed,
-    MetadataParseError,
     Mode,
     NotFound,
     PortInfo,
@@ -71,7 +70,6 @@ __all__ = [
     "HandshakeFailed",
     "InvalidValue",
     "MetadataError",
-    "MetadataParseError",
     "MissingEnd",
     "MissingField",
     "Mode",

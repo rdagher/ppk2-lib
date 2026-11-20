@@ -84,7 +84,7 @@ def test_capture_rejects_malformed_user_gain_at_runtime() -> None:
         ],
     )
     assert result.exit_code != 0
-    # The error mentions the flag — the helper raises typer.BadParameter.
+    # The error mentions the flag: the helper raises typer.BadParameter.
     assert "--user-gain" in result.output or "user-gain" in result.output.lower()
 
 

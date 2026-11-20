@@ -1,6 +1,6 @@
-"""Pure protocol primitives — opcodes, metadata parser, sample decoder, stream.
+"""Pure protocol primitives: opcodes, metadata parser, sample decoder, stream.
 
-Stdlib-only; no I/O. The top-level [`ppk2`][] package re-exports the
+Stdlib-only; no I/O. The top-level ``ppk2`` package re-exports the
 items you'd typically import from here.
 """
 

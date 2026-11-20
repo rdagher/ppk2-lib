@@ -1,27 +1,21 @@
-"""Stateful byte-stream parser — alignment + counter resync + EMA spike filter.
+"""Stateful byte-stream parser: alignment, counter resync, spike filter.
 
-Feed it raw bytes from the serial port via [`StreamParser.push_bytes`][];
-it calls the supplied callback once per emitted sample.
+Feed raw serial bytes to ``StreamParser.push_bytes``; it calls back once
+per emitted sample. Each 4-byte word goes through two stages:
 
-Two state machines run in series per input word:
+1. **Counter resync.** A word with an out-of-range range field is
+   dropped. A counter mismatch holds the sample back; the next in-sync
+   sample releases what was held (those samples were real, just behind
+   a brief gap). After ``MAX_BUFFERED_CORRUPTED`` mismatches in a row
+   the gap is declared lost: NaN placeholders fill it, the held samples
+   follow (they arrived after it), and the parser resyncs.
+2. **Spike filter.** Two exponential moving averages (one for ranges
+   0-3, a slower one for range 4) smooth the samples that follow a
+   range change. Knobs: ``SpikeFilter``.
 
-1. **Counter resync** — drops range-out-of-spec samples; on counter
-   mismatch, buffers the offending sample. A subsequent matched-counter
-   sample drains the buffer back into the output (the buffered samples
-   were real, just delivered behind a brief gap). Once
-   ``MAX_BUFFERED_CORRUPTED`` samples accumulate without recovery,
-   declares data loss: emits ``float('nan')`` placeholders for the gap,
-   drops the buffered samples, and resyncs to the current counter.
-   Clean-room, intent-corrected port of the Nordic GUI's
-   ``handleRawDataSet`` (``pc-nrfconnect-ppk`` @ ``63ae4b7``,
-   ``src/device/serialDevice.ts:246-296``; unchanged through
-   v4.4.1) — verified against that primary source. See
-   [`StreamParser`][] for the three shipped-code bugs the port
-   deliberately corrects.
-2. **EMA smoothing** — two exponential moving averages (one alpha for
-   ranges 0-3, a slower one for range 4), with a rollback path for the
-   first two post-range-change samples at range 4. Knobs exposed via
-   [`SpikeFilter`][].
+The resync logic is an independent implementation of
+``handleRawDataSet`` in Nordic's app, with a few deliberate differences
+listed in ``docs/measure/protocol.md`` (section 5).
 """
 
 from collections.abc import Callable
@@ -36,70 +30,54 @@ from ppk2.protocol.sample import decode_sample
 
 @dataclass(frozen=True, slots=True)
 class Sample:
-    """One sample after counter validation + calibration + EMA smoothing.
+    """One calibrated, filtered sample.
 
     Attributes:
-        current_micro_amps: Calibrated current in microamperes. NaN
-            indicates a data-loss placeholder (counter sync was lost
-            and could not be recovered within
-            ``MAX_BUFFERED_CORRUPTED`` samples); ``logic`` is 0
-            for placeholders.
-        logic: Digital input pins D0..D7 at the moment this sample was
-            taken (bit 0 = D0). Always 0 for NaN placeholder samples.
+        current_micro_amps: Current in microamperes. NaN marks a lost
+            sample: counter sync was not recovered in time.
+        logic: Digital inputs D0..D7 (bit 0 = D0); 0 for a lost sample.
     """
 
     current_micro_amps: float
     logic: int
 
 
-#: Max consecutive mismatched samples we'll hold in the corruption
-#: buffer before declaring data loss and emitting NaN placeholders.
-#: Matches the Nordic GUI's threshold — recovery is declared impossible
-#: when the 6th mismatched sample arrives without a matched counter
-#: in between (the shipped code checks ``corruptedSamples.length > 4``
-#: BEFORE pushing, ``serialDevice.ts:268`` @ ``63ae4b7``, so the
-#: data-loss branch fires with exactly 5 samples buffered).
+#: Mismatched samples held before the gap is declared lost. Same as
+#: Nordic's app, whose check (``corruptedSamples.length > 4``, before the
+#: push, ``serialDevice.ts:268`` @ ``63ae4b7``) fires with exactly 5 held.
 MAX_BUFFERED_CORRUPTED = 5
 
-#: Default EMA coefficient for ranges 0..=3. Matches Nordic GUI's
-#: ``spikeFilter.alpha`` default.
+#: Default EMA coefficient for ranges 0-3 (the app's "Coefficient for
+#: range 1-4", ``spikeFilter.alpha``).
 DEFAULT_SPIKE_FILTER_ALPHA: float = 0.18
 
-#: Default EMA coefficient for range 4 (the slow range). Matches Nordic
-#: GUI's ``spikeFilter.alpha5`` default.
+#: Default EMA coefficient for range 4, the slow one (the app's
+#: "Coefficient for range 5", ``spikeFilter.alpha5``).
 DEFAULT_SPIKE_FILTER_ALPHA5: float = 0.06
 
-#: Default post-range-change smoothing window length, in samples.
-#: Matches Nordic GUI's ``spikeFilter.samples`` default.
+#: Default number of samples smoothed after a range change (the app's
+#: "Samples to smooth", ``spikeFilter.samples``).
 DEFAULT_SPIKE_FILTER_SAMPLES: int = 3
 
 
 @dataclass(frozen=True, slots=True)
 class SpikeFilter:
-    """Tunable knobs for the post-range-change EMA spike filter.
+    """Knobs of the spike filter applied after a range change.
 
-    Mirrors the three settings Nordic exposes under "Advanced
-    Configuration → Spike filter" in their GUI:
-
-    - ``samples`` — how many samples after a range change participate
-      in the smoothing window. Larger = more smoothing on transients,
-      slower recovery from a genuine new operating point.
-    - ``alpha`` — EMA coefficient for ranges 0..=3. The fast EMA.
-    - ``alpha5`` — EMA coefficient for range 4 only. The slow EMA;
-      range 4 is the lowest-resistance shunt (~0.056 Ω, the ~60 mA-1 A
-      range), for which Nordic ships a deliberately smaller
-      coefficient (heavier smoothing).
-
-    Defaults reproduce the Nordic GUI behaviour byte-for-byte against
-    our [`StreamParser`][] regression fixture.
+    The same three settings as the spike filter of Nordic's app, with
+    the app's defaults. The app numbers the ranges 1 to 5; here they
+    are 0 to 4, as in the stream.
 
     Attributes:
-        samples: Post-range-change smoothing window length, in samples.
-            Must be ``>= 0``.
-        alpha: EMA coefficient for ranges 0..=3. Must lie in
-            ``[0.0, 1.0]``.
-        alpha5: EMA coefficient for range 4 (the slow range). Must lie
-            in ``[0.0, 1.0]``.
+        samples: How many samples after a range change are smoothed
+            (``>= 0``). The app's "Samples to smooth". More smooths
+            transients harder and follows a real new level later.
+        alpha: EMA coefficient for ranges 0-3, in ``[0, 1]``. The app's
+            "Coefficient for range 1-4".
+        alpha5: EMA coefficient for range 4, in ``[0, 1]``. The app's
+            "Coefficient for range 5". This is the top range, 50 mA to
+            1 A in the PPK2 user guide, and it gets the heavier
+            smoothing.
     """
 
     samples: int = DEFAULT_SPIKE_FILTER_SAMPLES
@@ -107,7 +85,6 @@ class SpikeFilter:
     alpha5: float = DEFAULT_SPIKE_FILTER_ALPHA5
 
     def __post_init__(self) -> None:
-        """Validate the three knobs are in their expected ranges."""
         if self.samples < 0:
             raise ValueError(f"samples must be >= 0, got {self.samples}")
         if not 0.0 <= self.alpha <= 1.0:
@@ -117,55 +94,76 @@ class SpikeFilter:
 
 
 _COUNTER_MASK = 0x3F  # 6-bit counter, mod 64
+_TOP_RANGE = 4  # 50 mA to 1 A: where the PPK2 jumps when the current rises fast
 
-# Placeholder emitted in the data-loss path. logic = 0 because we have
-# no real signal to report for the gap.
+
+def _blend(average: float, reading: float, weight: float) -> float:
+    """Move a running average towards ``reading`` by ``weight``."""
+    return weight * reading + (1.0 - weight) * average
+
+
+class _RangeChangeSmoother:
+    """Replaces the readings that follow a range change by a running average.
+
+    The PPK2 switches range as the current moves, and the readings right
+    after a switch can be far off: on a DUT waking from sleep they
+    reach an ampere for a few samples. For ``samples`` readings from
+    each switch on, the output is a running average instead of the
+    reading. Two averages run all the time, a quick one for ranges 0-3
+    and a heavier one for range 4; in range 4 the first two readings
+    after the switch are kept out of the averages as well.
+
+    Same output as the spike filter of Nordic's app, setting for setting.
+    """
+
+    def __init__(self, knobs: SpikeFilter) -> None:
+        self._knobs = knobs
+        self._quick = 0.0
+        self._heavy = 0.0
+        self._range: int | None = None  # range of the previous reading
+        self._since_switch = 0  # readings in the present range since the switch
+        self._left = 0  # readings still to replace
+
+    def next(self, range_idx: int, ua: float) -> float:
+        """Take one reading in µA; return it, or the average that replaces it."""
+        if self._range is None:
+            self._quick = self._heavy = ua
+            self._range = range_idx
+            return ua
+
+        before = (self._quick, self._heavy)
+        self._quick = _blend(self._quick, ua, self._knobs.alpha)
+        self._heavy = _blend(self._heavy, ua, self._knobs.alpha5)
+
+        if range_idx != self._range:
+            self._range = range_idx
+            self._since_switch = 0
+            self._left = self._knobs.samples
+        elif self._left > 0:
+            self._since_switch += 1
+        else:
+            return ua
+
+        self._left = max(0, self._left - 1)
+        if range_idx != _TOP_RANGE:
+            return self._quick
+        if self._since_switch < 2:
+            self._quick, self._heavy = before
+        return self._heavy
+
+
+# Placeholder for a lost sample. logic is 0: there is no signal to report.
 _NAN_SAMPLE = Sample(current_micro_amps=nan, logic=0)
 
 
 class StreamParser:
-    """Stateful PPK2 byte-stream → [`ppk2.protocol.stream.Sample`][] parser.
+    """Turns the PPK2 byte stream into ``Sample`` objects; one per capture.
 
-    One instance per session. Keeps a small remainder buffer (≤ 3
-    bytes) across [`push_bytes`][] calls so callers that hand in
-    non-4-aligned chunks don't lose words.
-
-    On macOS with the production 4096-byte reads, alignment is always
-    preserved in practice — the kernel CDC layer consistently fills
-    the buffer in 4-byte multiples. The remainder buffer is there as
-    defence-in-depth for Linux/Windows pyserial implementations with
-    different buffering, contended hosts where read timeouts can fire
-    mid-frame, and test fixtures that feed sub-word chunks
-    deliberately.
-
-    **Provenance.** The per-word counter-resync state machine is a
-    clean-room port of the Nordic GUI's ``handleRawDataSet``
-    (``pc-nrfconnect-ppk`` @ ``63ae4b7``,
-    ``src/device/serialDevice.ts:246-296``; unchanged through
-    v4.4.1), verified against that primary source, with three
-    deliberate intent-corrections where the shipped code contradicts
-    its own stated intent:
-
-    - **duplicate-emission fix** — no buffer-empty guard on the trailing emission
-      (``serialDevice.ts:284-285``). Shipped code fires the sample
-      callback for every word after the branch logic, despite the
-      "Only fire the event, if the buffer data is valid" comment
-      directly above it — a mismatched sample is emitted at arrival
-      AND re-emitted when the buffer later drains, duplicating
-      samples and inflating the timeline. Here a mismatched sample
-      is buffered only; the drain is its single emission path.
-    - **gap off-by-one fix** (``serialDevice.ts:269-271``).
-      Shipped code sizes the data-loss gap as
-      ``(counter - expected + 63) & 63``, one short of the true
-      mod-64 distance. Here the gap is ``(counter - expected) & 63``,
-      so placeholders cover the real number of missing slots.
-    - **corrupt-range fix** — corrupt range clamped instead of dropped
-      (``serialDevice.ts:248-251``). Shipped code clamps the 3-bit
-      range field with ``Math.min(range, 5)``, so a corrupt word
-      indexes one past the end of the 5-element calibration arrays
-      (``undefined`` → NaN current) and its garbage counter still
-      drives the resync state machine. Here a range > 4 word is
-      dropped entirely, without touching counter state.
+    Reads need not land on 4-byte boundaries: up to 3 trailing bytes are
+    kept and prepended to the next ``push_bytes`` call. On macOS the
+    4096-byte reads have always come back aligned; other platforms, read
+    timeouts that fire mid-frame, and tests are what the remainder is
+    for.
     """
 
     def __init__(
@@ -174,57 +172,37 @@ class StreamParser:
         vdd_mv: int,
         spike_filter: SpikeFilter | None = None,
     ) -> None:
-        """Build a fresh parser.
+        """Build a parser.
 
         Args:
-            coeffs: Calibration block from
-                [`ppk2.protocol.parse_metadata`][].
-            vdd_mv: Present ``REGULATOR_SET`` setpoint in millivolts.
-            spike_filter: Tunable EMA spike-filter knobs. ``None`` uses
-                Nordic GUI defaults — that path is byte-identical to the
-                pre-knob behaviour against our regression fixture.
+            coeffs: Calibration from ``parse_metadata``.
+            vdd_mv: Present supply voltage in millivolts.
+            spike_filter: Filter settings; the app's defaults when
+                ``None``.
         """
         self._coeffs = coeffs
         self._vdd_mv = vdd_mv
-        self._spike_filter = spike_filter if spike_filter is not None else SpikeFilter()
-        # Cross-call alignment buffer. Always 0-3 bytes; consumed on
-        # the next call's first complete word.
+        self._smoother = _RangeChangeSmoother(
+            spike_filter if spike_filter is not None else SpikeFilter()
+        )
+        # Bytes short of a word, carried to the next call. Always 0-3.
         self._remainder = bytearray()
         # Counter-resync state.
         self._expected_counter: int | None = None
         self._corruption_buffer: list[Sample] = []
-        #: Cumulative count of NaN data-loss placeholder samples
-        #: emitted across this parser's lifetime. Monotonically
-        #: non-decreasing. Public for diagnostics — capture-loop
-        #: callers can compare against a baseline at the start of
-        #: each ``push_bytes`` iteration to detect new losses.
+        #: NaN placeholders emitted so far. Never decreases: compare
+        #: before and after a ``push_bytes`` call to spot new losses.
         self.dataloss_total: int = 0
-        # EMA / spike-filter state.
-        self._prev_range: int | None = None
-        self._rolling_avg: float | None = None
-        self._rolling_avg4: float | None = None
-        self._consecutive_range_sample = 0
-        self._after_spike = 0
 
     def push_bytes(self, buf: bytes, emit: Callable[[Sample], None]) -> None:
-        """Feed bytes from a serial read; emit one ``Sample`` per valid word.
+        """Feed bytes from a serial read; call ``emit`` for each sample they complete.
 
-        Bytes that don't form a complete 4-byte word are stashed in an
-        internal remainder buffer and consumed on the next call.
-
-        Args:
-            buf: Bytes from ``serial.read()`` (or a test fixture).
-            emit: Callback invoked once per emitted sample. May fire
-                zero times (range-invalid, or mismatched sample that
-                got buffered, or sub-word input) or multiple times
-                (drain-on-recovery, or data-loss path that emits NaN
-                placeholders) per input word.
+        One call can emit nothing (bytes short of a word, or a sample
+        held back for resync) or several samples per word (held samples
+        released, or placeholders for a lost gap).
         """
-        # Fast path: no leftover bytes from the previous call.
-        # `struct.iter_unpack` is a C-implemented native-loop unpacker;
-        # 4-byte little-endian unsigned int per word. Significantly
-        # faster than slicing bytes and calling int.from_bytes in pure
-        # Python for the high-rate path.
+        # Fast path, nothing carried over: unpack whole words straight
+        # from the buffer (iter_unpack runs the loop in C).
         if not self._remainder:
             whole = len(buf) - (len(buf) % 4)
             if whole > 0:
@@ -249,39 +227,34 @@ class StreamParser:
         """Process one decoded 4-byte word; emit zero, one, or many samples."""
         raw_sample = decode_sample(raw)
 
-        # Defence 1 — range validation. range_idx must index our 5-slot
-        # calibration arrays; out-of-spec range means we're parsing at
-        # the wrong byte offset, drop and let the next word retry.
-        # Corrupt-range fix: dropped without touching counter state
-        # (shipped Nordic clamps the range and lets the garbage word in).
+        # A range above 4 cannot index the calibration arrays: the parse
+        # is misaligned. Drop the word without touching the counter
+        # state (Nordic clamps the range and lets the word through).
         if not raw_sample.range_valid():
             return
         counter = raw_sample.counter
 
-        # Calibrate + spike-filter the input sample before any
-        # counter-routing decision. The EMA state must advance per
-        # input sample so buffered-then-drained samples keep their
-        # at-input-time smoothed value. Mirrors Nordic's getAdcResult
-        # being called at the top of handleRawDataSet, before the
-        # corruption-buffer logic.
+        # Calibrate and filter before routing on the counter: the filter
+        # state must advance per input sample, so a held sample keeps
+        # the value it had on arrival. Same order as Nordic's
+        # handleRawDataSet.
         raw_ua = current_micro_amps(
             raw_sample.adc_14,
             raw_sample.range,
             self._vdd_mv,
             self._coeffs,
         )
-        smoothed_ua = self._apply_spike_filter(raw_sample.range, raw_ua)
+        smoothed_ua = self._smoother.next(raw_sample.range, raw_ua)
         sample = Sample(current_micro_amps=smoothed_ua, logic=raw_sample.logic)
 
-        # Branch 1 — first valid sample. Seed expected counter and emit.
+        # First valid sample: seed the expected counter and emit.
         if self._expected_counter is None:
             self._expected_counter = (counter + 1) & _COUNTER_MASK
             emit(sample)
             return
 
-        # Branch 2 — in sync. Drain any pending mismatched samples
-        # first (they were real, just delivered behind a brief gap),
-        # then emit the current sample.
+        # In sync: release any held samples first (they were real, just
+        # behind a brief gap), then emit this one.
         if counter == self._expected_counter:
             if self._corruption_buffer:
                 for buffered in self._corruption_buffer:
@@ -291,83 +264,24 @@ class StreamParser:
             self._expected_counter = (counter + 1) & _COUNTER_MASK
             return
 
-        # Branch 3 — buffer full + still mismatched. Recovery is
-        # declared impossible: emit NaN placeholders covering the gap
-        # from where we expected to be to where this sample says we
-        # are, then emit this sample, drop the buffered ones, and
-        # resync to the current counter.
+        # Buffer full and still out of sync: the gap is lost. Fill it
+        # with placeholders, then release the held samples (they arrived
+        # after the gap) and this one, and resync on this counter.
         if len(self._corruption_buffer) >= MAX_BUFFERED_CORRUPTED:
-            # True mod-64 gap — the gap off-by-one fix (shipped Nordic's
-            # `+ 63` under-counts the missing slots by one).
+            # The true mod-64 distance (Nordic's `+ 63` is one short).
             gap = (counter - self._expected_counter) & _COUNTER_MASK
             for _ in range(gap):
                 emit(_NAN_SAMPLE)
             self.dataloss_total += gap
+            for buffered in self._corruption_buffer:
+                emit(buffered)
+            self._corruption_buffer.clear()
             emit(sample)
             self._expected_counter = (counter + 1) & _COUNTER_MASK
-            self._corruption_buffer.clear()
             return
 
-        # Branch 4 — mismatch with room in the buffer. Defer emission;
-        # the sample will either be drained on a future matched-counter
-        # sample (branch 2) or discarded when branch 3 fires.
-        # Duplicate-emission fix: buffered ONLY — shipped Nordic also
-        # emits it here, then re-emits it on drain (duplicates).
+        # Out of sync with room left: hold the sample back until the
+        # stream resyncs or the gap is declared lost. (Nordic also emits
+        # it here, which duplicates it on a resync.)
         self._corruption_buffer.append(sample)
         self._expected_counter = (self._expected_counter + 1) & _COUNTER_MASK
-
-    def _apply_spike_filter(self, range_idx: int, raw_ua: float) -> float:
-        """Two-stage EMA with a post-range-change smoothing window."""
-        alpha = self._spike_filter.alpha
-        alpha5 = self._spike_filter.alpha5
-        samples = self._spike_filter.samples
-
-        # Snapshot pre-update EMAs (needed for the range-4 rollback below).
-        prev_rolling_avg = self._rolling_avg
-        prev_rolling_avg4 = self._rolling_avg4
-
-        # Update both EMAs from raw, every sample.
-        self._rolling_avg = (
-            raw_ua
-            if self._rolling_avg is None
-            else alpha * raw_ua + (1.0 - alpha) * self._rolling_avg
-        )
-        self._rolling_avg4 = (
-            raw_ua
-            if self._rolling_avg4 is None
-            else alpha5 * raw_ua + (1.0 - alpha5) * self._rolling_avg4
-        )
-
-        # Seed prev_range on first sample.
-        if self._prev_range is None:
-            self._prev_range = range_idx
-
-        same_range = self._prev_range == range_idx
-        in_window = (not same_range) or self._after_spike > 0
-        out = raw_ua
-
-        if in_window:
-            if same_range:
-                self._consecutive_range_sample += 1
-            else:
-                # Range transition just happened — reset the window.
-                self._consecutive_range_sample = 0
-                self._after_spike = samples
-
-            if range_idx == 4:
-                if self._consecutive_range_sample < 2:
-                    # First two post-transition samples at range 4:
-                    # roll the EMAs back to their pre-update values so
-                    # the slow EMA tracks the new range more cleanly.
-                    self._rolling_avg = prev_rolling_avg
-                    self._rolling_avg4 = prev_rolling_avg4
-                assert self._rolling_avg4 is not None, "just-updated EMA must be set"
-                out = self._rolling_avg4
-            else:
-                assert self._rolling_avg is not None, "just-updated EMA must be set"
-                out = self._rolling_avg
-
-            self._after_spike = max(0, self._after_spike - 1)
-
-        self._prev_range = range_idx
-        return out

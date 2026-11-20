@@ -1,11 +1,9 @@
-"""Top-level Typer app + dispatch.
+"""The ``ppk2`` Typer app and its error mapping.
 
-The ``ppk2`` binary is registered as ``ppk2 = ppk2.cli.main:main`` in
-``pyproject.toml``; ``python -m ppk2`` resolves through
-``ppk2.__main__`` to the same entry point. [`main`][] wraps the Typer
-app with the top-level error mapping: expected failure modes (no
-device, wedged handshake, serial I/O) exit with a clean one-line
-stderr diagnostic instead of a traceback.
+``main`` is the entry point of the ``ppk2`` binary and of
+``python -m ppk2``. It wraps the app so that the expected failures (no
+device, wedged handshake, serial I/O) exit with a one-line message
+instead of a traceback.
 """
 
 import sys
@@ -17,6 +15,7 @@ import typer
 
 from ppk2 import DiscoveryError, SessionError
 from ppk2.cli.commands import capture as _capture
+from ppk2.cli.commands import convert as _convert
 from ppk2.cli.commands import discover as _discover
 from ppk2.cli.commands import list_devices as _list_devices
 from ppk2.cli.commands import metadata as _metadata
@@ -52,9 +51,9 @@ _VddOption = Annotated[
     typer.Option(
         "--vdd",
         help=(
-            "DUT VDD in volts. Source mode: regulator setpoint; ammeter mode: "
-            "feeds the calibration math, so set it to the DUT's real rail. "
-            "Clamped to [0.8, 5.0]."
+            "DUT supply voltage in volts. Source meter mode: what the PPK2 "
+            "outputs. Ampere meter mode: only feeds the calibration, so give "
+            "the DUT's real supply voltage. Clamped to [0.8, 5.0]."
         ),
     ),
 ]
@@ -62,7 +61,10 @@ _SourceOption = Annotated[
     bool,
     typer.Option(
         "--source",
-        help="Use source mode (PPK2 supplies VDD) instead of the default ammeter mode.",
+        help=(
+            "Use Source meter mode (the PPK2 supplies the DUT) instead of "
+            "the default, Ampere meter mode."
+        ),
     ),
 ]
 
@@ -83,7 +85,7 @@ def discover(serial: _SerialOption = None, port: _PortOption = None) -> None:
 
 @app.command("list")
 def list_() -> None:
-    """List connected PPK2s and tag each VCOM (data port / idle / busy)."""
+    """List connected PPK2s and mark each serial port: data port, idle or busy."""
     _list_devices.list_devices()
 
 
@@ -97,18 +99,21 @@ def metadata(serial: _SerialOption = None, port: _PortOption = None) -> None:
 def power(
     state: Annotated[
         _power.PowerState,
-        typer.Argument(case_sensitive=False, help="`on` closes the FET; `off` opens it."),
+        typer.Argument(case_sensitive=False, help="`on` powers the DUT; `off` cuts its power."),
     ],
     serial: _SerialOption = None,
     port: _PortOption = None,
     hold: Annotated[
         bool,
-        typer.Option("--hold", help="Hold the FET state until SIGINT (only meaningful with `on`)."),
+        typer.Option("--hold", help="Keep the power on until Ctrl-C (only meaningful with `on`)."),
     ] = False,
     vdd: _VddOption = 3.3,
     source: _SourceOption = False,
 ) -> None:
-    """Toggle the DUT-power FET on or off."""
+    """Switch power to the DUT on or off, like the app's Enable power output.
+
+    Power lasts only while the command runs: use --hold to keep it on.
+    """
     _power.power(serial, port, state, hold, vdd, source)
 
 
@@ -116,7 +121,11 @@ def power(
 def capture(
     out: Annotated[
         Path,
-        typer.Option("--out", "-o", help="Output CSV path."),
+        typer.Option(
+            "--out",
+            "-o",
+            help="Output path: a CSV, or a Power Profiler session file if it ends in .ppk2.",
+        ),
     ],
     serial: _SerialOption = None,
     port: _PortOption = None,
@@ -131,15 +140,25 @@ def capture(
         typer.Option(
             "--user-gain",
             help=(
-                "Per-range user gain override, RANGE:GAIN. Repeatable; "
+                "Per-range user gain override, RANGE:GAIN, with RANGE from 0 to 4 "
+                "(the app numbers the ranges 1 to 5). Repeatable; "
                 "e.g. --user-gain 2:1.05 --user-gain 4:0.98. Applied "
                 "host-side via Session.set_user_gain."
             ),
         ),
     ] = None,
 ) -> None:
-    """Capture the current trace to a CSV file (GUI-parity 11-column format)."""
+    """Capture the trace to a CSV file (the app's export format) or to a .ppk2 file."""
     _capture.capture(serial, port, out, seconds, vdd, source, user_gain or ())
+
+
+@app.command()
+def convert(
+    src: Annotated[Path, typer.Argument(help="CSV capture, plain or .gz.")],
+    dst: Annotated[Path, typer.Argument(help="Output .ppk2 path.")],
+) -> None:
+    """Convert a CSV capture to a .ppk2 file for Nordic's Power Profiler app."""
+    _convert.convert(src, dst)
 
 
 @app.command(
@@ -151,12 +170,19 @@ def run(
     port: _PortOption = None,
     out: Annotated[
         Path | None,
-        typer.Option("--out", "-o", help="Optional CSV output path for the child's runtime."),
+        typer.Option(
+            "--out",
+            "-o",
+            help="Optional trace output: a CSV, or a session file if the name ends in .ppk2.",
+        ),
     ] = None,
     vdd: _VddOption = 3.3,
     source: _SourceOption = False,
 ) -> None:
-    """Run a shell command with the DUT powered, optionally capturing the trace."""
+    """Run a command with the DUT powered, optionally capturing the trace.
+
+    The command goes after `--`: ppk2 run --source --vdd 3.0 -- west flash
+    """
     cmd = list(ctx.args)
     exit_code = _run.run(serial, port, cmd, out, vdd, source)
     if exit_code != 0:
@@ -166,16 +192,12 @@ def run(
 # ─── top-level error mapping ────────────────────────────────────────────
 
 #: Hint appended when a serial failure carries errno 16 (EBUSY): the
-#: port is held by another process — in practice, Nordic's GUI.
-_ERRNO16_HINT = " — close the nRF Connect Power Profiler (or any other process holding the port)"
+#: port is held by another process, in practice Nordic's app.
+_ERRNO16_HINT = " (close the nRF Connect Power Profiler, or whatever else holds the port)"
 
 
 def errno16_in_chain(exc: BaseException) -> bool:
-    """True when ``exc`` or anything in its cause/context chain is EBUSY (errno 16).
-
-    Module-public so tests can pin the chain walk; not part of the
-    documented API.
-    """
+    """Whether ``exc`` or anything in its cause/context chain is EBUSY (errno 16)."""
     seen: set[int] = set()
     current: BaseException | None = exc
     while current is not None and id(current) not in seen:
@@ -187,29 +209,24 @@ def errno16_in_chain(exc: BaseException) -> bool:
 
 
 def dispatch(argv: list[str] | None = None) -> int:
-    """Invoke the Typer app and map failures to exit codes + one-line stderr.
+    """Run the app and map failures to an exit code and one line on stderr.
 
-    The app runs in Typer's standalone mode, so CLI usage errors keep
-    Typer's own rendering (usage + hint, exit 2) and a Ctrl-C inside a
-    command keeps Typer's conventional exit 130 — those arrive here as
-    ``SystemExit`` and are passed through. What this wrapper adds is
-    the mapping for the library's expected failure modes, which must
+    Typer keeps its own handling of usage errors (exit 2) and of Ctrl-C
+    inside a command (exit 130): those arrive here as ``SystemExit`` and
+    pass through. Added here, so that the library's expected failures
     never show a traceback:
 
-    - [`DiscoveryError`][ppk2.DiscoveryError] /
-      [`SessionError`][ppk2.SessionError] → ``error: …`` + exit 1.
-    - Serial I/O errors → ``error: serial I/O failed …`` + exit 1.
-    - Either kind appends the close-the-Power-Profiler hint when
-      errno 16 (``EBUSY`` — the port is held by another process) is
-      anywhere in the exception's cause chain.
+    - ``DiscoveryError`` / ``SessionError`` -> ``error: …``, exit 1.
+    - Serial I/O errors -> ``error: serial I/O failed …``, exit 1.
+    - Either gets a close-the-Power-Profiler hint when errno 16 (the port
+      is held by another process) is in the cause chain.
 
-    A Ctrl-C *during* capture never reaches this mapping as an
-    exception: the capture command handles it (CSV flushed, its own
-    exit 130).
+    A Ctrl-C during a capture does not come through here: the capture
+    command handles it itself (CSV flushed, exit 130).
 
     Args:
-        argv: CLI arguments without the program name. ``None`` uses
-            ``sys.argv[1:]``.
+        argv: Arguments without the program name; ``sys.argv[1:]`` when
+            ``None``.
 
     Returns:
         The process exit code.
@@ -247,5 +264,5 @@ def _systemexit_code(exc: SystemExit) -> int:
 
 
 def main() -> None:
-    """Console-script entry point: run [`dispatch`][] and exit with its code."""
+    """Console-script entry point: run ``dispatch`` and exit with its code."""
     raise SystemExit(dispatch())

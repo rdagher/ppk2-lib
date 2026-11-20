@@ -1,7 +1,3 @@
-"""CLI entry point — the ``ppk2`` binary built on Typer.
-
-Internal to the package; not re-exported from the top-level
-[`ppk2`][] module.
-"""
+"""The ``ppk2`` binary, built on Typer. Internal: nothing here is re-exported."""
 
 __all__: list[str] = []

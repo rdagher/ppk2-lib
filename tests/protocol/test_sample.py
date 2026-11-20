@@ -2,8 +2,7 @@
 
 from ppk2 import decode_sample, decode_sample_bytes
 
-# Captured sample word from the same capture as
-# tests/fixtures/stream_4000.bin.
+# A sample word captured from a PPK2.
 _CAPTURED_WORD = 0x015C_0097
 
 

@@ -1,9 +1,4 @@
-"""Entry point for ``python -m ppk2``.
-
-Re-uses the wrapped entry point exported by [`ppk2.cli.main`][] so the
-top-level error mapping (clean one-line diagnostics, exit codes)
-applies identically to both invocation styles.
-"""
+"""Entry point for ``python -m ppk2``: the same ``main`` as the ``ppk2`` binary."""
 
 from ppk2.cli.main import main
 

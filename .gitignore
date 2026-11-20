@@ -24,6 +24,7 @@ htmlcov/
 # Build artefacts
 build/
 dist/
+site/
 *.egg-info/
 *.egg
 
@@ -44,9 +45,6 @@ dist/
 # Committed reference captures (gzipped, lossless) for validation rounds
 !validation/evidence/*/captures/*.csv.gz
 
-# Firmware hex artefacts — built locally (`just hex`) and, later, by a
-# CI build matrix. Never committed.
+# Firmware hex artefacts: built locally (`just hex`) or by the CI
+# firmware matrix. Never committed.
 *.hex
-
-# mkdocs build output
-site/

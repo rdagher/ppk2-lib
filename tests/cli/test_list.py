@@ -1,4 +1,4 @@
-"""``ppk2 list`` rendering tests — device enumeration stubbed, no serial I/O."""
+"""``ppk2 list`` rendering tests: device enumeration stubbed, no serial I/O."""
 
 import pytest
 from typer.testing import CliRunner
@@ -57,7 +57,7 @@ def test_list_flags_busy_port_and_exits_1_when_data_port_unidentified(
     )
     result = runner.invoke(app, ["list"])
     assert result.exit_code == 1
-    assert "[busy — held by another process?]" in result.output
+    assert "[busy: held by another process?]" in result.output
     assert "close the nRF Connect Power Profiler" in result.output
     assert "--port" in result.output
 
@@ -65,7 +65,7 @@ def test_list_flags_busy_port_and_exits_1_when_data_port_unidentified(
 def test_list_mixed_devices_exit_code_follows_the_unidentified_one(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """One healthy device + one unidentified → still exit 1."""
+    """One healthy device + one unidentified -> still exit 1."""
     _patch_listings(
         monkeypatch,
         [

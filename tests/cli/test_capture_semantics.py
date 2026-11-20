@@ -1,14 +1,14 @@
-"""Capture end-block semantics — Session stubbed, no hardware.
+"""Capture end-block semantics: Session stubbed, no hardware.
 
-Pins: n == 0 → exit 1 with the mode/power diagnostic; sub-95 % realized
-rate → the dropped-samples watchdog; Ctrl-C → "interrupted — CSV
+Pins: n == 0 -> exit 1 with the mode/power diagnostic; sub-95 % realized
+rate -> the dropped-samples watchdog; Ctrl-C -> "interrupted: CSV
 flushed" + exit 130 with the partial CSV intact; NaN placeholders count
 toward the stream rate but write no rows.
 """
 
 import signal
 from collections.abc import Callable
-from math import nan
+from math import isnan, nan
 from pathlib import Path
 from time import sleep
 
@@ -16,7 +16,9 @@ import pytest
 
 from ppk2 import Sample
 from ppk2.cli.commands import capture as capture_module
+from ppk2.cli.csv import CSV_HEADER
 from ppk2.cli.main import dispatch
+from tests.cli.test_ppk2file import frames
 
 _REAL = Sample(current_micro_amps=12.5, logic=0x03)
 _NAN = Sample(current_micro_amps=nan, logic=0)
@@ -27,7 +29,7 @@ class _FakeSession:
 
     ``interrupt`` delivers a real SIGINT mid-capture (handled by the
     command's ``_SigintFlag``), emitting one row before and attempting
-    one after — like a user's Ctrl-C between samples.
+    one after: like a user's Ctrl-C between samples.
     """
 
     def __init__(
@@ -61,7 +63,7 @@ class _FakeSession:
         return None
 
     def power_on(self, latch_s: float = 1.0) -> None:
-        assert latch_s == 0.0, "capture must hand the FET latch to the loop"
+        assert latch_s == 0.0, "capture must leave the reads after power-on to the loop"
 
     def power_off(self) -> None:
         return None
@@ -82,7 +84,7 @@ class _FakeSession:
         if self._interrupt:
             emit(_REAL)  # one row lands before the interrupt
             signal.raise_signal(signal.SIGINT)  # handled by capture's _SigintFlag
-            emit(_REAL)  # flag now set → emit returns False → loop stops
+            emit(_REAL)  # flag now set -> emit returns False -> loop stops
             return
         if self._wall_s:
             sleep(self._wall_s)
@@ -120,8 +122,8 @@ def test_zero_samples_exits_1_with_mode_power_diagnostic(
     code = dispatch(["capture", "-o", str(out), "-s", "0.1"])
     captured = capsys.readouterr()
     assert code == 1
-    assert "no samples captured — check PPK2 mode + DUT power" in captured.err
-    assert out.read_text().splitlines() == [capture_module.CSV_HEADER]
+    assert "no samples captured: check the PPK2 mode and the DUT's power" in captured.err
+    assert out.read_text().splitlines() == [CSV_HEADER]
 
 
 def test_low_realized_rate_prints_dropped_samples_watchdog(
@@ -129,7 +131,7 @@ def test_low_realized_rate_prints_dropped_samples_watchdog(
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
-    """0.6 s wall with a handful of samples ≪ 95 % of 100 kSPS → WARNING."""
+    """0.6 s wall with a handful of samples ≪ 95 % of 100 kSPS -> WARNING."""
     _install(monkeypatch, _FakeSession(samples=[_REAL], wall_s=0.6))
     code = dispatch(["capture", "-o", str(tmp_path / "slow.csv"), "-s", "0.1"])
     captured = capsys.readouterr()
@@ -148,7 +150,7 @@ def test_clean_short_capture_exits_0_without_watchdog(
     code = dispatch(["capture", "-o", str(out), "-s", "30"])
     captured = capsys.readouterr()
     assert code == 0
-    assert "WARNING: stream rate" not in captured.err  # wall < 0.5 s → no watchdog
+    assert "WARNING: stream rate" not in captured.err  # wall < 0.5 s -> no watchdog
     assert len(out.read_text().splitlines()) == 1 + 10  # header + rows
 
 
@@ -176,6 +178,26 @@ def test_ctrl_c_flushes_csv_prints_interrupted_and_exits_130(
     code = dispatch(["capture", "-o", str(out), "-s", "30"])
     captured = capsys.readouterr()
     assert code == 130
-    assert "interrupted — CSV flushed" in captured.err
+    assert "interrupted: CSV flushed" in captured.err
     # The partial CSV is valid: header + the one pre-interrupt row.
     assert len(out.read_text().splitlines()) == 1 + 1
+
+
+def test_ppk2_output_keeps_a_slot_for_lost_samples(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    """``--out x.ppk2`` writes a session file; a lost sample stays in the timeline."""
+    _install(monkeypatch, _FakeSession(samples=[_REAL, _NAN, _REAL]))
+    out = tmp_path / "trace.ppk2"
+
+    code = dispatch(["capture", "-o", str(out), "-s", "0.1"])
+
+    captured = capsys.readouterr()
+    assert code == 0, captured.err
+    currents = [current for current, _ in frames(out)]
+    assert currents[0] == currents[2] == 12.5
+    assert isnan(currents[1])
+    assert [pairs for _, pairs in frames(out)] == [0x555A, 0x5555, 0x555A]
+    assert "kept as gaps in the .ppk2" in captured.err

@@ -1,22 +1,42 @@
 # Test fixtures
 
-Captured-hardware artefacts used by the protocol layer's tests. All
-are small enough to vendor (~17 KB total); the project depends on
-nothing outside this repo to run its test suite.
+Bytes recorded from a PPK2, and what they should parse to. With these
+the unit tests need no hardware.
 
-| File | What | Used by |
-|---|---|---|
-| [`metadata.raw`](metadata.raw) | 1032 bytes — `GET_META_DATA` response captured from a real PPK2 (captured with a DWM3001CDK dev kit as the DUT, 2026-06-05). | [`tests/protocol/test_metadata.py`](../protocol/test_metadata.py), [`tests/protocol/test_calibration.py`](../protocol/test_calibration.py) |
-| [`metadata.parsed.json`](metadata.parsed.json) | Reference parse of `metadata.raw` (R / GS / GI / O / S / I / UG arrays + HW + IA + Calibrated). | [`tests/protocol/test_metadata.py`](../protocol/test_metadata.py) (ground-truth byte-for-byte comparison) |
-| [`stream_4000.bin`](stream_4000.bin) | First 4 000 bytes (= 1 000 samples = 10 ms) of a 30 s sample stream from the same bench. | [`tests/protocol/test_stream.py`](../protocol/test_stream.py) (parity test) |
-| [`parsed_1000.csv`](parsed_1000.csv) | First 1 000 rows of the corresponding parsed-CSV ground truth from the upstream Python reference, IRNAS `ppk2-api-python`. | [`tests/protocol/test_stream.py`](../protocol/test_stream.py) (per-sample current comparison within ±0.01 µA) |
+| File | What it is |
+|---|---|
+| [`metadata.raw`](metadata.raw) | The calibration text a PPK2 sent, 1032 bytes (2026-06-05). |
+| [`metadata.parsed.json`](metadata.parsed.json) | Its expected values. |
+| [`stream_poweron.bin`](stream_poweron.bin) | 600 samples (6 ms) of the same PPK2's stream while it powers a dev kit on. All five measurement ranges, nine range changes. |
+| [`parsed_poweron.csv`](parsed_poweron.csv) | Those samples as parsed by Nordic's own code: current and logic byte. |
 
-## Provenance
+The stream was recorded on 2026-11-20 in Source meter mode at 3.3 V,
+with the [bench firmware](../hil/bench-dut/) on an nRF54LM20 DK.
 
-`metadata.raw` / `stream_*.bin` / `parsed_*.csv` originate from
-captures the project author ran on a known-good bench setup; they were
-parsed by a known-good independent Python implementation (IRNAS
-`ppk2-api-python`) to produce the JSON / CSV ground truth. The fixtures are committed to make the
-test suite reproducible — anyone can run `just test` without needing
-hardware. The HIL test tier (`just test-hw`) re-validates the same
-contract against fresh captures.
+## Where the expected values come from
+
+`parsed_poweron.csv` is what the parser of Nordic's Power Profiler app
+gives for `stream_poweron.bin`, with `metadata.raw` as calibration
+(`pc-nrfconnect-ppk` v4.4.1, commit `39bba39`,
+`src/device/serialDevice.ts`). To produce it again you need Node 24 or
+newer and a checkout of the app:
+
+```sh
+git clone https://github.com/nordicsemi/pc-nrfconnect-ppk
+node tests/fixtures/make_reference.mjs pc-nrfconnect-ppk
+```
+
+The app's source is not copied here: its licence allows using it, not
+redistributing it. [`nordic_hooks.mjs`](nordic_hooks.mjs) replaces the
+two parts that tie the parser to the desktop app, the serial worker and
+the logger.
+
+`metadata.parsed.json` was produced by IRNAS's `ppk2-api-python` 0.9.2.
+On the stream, that library gives the same output as Nordic's parser.
+
+## What the stream covers
+
+Bit extraction, the calibration of each range, the spike filter across
+range changes, and the logic byte. It has no lost sample and no corrupt
+word: those cases are unit tests in
+[`tests/protocol/test_stream.py`](../protocol/test_stream.py).

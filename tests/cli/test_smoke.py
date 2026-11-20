@@ -1,4 +1,4 @@
-"""CLI parse-path smoke tests — verify Typer wiring without touching hardware.
+"""CLI parse-path smoke tests: verify Typer wiring without touching hardware.
 
 Every subcommand's help text renders cleanly, default flag values land,
 required flags raise the right error, and ``--`` separates
@@ -19,7 +19,7 @@ runner = CliRunner()
 
 
 class _StubSession:
-    """Zero-sample stand-in for ppk2.Session — same device seam that
+    """Zero-sample stand-in for ppk2.Session: same device seam that
     tests/cli/test_capture_semantics.py stubs, so no discovery poll or
     serial I/O ever runs. Doubles as its own ``Session.open`` surface.
     """
@@ -135,7 +135,7 @@ def test_run_help_runs() -> None:
 def test_capture_seconds_flag_accepts_float(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """``--seconds 2.5`` must parse — failing means we mistyped the argument."""
+    """``--seconds 2.5`` must parse: failing means we mistyped the argument."""
     stub_device_seam(monkeypatch)
     result = runner.invoke(
         app, ["capture", "--out", str(tmp_path / "unused.csv"), "--seconds", "2.5"]
@@ -159,7 +159,7 @@ def test_every_device_command_documents_port_flag() -> None:
 
 
 def test_discover_with_port_echoes_it_without_discovery() -> None:
-    """--port bypasses discovery AND the probe — works with no PPK2 plugged in."""
+    """--port bypasses discovery AND the probe: works with no PPK2 plugged in."""
     result = runner.invoke(app, ["discover", "--port", "/dev/cu.usbmodemFAKE12"])
     assert result.exit_code == 0
     assert result.output.strip() == "/dev/cu.usbmodemFAKE12"

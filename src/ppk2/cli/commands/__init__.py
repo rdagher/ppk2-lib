@@ -1,23 +1,21 @@
 """Per-subcommand modules for the ``ppk2`` CLI.
 
-Each submodule registers a single Typer subcommand on the root
-[`ppk2.cli.main.app`][]. The split keeps each subcommand's logic
-self-contained and unit-testable.
-
-Shared across the modules: [`resolve_device`][] turns the
-``--serial`` / ``--port`` flag pair into a concrete device path.
+``resolve_device``, shared by all of them, turns the ``--serial`` /
+``--port`` flag pair into a device path.
 """
 
-from ppk2 import find_ppk2, find_ppk2_by_serial
+from ppk2 import Mode, find_ppk2, find_ppk2_by_serial
+
+#: The modes under the names of Nordic's app, for messages.
+MODE_LABELS: dict[int, str] = {Mode.AMPERE: "Ampere meter", Mode.SOURCE: "Source meter"}
 
 
 def resolve_device(serial: str | None, port: str | None) -> str:
-    """Resolve the target data-port path from the ``--serial``/``--port`` flags.
+    """Resolve the data-port path from the ``--serial``/``--port`` flags.
 
-    ``--port`` wins and bypasses discovery AND the active data-port
-    probe entirely — the caller asserts they know the right path.
-    Otherwise discovery runs (scoped to ``--serial`` when given),
-    including the probe.
+    ``--port`` wins and skips discovery and the probe: the caller says
+    they know the path. Otherwise discovery runs, scoped to ``--serial``
+    when given.
     """
     if port is not None:
         return port

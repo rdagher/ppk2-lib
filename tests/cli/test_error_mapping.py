@@ -1,4 +1,4 @@
-"""Top-level error-mapping tests — dispatch() turns failures into exit codes.
+"""Top-level error-mapping tests: dispatch() turns failures into exit codes.
 
 Every test stubs the device-resolution seam, so no discovery poll or
 serial I/O ever runs.
@@ -56,13 +56,13 @@ def test_bare_serial_exception_maps_to_serial_io_line(
     captured = capsys.readouterr()
     assert code == 1
     assert captured.err.startswith("error: serial I/O failed")
-    assert "nRF Connect Power Profiler" not in captured.err  # no errno 16 → no hint
+    assert "nRF Connect Power Profiler" not in captured.err  # no errno 16 -> no hint
 
 
 def test_keyboard_interrupt_outside_capture_maps_to_130(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Ctrl-C in a non-capture command → conventional 130, no traceback.
+    """Ctrl-C in a non-capture command -> conventional 130, no traceback.
 
     Typer converts an in-command KeyboardInterrupt to a silent exit
     130 itself; the exit code is the automation contract. The

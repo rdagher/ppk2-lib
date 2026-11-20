@@ -1,7 +1,7 @@
 """CSV format helper tests.
 
-Cases pulled verbatim from a real Nordic GUI export so any drift in our
-formatting surfaces immediately.
+Cases pulled verbatim from a real export of Nordic's app so any drift
+in our formatting surfaces immediately.
 """
 
 from io import StringIO
@@ -11,26 +11,26 @@ from ppk2.cli.csv import (
     CSV_HEADER,
     fmt_logic_d0d7,
     fmt_ts,
-    gui_noise_floor,
+    noise_floor,
     vdd_to_mv,
     write_csv_row,
 )
 
 
-def test_gui_noise_floor_matches_device_actions() -> None:
-    """deviceActions.ts:333-337 — everything below 0.2 µA → exactly 0."""
-    assert gui_noise_floor(-1.32) == 0.0
-    assert gui_noise_floor(0.0) == 0.0
-    assert gui_noise_floor(0.199) == 0.0
-    assert gui_noise_floor(0.2) == 0.2
-    assert gui_noise_floor(14.53) == 14.53
+def test_noise_floor_matches_device_actions() -> None:
+    """deviceActions.ts:333-337: everything below 0.2 µA -> exactly 0."""
+    assert noise_floor(-1.32) == 0.0
+    assert noise_floor(0.0) == 0.0
+    assert noise_floor(0.199) == 0.0
+    assert noise_floor(0.2) == 0.2
+    assert noise_floor(14.53) == 14.53
     # NaN passes through so the skip-row path still sees it.
-    assert isnan(gui_noise_floor(nan))
+    assert isnan(noise_floor(nan))
 
 
 def test_clamped_row_writes_exact_zero() -> None:
     out = StringIO()
-    write_csv_row(out, 0.01, gui_noise_floor(0.084), 0)
+    write_csv_row(out, 0.01, noise_floor(0.084), 0)
     assert out.getvalue() == "0.01,0.000,00000000,0,0,0,0,0,0,0,0\n"
 
 
@@ -51,7 +51,7 @@ def test_fmt_ts_matches_gui_style() -> None:
 
 
 def test_fmt_logic_d0d7_d0_leftmost() -> None:
-    """The GUI prints D0 as the leftmost character of the 8-char field."""
+    """The app prints D0 as the leftmost character of the 8-char field."""
     assert fmt_logic_d0d7(0b0000_0000) == "00000000"
     assert fmt_logic_d0d7(0b0000_0001) == "10000000"  # D0=1
     assert fmt_logic_d0d7(0b1000_0000) == "00000001"  # D7=1
@@ -59,8 +59,8 @@ def test_fmt_logic_d0d7_d0_leftmost() -> None:
     assert fmt_logic_d0d7(0xFF) == "11111111"
 
 
-def test_write_csv_row_matches_gui_layout() -> None:
-    """Verbatim line from a Nordic GUI export."""
+def test_write_csv_row_matches_the_apps_layout() -> None:
+    """Verbatim line from an export of Nordic's app."""
     buf = StringIO()
     write_csv_row(buf, 0.0, 2.846, 0b0000_0001)
     assert buf.getvalue() == "0,2.846,10000000,1,0,0,0,0,0,0,0\n"
@@ -71,7 +71,7 @@ def test_write_csv_row_matches_gui_layout() -> None:
 
 
 def test_write_csv_row_writes_whatever_it_is_given() -> None:
-    """write_csv_row does not filter NaN — that policy lives in the callers.
+    """write_csv_row does not filter NaN: that policy lives in the callers.
 
     Both capture loops skip (and count) data-loss placeholders before
     calling this helper; the loop-level skip is pinned in

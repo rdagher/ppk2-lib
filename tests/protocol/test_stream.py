@@ -1,11 +1,9 @@
 """Stream parser tests.
 
-Includes a parity check of the parser against a captured byte stream
-and its reference-parsed CSV (tests/fixtures/stream_4000.bin ->
-parsed_1000.csv; see tests/fixtures/README.md for provenance). The
-reference CSV writes currents at 3-decimal precision, so we use a
-tolerance of 0.01 µA to absorb that rounding plus any path-dependent
-f64 LSB drift in the EMA.
+Includes a parity check against a captured byte stream and its parse
+by Nordic's own code (see tests/fixtures/README.md). The reference CSV
+carries currents at 3-decimal precision; the comparison allows for
+that rounding.
 """
 
 import math
@@ -26,53 +24,40 @@ from ppk2 import (
 from tests.protocol.fixtures import METADATA_RAW, PARSED_CSV, STREAM_BIN
 
 _VDD_MV = 3300
-_TOLERANCE_UA = 0.01
-_PREFIX_BYTES = 4_000  # 1 000 samples = 10 ms of capture
-
-_HAS_FIXTURES = METADATA_RAW.exists() and STREAM_BIN.exists() and PARSED_CSV.exists()
+_TOLERANCE_UA = 0.001  # the reference is rounded to 3 decimals
 
 
-@pytest.mark.skipif(not _HAS_FIXTURES, reason="captured stream fixtures not present")
-def test_stream_parser_matches_python_ref_on_captured_stream() -> None:
-    coeffs = parse_metadata(METADATA_RAW.read_bytes())
-    stream_bytes = STREAM_BIN.read_bytes()
-    csv_text = PARSED_CSV.read_text()
+def test_stream_parser_matches_nordic_on_a_captured_stream() -> None:
+    """Same raw bytes, parsed here and by the code of Nordic's app: same currents and logic.
 
-    n_expected = _PREFIX_BYTES // 4
-    expected: list[float] = []
-    for line in csv_text.splitlines()[1 : 1 + n_expected]:
-        parts = line.split(",")
-        expected.append(float(parts[1]))
+    The stream is a DUT power-on: all five measurement ranges, nine range changes,
+    so the calibration of each range and the spike filter are compared.
+    """
+    rows = [line.split(",") for line in PARSED_CSV.read_text().splitlines()[1:]]
+    expected_ua = [float(row[1]) for row in rows]
+    expected_logic = [int(row[2]) for row in rows]
 
-    parser = StreamParser(coeffs, _VDD_MV)
+    parser = StreamParser(parse_metadata(METADATA_RAW.read_bytes()), _VDD_MV)
     produced: list[Sample] = []
-    parser.push_bytes(stream_bytes[:_PREFIX_BYTES], produced.append)
+    parser.push_bytes(STREAM_BIN.read_bytes(), produced.append)
 
-    count_diff = abs(len(produced) - len(expected))
-    assert count_diff <= 2, (
-        f"sample count mismatch: ours {len(produced)} vs reference {len(expected)}"
+    assert len(produced) == len(expected_ua)
+    worst, index = max(
+        (abs(sample.current_micro_amps - ua), i)
+        for i, (sample, ua) in enumerate(zip(produced, expected_ua, strict=True))
     )
-
-    n = min(len(produced), len(expected))
-    max_diff = 0.0
-    max_idx = 0
-    for idx in range(n):
-        diff = abs(produced[idx].current_micro_amps - expected[idx])
-        if diff > max_diff:
-            max_diff = diff
-            max_idx = idx
-    assert max_diff <= _TOLERANCE_UA, (
-        f"max sample diff {max_diff:.6f} µA at index {max_idx} "
-        f"(ours {produced[max_idx].current_micro_amps:.6f}, "
-        f"reference {expected[max_idx]:.6f}) exceeds tolerance {_TOLERANCE_UA}"
+    assert worst <= _TOLERANCE_UA, (
+        f"sample {index}: ours {produced[index].current_micro_amps:.6f} µA, "
+        f"reference {expected_ua[index]:.6f} µA"
     )
+    assert [sample.logic for sample in produced] == expected_logic
 
 
 def test_stream_parser_stashes_sub_4_byte_input_until_complete() -> None:
     """Sub-word input is stashed in the remainder buffer; emits on completion.
 
     Matches Nordic's ``remainder: Buffer`` behavior at
-    ``serialDevice.ts:299`` — a chunk that ends mid-word must not
+    ``serialDevice.ts:299``: a chunk that ends mid-word must not
     drop the trailing 1-3 bytes; they're consumed when the next chunk
     arrives.
     """
@@ -83,11 +68,11 @@ def test_stream_parser_stashes_sub_4_byte_input_until_complete() -> None:
     word = _make_word(adc=42, range_idx=0, counter=0, logic=0x5A)
     payload = word.to_bytes(4, "little")
 
-    # First push: 3 of 4 bytes → 0 emits, 3 bytes stashed.
+    # First push: 3 of 4 bytes -> 0 emits, 3 bytes stashed.
     parser.push_bytes(payload[:3], emitted.append)
     assert emitted == []
 
-    # Second push: the missing 4th byte → 1 emit, remainder cleared.
+    # Second push: the missing 4th byte -> 1 emit, remainder cleared.
     parser.push_bytes(payload[3:4], emitted.append)
     assert len(emitted) == 1
     assert emitted[0].logic == 0x5A
@@ -98,9 +83,9 @@ def test_stream_parser_handles_misaligned_chunks_across_calls() -> None:
 
     5 + 5 + 5 = 15 bytes. With 4-byte words and a remainder buffer:
     - After call 1 (5 bytes): emit 1 (bytes 0..3), stash 1 (byte 4).
-    - After call 2 (5 bytes, prepended to 1 stashed → 6): emit 1
+    - After call 2 (5 bytes, prepended to 1 stashed -> 6): emit 1
       (bytes 0..3 of combined), stash 2.
-    - After call 3 (5 bytes, prepended to 2 stashed → 7): emit 1
+    - After call 3 (5 bytes, prepended to 2 stashed -> 7): emit 1
       (bytes 0..3 of combined), stash 3.
     Final: 3 emits, 3 bytes still in the remainder buffer.
     """
@@ -134,7 +119,7 @@ def test_stream_parser_drops_range_out_of_spec_samples() -> None:
 
 
 def test_clean_stream_emits_every_sample_in_order() -> None:
-    """Monotonically-increasing counters: every input → exactly one output, in order."""
+    """Monotonically-increasing counters: every input -> exactly one output, in order."""
     coeffs = _identity_coeffs()
     parser = StreamParser(coeffs, _VDD_MV)
 
@@ -147,7 +132,7 @@ def test_clean_stream_emits_every_sample_in_order() -> None:
     parser.push_bytes(payload, emitted.append)
 
     assert len(emitted) == n
-    # Logic bytes were i & 0xFF — a strict-ordering tell-tale that
+    # Logic bytes were i & 0xFF: a strict-ordering tell-tale that
     # samples weren't reordered.
     for i, s in enumerate(emitted):
         assert s.logic == i & 0xFF
@@ -159,14 +144,14 @@ def test_brief_mismatch_drained_on_matched_recovery() -> None:
     With expected counter advancing past a small gap, the mismatched
     samples sit in the corruption buffer; when a counter matches the
     advanced-expected value, the buffer drains in FIFO order, then
-    the current sample emits — every input surfaces exactly once.
+    the current sample emits: every input surfaces exactly once.
     """
     coeffs = _identity_coeffs()
     parser = StreamParser(coeffs, _VDD_MV)
 
     emitted: list[Sample] = []
 
-    # Seed with counter=0 → expected becomes 1, emit s0.
+    # Seed with counter=0 -> expected becomes 1, emit s0.
     seed = _make_word(adc=100, range_idx=0, counter=0, logic=0xA0)
     parser.push_bytes(seed.to_bytes(4, "little"), emitted.append)
     assert [s.logic for s in emitted] == [0xA0]
@@ -177,10 +162,10 @@ def test_brief_mismatch_drained_on_matched_recovery() -> None:
         _make_word(adc=100, range_idx=0, counter=3, logic=0xA3).to_bytes(4, "little"),
         emitted.append,
     )
-    # No new emit yet — s_3 sits in the buffer.
+    # No new emit yet: s_3 sits in the buffer.
     assert [s.logic for s in emitted] == [0xA0]
 
-    # Match at expected=2 — drain buffer + emit current. Order: s_3 (drained), s_2 (current).
+    # Match at expected=2: drain buffer + emit current. Order: s_3 (drained), s_2 (current).
     parser.push_bytes(
         _make_word(adc=100, range_idx=0, counter=2, logic=0xA2).to_bytes(4, "little"),
         emitted.append,
@@ -192,20 +177,20 @@ def test_buffer_overflow_emits_nan_placeholders_and_resyncs() -> None:
     """After MAX_BUFFERED_CORRUPTED mismatches without recovery, declare data loss.
 
     NaN placeholders are emitted for the (counter - expected) gap, then
-    the trigger sample emits as itself. Subsequent matched samples
-    continue normally.
+    the held samples, then the trigger sample. Subsequent matched
+    samples continue normally.
     """
     coeffs = _identity_coeffs()
     parser = StreamParser(coeffs, _VDD_MV)
     emitted: list[Sample] = []
 
-    # Seed with counter=0 → expected = 1, emit s0.
+    # Seed with counter=0 -> expected = 1, emit s0.
     parser.push_bytes(
         _make_word(adc=100, range_idx=0, counter=0, logic=0).to_bytes(4, "little"), emitted.append
     )
     emitted.clear()
 
-    # Send MAX_BUFFERED_CORRUPTED mismatched samples — all buffered.
+    # Send MAX_BUFFERED_CORRUPTED mismatched samples: all buffered.
     # Counters chosen to be far from expected and from each other so
     # they look like real noise rather than a stuck counter.
     mismatch_counters = [10, 20, 30, 40, 50]  # exactly 5 = MAX_BUFFERED_CORRUPTED
@@ -214,27 +199,29 @@ def test_buffer_overflow_emits_nan_placeholders_and_resyncs() -> None:
             _make_word(adc=100, range_idx=0, counter=c, logic=0xFF).to_bytes(4, "little"),
             emitted.append,
         )
-    # Nothing emitted yet — buffer at threshold but not over.
+    # Nothing emitted yet: buffer at threshold but not over.
     assert emitted == []
 
     # 6th mismatch triggers data-loss path. Trigger with counter=10
     # (any non-matching value). Expected at this point: 1 + 5 = 6.
-    # gap = (10 - 6) & 0x3F = 4 → 4 NaN placeholders, then trigger sample.
+    # gap = (10 - 6) & 0x3F = 4 -> 4 NaN placeholders, the 5 held
+    # samples, then the trigger sample.
     parser.push_bytes(
         _make_word(adc=100, range_idx=0, counter=10, logic=0x55).to_bytes(4, "little"),
         emitted.append,
     )
-    assert len(emitted) == 5  # 4 NaN + 1 trigger
+    assert len(emitted) == 10  # 4 NaN + 5 held + 1 trigger
     for nan_sample in emitted[:4]:
         assert math.isnan(nan_sample.current_micro_amps)
         assert nan_sample.logic == 0  # placeholders carry no logic data
-    trigger = emitted[4]
+    assert [s.logic for s in emitted[4:9]] == [0xFF] * 5
+    trigger = emitted[9]
     assert not math.isnan(trigger.current_micro_amps)
     assert trigger.logic == 0x55
 
-    # After the data-loss path, the buffered 5 samples are dropped and
-    # expected is reset to (trigger.counter + 1) = 11. A subsequent
-    # in-sync sample emits normally.
+    # After the data-loss path expected is reset to
+    # (trigger.counter + 1) = 11. A subsequent in-sync sample emits
+    # normally.
     emitted.clear()
     parser.push_bytes(
         _make_word(adc=100, range_idx=0, counter=11, logic=0x42).to_bytes(4, "little"),
@@ -244,17 +231,38 @@ def test_buffer_overflow_emits_nan_placeholders_and_resyncs() -> None:
     assert emitted[0].logic == 0x42
 
 
+@pytest.mark.parametrize("lost", [1, 10, 40, 63])
+def test_lost_samples_keep_the_timeline_exact(lost: int) -> None:
+    """``lost`` samples vanish on the wire and the stream goes on.
+
+    Every sample period must get exactly one slot: a placeholder for
+    each lost sample, and every sample that did arrive, in order.
+    """
+    parser = StreamParser(_identity_coeffs(), _VDD_MV)
+    emitted: list[Sample] = []
+    before, after = 10, 20
+    sent = [*range(before), *range(before + lost, before + lost + after)]
+    for seq in sent:
+        word = _make_word(adc=100, range_idx=0, counter=seq & 0x3F, logic=seq & 0xFF)
+        parser.push_bytes(word.to_bytes(4, "little"), emitted.append)
+
+    assert len(emitted) == before + lost + after
+    arrived = [s.logic for s in emitted if not math.isnan(s.current_micro_amps)]
+    assert arrived == [seq & 0xFF for seq in sent]
+    assert all(math.isnan(s.current_micro_amps) for s in emitted[before : before + lost])
+    assert parser.dataloss_total == lost
+
+
 def test_max_buffered_corrupted_constant_matches_nordic_threshold() -> None:
-    """Pinning the constant value — Nordic's serialDevice.ts:268 fires on length > 4."""
+    """Pinning the constant value: Nordic's serialDevice.ts:268 fires on length > 4."""
     assert MAX_BUFFERED_CORRUPTED == 5
 
 
 def test_dataloss_total_counts_nan_placeholders_only() -> None:
-    """dataloss_total tracks NaN placeholders emitted, not buffered-and-dropped samples.
+    """dataloss_total counts the NaN placeholders, not the held samples.
 
-    Matches Nordic's dataLossCounter at serialDevice.ts:131 which is
-    incremented by the (counter - expectedCounter) gap, not by the
-    5 buffered samples that get cleared alongside.
+    Like Nordic's dataLossCounter (serialDevice.ts), it grows by the
+    (counter - expectedCounter) gap only.
     """
     coeffs = _identity_coeffs()
     parser = StreamParser(coeffs, _VDD_MV)
@@ -275,26 +283,21 @@ def test_dataloss_total_counts_nan_placeholders_only() -> None:
     assert parser.dataloss_total == 0  # nothing dropped yet, just buffered
 
     # Trigger sample (counter=10, expected=6 after 5 mismatch advances).
-    # gap = (10 - 6) & 0x3F = 4 → dataloss_total should grow by 4.
+    # gap = (10 - 6) & 0x3F = 4 -> dataloss_total should grow by 4.
     parser.push_bytes(
         _make_word(adc=100, range_idx=0, counter=10, logic=0).to_bytes(4, "little"), emitted.append
     )
     assert parser.dataloss_total == 4
 
 
-def test_genuine_loss_trace_drops_buffered_reals_and_fills_the_arithmetic_gap() -> None:
-    """Genuine forward loss: the 5 post-gap samples are dropped, placeholders span the rest.
+def test_genuine_loss_keeps_the_samples_that_arrived_after_the_gap() -> None:
+    """Genuine forward loss: placeholders for the lost samples, then the real ones.
 
-    Pins a Nordic-inherited property of the corruption-buffer design
-    (deliberate — we port the intent-corrected primary source, we don't
-    redesign it): when the counter jumps forward because samples were
-    genuinely lost in transit, the next 5 REAL samples land in the
-    corruption buffer and are discarded when the 6th arrival triggers
-    the data-loss branch. The NaN placeholders emitted at that point
-    cover the arithmetic gap from the advanced expected-counter to the
-    trigger sample — which includes the 5 buffered-and-dropped slots —
-    so the timeline stays mod-64-consistent even though those 5 carried
-    real data.
+    When samples are lost in transit the counter jumps forward and
+    stays consecutive, so the next 5 arrivals are held back and the 6th
+    declares the loss. The held samples are real and came after the
+    gap: they surface after the placeholders, each in its own slot.
+    Nordic's app shows them too (it emits them on arrival).
     """
     coeffs = _identity_coeffs()
     parser = StreamParser(coeffs, _VDD_MV)
@@ -309,27 +312,26 @@ def test_genuine_loss_trace_drops_buffered_reals_and_fills_the_arithmetic_gap() 
     assert [s.logic for s in emitted] == [0, 1, 2, 3]
 
     # Genuine loss: counters 4..23 never arrive. The stream resumes at
-    # 24 and stays consecutive — every arrival is REAL data.
+    # 24 and stays consecutive: every arrival is REAL data.
     for c in (24, 25, 26, 27, 28):
         parser.push_bytes(
             _make_word(adc=100, range_idx=0, counter=c, logic=c).to_bytes(4, "little"),
             emitted.append,
         )
-    # All five buffered (expected advanced 4 → 9), nothing emitted yet.
+    # All five held (expected advanced 4 -> 9), nothing emitted yet.
     assert [s.logic for s in emitted] == [0, 1, 2, 3]
 
-    # 6th consecutive mismatch (counter=29, expected=9) triggers the
-    # data-loss branch: gap = (29 - 9) & 0x3F = 20 NaN placeholders,
-    # then the trigger emits; the buffered 24..28 are dropped.
+    # 6th consecutive mismatch (counter=29, expected=9) declares the
+    # loss: gap = (29 - 9) & 0x3F = 20 placeholders for 4..23, then the
+    # held 24..28, then 29. One slot per sample period, 0 through 29.
     parser.push_bytes(
         _make_word(adc=100, range_idx=0, counter=29, logic=29).to_bytes(4, "little"),
         emitted.append,
     )
-    assert len(emitted) == 4 + 20 + 1
+    assert len(emitted) == 30
     assert all(math.isnan(s.current_micro_amps) for s in emitted[4:24])
-    assert emitted[24].logic == 29 and not math.isnan(emitted[24].current_micro_amps)
-    # The five real samples that sat in the buffer never surface.
-    assert not any(s.logic in (24, 25, 26, 27, 28) for s in emitted)
+    assert [s.logic for s in emitted[24:]] == [24, 25, 26, 27, 28, 29]
+    assert not any(math.isnan(s.current_micro_amps) for s in emitted[24:])
     assert parser.dataloss_total == 20
 
     # Resynced: the next consecutive sample emits normally.
@@ -341,14 +343,14 @@ def test_genuine_loss_trace_drops_buffered_reals_and_fills_the_arithmetic_gap() 
 
 
 def test_dataloss_gap_uses_true_mod64_arithmetic_across_counter_wrap() -> None:
-    """The placeholder count is the TRUE mod-64 gap, exercised across the 63→0 wrap.
+    """The placeholder count is the TRUE mod-64 gap, exercised across the 63->0 wrap.
 
     Pins the gap off-by-one fix: shipped Nordic (serialDevice.ts:269-271
     @ 63ae4b7) computes ``(counter - expected + 63) & 63``, one short
     of the true distance. With expected=2 and trigger counter=1 the
     true mod-64 gap is 63; the shipped arithmetic would emit 62. The
     wrap also proves the expected-counter advances correctly through
-    63 → 0 while mismatches are being buffered.
+    63 -> 0 while mismatches are being buffered.
     """
     coeffs = _identity_coeffs()
     parser = StreamParser(coeffs, _VDD_MV)
@@ -361,7 +363,7 @@ def test_dataloss_gap_uses_true_mod64_arithmetic_across_counter_wrap() -> None:
     )
     assert len(emitted) == 1
 
-    # 5 mismatches fill the buffer; expected advances 61 → 62 → 63 → 0 → 1 → 2.
+    # 5 mismatches fill the buffer; expected advances 61 -> 62 -> 63 -> 0 -> 1 -> 2.
     for c in (0, 10, 20, 30, 40):
         parser.push_bytes(
             _make_word(adc=100, range_idx=0, counter=c, logic=0xFF).to_bytes(4, "little"),
@@ -369,15 +371,16 @@ def test_dataloss_gap_uses_true_mod64_arithmetic_across_counter_wrap() -> None:
         )
     assert len(emitted) == 1  # all buffered
 
-    # Trigger: counter=1 vs expected=2 → true gap (1 - 2) & 0x3F = 63.
+    # Trigger: counter=1 vs expected=2 -> true gap (1 - 2) & 0x3F = 63.
     parser.push_bytes(
         _make_word(adc=100, range_idx=0, counter=1, logic=0x55).to_bytes(4, "little"),
         emitted.append,
     )
-    placeholders = emitted[1:-1]
+    placeholders = emitted[1:-6]
     assert len(placeholders) == 63  # shipped Nordic's `+ 63` would give 62
     assert all(math.isnan(s.current_micro_amps) for s in placeholders)
     assert all(s.logic == 0 for s in placeholders)
+    assert [s.logic for s in emitted[-6:-1]] == [0xFF] * 5  # the held samples
     assert emitted[-1].logic == 0x55
     assert parser.dataloss_total == 63
 
@@ -390,7 +393,7 @@ def test_dataloss_gap_uses_true_mod64_arithmetic_across_counter_wrap() -> None:
 
 
 def test_spike_filter_defaults_match_module_level_constants() -> None:
-    """Default-constructed SpikeFilter pins the Nordic-GUI knob values."""
+    """Default-constructed SpikeFilter pins the defaults of Nordic's app."""
     sf = SpikeFilter()
     assert sf.samples == DEFAULT_SPIKE_FILTER_SAMPLES == 3
     assert sf.alpha == DEFAULT_SPIKE_FILTER_ALPHA == 0.18
@@ -417,7 +420,7 @@ def test_spike_filter_rejects_alpha5_outside_unit_interval() -> None:
 def test_explicit_default_filter_matches_implicit_default_byte_for_byte() -> None:
     """``SpikeFilter()`` keyword is byte-equivalent to omitting the kwarg.
 
-    The constants → dataclass refactor must not change the smoothed
+    The constants -> dataclass refactor must not change the smoothed
     output for callers who don't pass a filter, otherwise the parity
     fixture would silently flip. Drive both with the same input and
     require exact equality.
@@ -446,7 +449,7 @@ def test_explicit_default_filter_matches_implicit_default_byte_for_byte() -> Non
 def test_custom_alpha_changes_smoothed_output_inside_window() -> None:
     """A different ``alpha`` produces a different rolling_avg inside the smoothing window.
 
-    Construction: one range 0 → 1 → 0 transition pair primes the
+    Construction: one range 0 -> 1 -> 0 transition pair primes the
     post-transition window with ``samples`` length remaining; the
     subsequent same-range samples at varying ADC values evolve the EMA
     differently under different alphas. We compare bit-exact equality
@@ -454,9 +457,9 @@ def test_custom_alpha_changes_smoothed_output_inside_window() -> None:
     """
     coeffs = _identity_coeffs()
     # Sample 0: range 0, adc 100 (primes prev_range, EMA seed).
-    # Sample 1: range 1, adc 100 (transition #1 — after_spike = samples).
-    # Sample 2: range 0, adc 100 (transition #2 — after_spike = samples again).
-    # Samples 3..6: range 0, varying adc → in-window, EMA-dependent output.
+    # Sample 1: range 1, adc 100 (transition #1: after_spike = samples).
+    # Sample 2: range 0, adc 100 (transition #2: after_spike = samples again).
+    # Samples 3..6: range 0, varying adc -> in-window, EMA-dependent output.
     descriptors: list[tuple[int, int]] = [
         (100, 0),
         (100, 1),
@@ -487,14 +490,14 @@ def test_custom_alpha_changes_smoothed_output_inside_window() -> None:
         a.current_micro_amps != b.current_micro_amps
         for a, b in zip(default_out, heavy_out, strict=True)
     ]
-    assert any(diffs), "alpha override didn't reach the EMA — knob is dead"
+    assert any(diffs), "alpha override didn't reach the EMA: knob is dead"
 
 
 def test_custom_samples_shortens_smoothing_window() -> None:
     """``samples=0`` collapses the post-transition window to a single in-window sample.
 
     Compared against the default ``samples=3``, the tail of a varying-ADC
-    stream after one range transition must diverge — the wider window
+    stream after one range transition must diverge: the wider window
     keeps the EMA output engaged for more samples.
     """
     coeffs = _identity_coeffs()

@@ -1,4 +1,4 @@
-"""``ppk2 power on|off`` — toggle the DUT-power FET, optionally holding VDD live."""
+"""``ppk2 power on|off``: switch power to the DUT, optionally holding it on."""
 
 import signal
 import sys
@@ -25,12 +25,12 @@ def power(
     vdd: float,
     source: bool,
 ) -> None:
-    """Open a session, toggle the FET, optionally block until SIGINT, then close."""
+    """Open a session, switch the power, optionally block until SIGINT, then close."""
     device = resolve_device(serial, port)
     mv = vdd_to_mv(vdd)
     mode = Mode.SOURCE if source else Mode.AMPERE
 
-    # SIGTERM/SIGHUP → SystemExit so a kill still opens the FET and
+    # SIGTERM/SIGHUP -> SystemExit so a kill still cuts the power and
     # closes the port on the way out.
     with signals_to_systemexit("SIGTERM", "SIGHUP"), Session.open(device) as session:
         session.set_mode(mode)
@@ -56,11 +56,11 @@ def _hold_until_sigint() -> None:
 
     prev = signal.signal(signal.SIGINT, _handler)
     try:
-        sys.stderr.write("ppk2: holding VDD live; Ctrl-C to release\n")
+        sys.stderr.write("ppk2: holding power on; Ctrl-C to release\n")
         sys.stderr.flush()
         signal.pause()  # blocks until any signal; our handler unblocks SIGINT
         if not received:
             # Unlikely (SIGINT is the only signal we registered) but defensive.
-            sys.stderr.write("ppk2: woke from pause without SIGINT — exiting anyway\n")
+            sys.stderr.write("ppk2: woke from pause without SIGINT, exiting anyway\n")
     finally:
         signal.signal(signal.SIGINT, prev)

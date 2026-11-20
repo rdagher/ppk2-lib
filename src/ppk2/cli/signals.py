@@ -1,12 +1,10 @@
-"""Route termination signals to ``SystemExit`` so session teardown runs.
+"""Route termination signals to ``SystemExit`` so the session teardown runs.
 
 ``kill <pid>`` (SIGTERM) or a closed terminal (SIGHUP) would otherwise
-end the process without unwinding the ``with`` stack — leaving the FET
-closed, the port open, and the firmware streaming into a dead CDC
-session (which wedges the next open). Raising ``SystemExit`` from the
-handler unwinds the enclosing context managers instead: the session
-closes (stream stopped, FET opened, port closed) and any CSV file is
-flushed, same as a Ctrl-C stop.
+end the process without unwinding the ``with`` stack: no
+``AVERAGE_STOP`` is sent and the PPK2 keeps streaming into a dead
+session, which wedges the next open. Raising ``SystemExit`` from the
+handler unwinds the context managers instead, same as a Ctrl-C stop.
 """
 
 import signal
@@ -21,18 +19,12 @@ _SignalHandler = Callable[[int, FrameType | None], object] | int | None
 
 @contextmanager
 def signals_to_systemexit(*names: str) -> Generator[None, None, None]:
-    """Temporarily route the named signals (e.g. ``"SIGTERM"``) to ``SystemExit``.
+    """Route the named signals (e.g. ``"SIGTERM"``) to ``SystemExit`` for the block.
 
-    The exit code is the conventional ``128 + signum``. Previous
-    handlers are restored on exit. Signals that can't be installed are
-    skipped silently: a name absent on this OS (Windows has no
-    ``SIGHUP``) or installation off the main thread (``signal.signal``
-    raises ``ValueError`` there — e.g. when a capture helper runs in a
-    worker thread).
-
-    Args:
-        names: ``signal`` module attribute names, e.g. ``"SIGTERM"``,
-            ``"SIGHUP"``.
+    The exit code is the conventional ``128 + signum``; the previous
+    handlers come back on exit. A signal that cannot be installed is
+    skipped: a name this OS lacks (no ``SIGHUP`` on Windows), or a call
+    off the main thread, where ``signal.signal`` raises ``ValueError``.
     """
 
     def _raise(signum: int, _frame: FrameType | None) -> None:

@@ -107,35 +107,31 @@ def _full_block_lines(*scalars: str) -> list[str]:
     return lines
 
 
-def test_undecodable_leading_residue_is_tolerated() -> None:
-    """Binary stream residue before the ASCII block must not fail the parse.
+def test_samples_glued_in_front_of_the_response_are_skipped() -> None:
+    """The end of a stream that was not read out can precede the response.
 
-    A badly shut-down prior session leaves sample-stream bytes in the
-    OS buffer; they precede the metadata response. The parser decodes
-    with ``errors="replace"`` so the garbage becomes skippable lines
-    instead of a fatal decode error.
+    Measured on a PPK2: 900 to 964 bytes of samples, then ``Calibrated``
+    with no newline in between. The parse starts at the first key.
     """
+    lines = _full_block_lines("Calibrated: 1", "HW: 7", "IA: 3", "VDD: 3300", "mode: 1")
+    block = "\n".join([*lines, "END", ""]).encode()
+    samples = b"".join(bytes([0x20, 0x00, (4 * i) & 0xFF, 0x00]) for i in range(225))
+
+    parsed = parse_metadata(samples + block)
+
+    assert parsed == parse_metadata(block)
+    assert parsed.hw == 7
+
+
+def test_stray_bytes_and_a_newline_in_front_of_the_response_are_skipped() -> None:
     lines = _full_block_lines("Calibrated: 1", "HW: 7", "IA: 3", "VDD: 3300", "mode: 1")
     block = "\n".join([*lines, "END", ""]).encode()
     residue = bytes([0xFF, 0xFE, 0xFD, 0x81, 0x00, 0x13]) + b"\n"
+
     parsed = parse_metadata(residue + block)
+
     assert parsed.hw == 7
     assert parsed.vdd_mv == 3300
-
-
-def test_residue_glued_to_the_first_line_only_costs_that_line() -> None:
-    """Residue without a trailing newline mangles one key, not the whole parse.
-
-    The glued line decodes as garbage + ``Calibrated: 1`` under one
-    key, which the scanner drops as unknown — so ``Calibrated`` is the
-    field reported missing, while everything after the first newline
-    still parses.
-    """
-    lines = _full_block_lines("Calibrated: 1", "HW: 7", "IA: 3", "VDD: 3300", "mode: 1")
-    block = "\n".join([*lines, "END", ""]).encode()
-    with pytest.raises(MissingField) as exc:
-        parse_metadata(b"\xff\xfe" + block)  # no newline before "Calibrated"
-    assert exc.value.field == "Calibrated"
 
 
 def test_unknown_keys_are_tolerated_for_forward_compat() -> None:
@@ -146,13 +142,13 @@ def test_unknown_keys_are_tolerated_for_forward_compat() -> None:
         "IA: 67",
         "VDD: 1800",
         "mode: 2",
-        "VERSION_OUT: 1.2.3",  # unknown — forward-compat skip
+        "VERSION_OUT: 1.2.3",  # unknown: forward-compat skip
         "UNKNOWN_FUTURE_FIELD: 42",
     ]
     for prefix in ("R", "GS", "GI", "O", "S", "I", "UG"):
         for idx in range(5):
             lines.append(f"{prefix}{idx}: 1.0")
-    # 6-range future-firmware emission — must be silently ignored.
+    # 6-range future-firmware emission: must be silently ignored.
     lines.append("R5: 99.99")
     buf = "\n".join([*lines, "END", ""]).encode()
     parsed = parse_metadata(buf)
@@ -163,15 +159,15 @@ def test_unknown_keys_are_tolerated_for_forward_compat() -> None:
 
 
 def test_missing_vdd_defaults_to_3300() -> None:
-    """VDD is runtime state, not calibration — omitted key defaults, not fails."""
+    """VDD is runtime state, not calibration: omitted key defaults, not fails."""
     lines = _full_block_lines("Calibrated: 1", "HW: 1", "IA: 1", "mode: 1")
     buf = "\n".join([*lines, "END", ""]).encode()
     parsed = parse_metadata(buf)
     assert parsed.vdd_mv == 3300
 
 
-def test_missing_mode_defaults_to_ammeter() -> None:
-    """mode is runtime state — omitted key defaults to 1 (ammeter, passive)."""
+def test_missing_mode_defaults_to_ampere_meter() -> None:
+    """mode is runtime state: omitted key defaults to 1 (Ampere meter, passive)."""
     lines = _full_block_lines("Calibrated: 1", "HW: 1", "IA: 1", "VDD: 3300")
     buf = "\n".join([*lines, "END", ""]).encode()
     parsed = parse_metadata(buf)
@@ -187,7 +183,7 @@ def test_missing_both_vdd_and_mode_still_parses() -> None:
 
 
 def test_present_but_garbage_vdd_still_raises_invalid_value() -> None:
-    """Leniency covers ABSENT keys only — a present-but-broken value stays fatal."""
+    """Leniency covers ABSENT keys only: a present-but-broken value stays fatal."""
     lines = _full_block_lines("Calibrated: 1", "HW: 1", "IA: 1", "VDD: banana", "mode: 1")
     buf = "\n".join([*lines, "END", ""]).encode()
     with pytest.raises(InvalidValue) as exc:
@@ -196,7 +192,7 @@ def test_present_but_garbage_vdd_still_raises_invalid_value() -> None:
 
 
 def test_invalid_mode_value_raises_invalid_value() -> None:
-    """Wire byte is constrained to 1 (ammeter) or 2 (source) per Nordic GUI."""
+    """Wire byte is 1 (Ampere meter) or 2 (Source meter), as in Nordic's app."""
     lines = [
         "Calibrated: 1",
         "HW: 1",
@@ -233,28 +229,43 @@ def test_required_field_array_index_appears_in_missing_field_message() -> None:
     assert exc.value.field == "S[3]"
 
 
-def test_non_finite_coefficient_raises_invalid_value() -> None:
-    """Real devices emit ``-nan`` for blank calibration slots.
+def test_blank_slot_takes_the_apps_default() -> None:
+    """The firmware prints ``-nan`` for a slot left blank; Nordic's app assumes a default.
 
-    The GUI substitutes factory defaults (serialDevice.ts:340); we
-    fail loud — a non-finite coefficient would poison every sample
-    into NaN. All three spellings the firmware could produce.
+    Nominal resistance for ``R``, 1 for the gains, 0 for the offsets.
     """
-    for bad in ("-nan", "nan", "inf"):
-        lines = _full_block_lines("Calibrated: 1", "HW: 1", "IA: 1", f"GS2: {bad}")
+    for blank in ("-nan", "nan"):
+        lines = _full_block_lines("Calibrated: 1", "HW: 1", "IA: 1")
+        lines += [
+            f"R4: {blank}",
+            f"GS2: {blank}",
+            f"O1: {blank}",
+            f"UG0: {blank}",
+        ]  # later line wins
         buf = "\n".join([*lines, "END", ""]).encode()
-        with pytest.raises(InvalidValue) as exc:
-            parse_metadata(buf)
-        assert exc.value.field == "GS[2]"
+
+        parsed = parse_metadata(buf)
+
+        assert parsed.r == (1.0, 1.0, 1.0, 1.0, 0.043)
+        assert parsed.gs[2] == 1.0
+        assert parsed.o[1] == 0.0
+        assert parsed.ug[0] == 1.0
+
+
+def test_infinite_coefficient_raises_invalid_value() -> None:
+    lines = _full_block_lines("Calibrated: 1", "HW: 1", "IA: 1", "GS2: inf")
+    buf = "\n".join([*lines, "END", ""]).encode()
+    with pytest.raises(InvalidValue) as exc:
+        parse_metadata(buf)
+    assert exc.value.field == "GS[2]"
 
 
 def test_zero_coefficient_is_kept_not_defaulted() -> None:
-    """A literal 0 coefficient is kept, unlike Nordic's ``|| default``.
+    """A literal 0 coefficient is kept, where Nordic's app takes its default.
 
-    JS falsy semantics make the GUI silently substitute the factory
-    default for an exact 0; we keep the literal value — a recorded
-    divergence. (GS0 ≈ 1e-19 on real units, one calibration bit away
-    from exactly 0.)
+    The app treats an exact 0 like a blank slot; we keep the value the
+    device reported: a recorded divergence. (GS0 ≈ 1e-19 on real
+    units, one calibration bit away from exactly 0.)
     """
     lines = _full_block_lines("Calibrated: 1", "HW: 1", "IA: 1")
     lines.append("GS0: 0")  # later line wins over the builder's 1.0

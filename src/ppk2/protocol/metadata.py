@@ -1,67 +1,69 @@
 r"""Per-device calibration metadata returned by ``GET_META_DATA`` (0x19).
 
-The response is multi-line ASCII (~1 KB) terminated by a literal
-``END`` token. Each non-terminal line is ``key: value\n``. The parser
-is chunked-read-aware in the sense that the caller is expected to
-accumulate bytes until ``END`` is in the buffer before calling
-[`parse_metadata`][].
+The response is ~1 KB of ASCII ``key: value\n`` lines ending with a
+literal ``END``. It can arrive split across reads: accumulate until
+``END`` is in the buffer, then call ``parse_metadata``.
 
 Regression-tested against ``tests/fixtures/metadata.raw``, a real
 response captured from a PPK2.
 """
 
 from dataclasses import dataclass
-from math import isfinite
+from math import isfinite, isnan
 
-# Fixed across the PPK2 product line: five hardware shunt ranges.
-# (RangeArray and the unpack in _seal hardcode the same arity.)
+# Five measurement ranges, fixed across the PPK2 line.
 NUM_RANGES = 5
 
-# Type aliases for the 5-element fixed-length arrays. pyright enforces
-# the length so missing or extra elements are caught at construction.
+# One value per range; a fixed-length tuple, so pyright checks the count.
 RangeArray = tuple[float, float, float, float, float]
+
+# The response starts with this key; what precedes it is not metadata.
+_FIRST_KEY = b"Calibrated"
+
+# What Nordic's Power Profiler app assumes for a slot the device left
+# blank (the firmware prints ``-nan`` for one): nominal resistances,
+# unit gains, no offsets.
+_BLANK_DEFAULTS: dict[str, RangeArray] = {
+    "R": (1031.64, 101.65, 10.15, 0.94, 0.043),
+    "GS": (1.0, 1.0, 1.0, 1.0, 1.0),
+    "GI": (1.0, 1.0, 1.0, 1.0, 1.0),
+    "O": (0.0, 0.0, 0.0, 0.0, 0.0),
+    "S": (0.0, 0.0, 0.0, 0.0, 0.0),
+    "I": (0.0, 0.0, 0.0, 0.0, 0.0),
+    "UG": (1.0, 1.0, 1.0, 1.0, 1.0),
+}
 
 
 @dataclass(frozen=True, slots=True)
 class CalibrationCoefficients:
-    """Per-device calibration coefficients + runtime VDD/mode state.
+    """Per-device calibration, plus the VDD and mode the firmware reported.
 
-    Bundles the factory-fit calibration arrays with the present
-    ``REGULATOR_SET`` setpoint and power mode the firmware reported
-    at metadata-read time.
-
-    The calibration payload is strictly mandatory: [`parse_metadata`][]
-    raises [`MissingField`][] when any coefficient array slot or
-    version stamp is absent — silently defaulting a calibration value
-    would corrupt every sample. The two *runtime-state* keys are the
-    exception: ``VDD`` and ``mode`` get conservative defaults when the
-    firmware omits them (observed on some firmware revisions), because
-    they describe the device's present configuration, not its
-    calibration.
+    Every coefficient is mandatory: a defaulted calibration value would
+    corrupt every sample, so ``parse_metadata`` raises ``MissingField``
+    instead. ``VDD`` and ``mode`` describe the device's present state,
+    not its calibration, and some firmware revisions omit them: those
+    two get defaults.
 
     Attributes:
-        calibrated: Internal Nordic manufacturing flag. A device reporting
-            ``False`` still emits a fully populated coefficient block;
-            this flag is NOT a "use defaults" signal.
-        r: Per-range shunt resistance (Ω, virtual).
+        calibrated: The ``Calibrated`` value as reported. Not
+            interpreted: a PPK2 that reports ``False`` still carries a
+            full set of coefficients, and they are used.
+        r: Per-range resistance (Ω, virtual).
         gs: Per-range gain slope (quadratic term).
         gi: Per-range gain intercept (linear term).
         o: Per-range ADC offset (16-bit-equivalent counts).
         s: Per-range VDD-dependent linear slope.
         i: Per-range VDD-dependent linear intercept.
-        ug: Per-range user gain override (default 1.0).
-        vdd_mv: Current ``REGULATOR_SET`` setpoint in millivolts.
-            Survives across host disconnects — a PPK2 last left in
-            source mode at 1800 mV reports 1800 here on the next open.
-            Range per firmware: 800..=5000 mV. Defaults to ``3300``
-            when the firmware omits the ``VDD`` key.
-        mode: Current power mode the firmware came up in: ``1`` =
-            ammeter, ``2`` = source. Values outside ``{1, 2}`` raise
-            [`InvalidValue`][]; a missing ``mode`` key defaults to
-            ``1`` (ammeter — the PPK2's passive, can't-hurt-the-DUT
-            mode).
-        hw: Hardware version stamp.
-        ia: Internal-Ammeter calibration version stamp.
+        ug: Per-range user gain (default 1.0).
+        vdd_mv: Supply voltage in millivolts, 800-5000: the last
+            ``REGULATOR_SET``. It survives host disconnects: a PPK2
+            left at 1800 mV reports 1800 on the next open. 3300 when
+            the firmware omits it.
+        mode: Power mode, ``1`` Ampere meter or ``2`` Source meter;
+            anything else raises ``InvalidValue``. Ampere meter, the
+            passive mode, when the firmware omits it.
+        hw: The ``HW`` value as reported. Not interpreted.
+        ia: The ``IA`` value as reported. Not interpreted.
     """
 
     calibrated: bool
@@ -90,59 +92,43 @@ class MissingEnd(MetadataError):
 
 
 class MissingField(MetadataError):
-    """A required key was absent from the response.
-
-    ``field`` carries the human-readable field name (e.g. ``R[3]``).
-    """
+    """A required key was absent; ``field`` names it (e.g. ``R[3]``)."""
 
     def __init__(self, field: str) -> None:
-        """Build a MissingField error tagged with the human-readable field name."""
         super().__init__(f"missing required metadata field: {field}")
         self.field = field
 
 
 class InvalidValue(MetadataError):
-    """A field was present but its value could not be parsed.
-
-    ``field`` carries the human-readable field name; ``value`` is the
-    raw string the parser refused.
-    """
+    """A field's value could not be parsed; ``value`` is the raw text."""
 
     def __init__(self, field: str, value: str) -> None:
-        """Build an InvalidValue error capturing the field name and offending raw value."""
         super().__init__(f"invalid value for {field}: {value!r}")
         self.field = field
         self.value = value
 
 
 def parse_metadata(buf: bytes) -> CalibrationCoefficients:
-    r"""Parse a ``GET_META_DATA`` response into a populated coefficient block.
+    r"""Parse a full ``GET_META_DATA`` response into calibration coefficients.
 
-    Tolerates: unknown keys (forward-compat for future firmware
-    revisions), both ``END`` and ``END\n`` terminators, excess
-    whitespace around the ``:`` separator, missing ``VDD``/``mode``
-    runtime-state keys (defaulted — see [`CalibrationCoefficients`][]),
-    and undecodable leading residue. The residue case is real: binary
-    sample-stream bytes from a badly shut-down prior session can
-    precede the ASCII response, so the buffer is decoded with
-    ``errors="replace"`` — garbage decodes into lines the key-value
-    scan skips, instead of failing the whole parse.
+    Tolerant of unknown keys, ``END`` with or without a newline, spaces
+    around the ``:``, missing ``VDD``/``mode`` (see
+    ``CalibrationCoefficients``), and bytes before the text: the end
+    of a stream that was not read out, up to 1 kB of samples, can come
+    glued in front of the response. The parse starts at the first key,
+    ``Calibrated``.
 
-    Strict on: missing calibration fields and malformed values of
-    present keys.
-
-    Args:
-        buf: Raw bytes of the full ``GET_META_DATA`` response, accumulated
-            across whatever USB chunks the OS delivered.
-
-    Returns:
-        Fully populated [`CalibrationCoefficients`][].
+    Strict on missing calibration fields and on malformed values. A
+    blank slot (``-nan``) takes the default Nordic's app uses for it.
 
     Raises:
-        MissingEnd: If ``buf`` does not contain the ``END`` terminator.
-        MissingField: If a required calibration key is absent.
+        MissingEnd: If ``buf`` has no ``END`` terminator.
+        MissingField: If a calibration key is absent.
         InvalidValue: If a present field's value cannot be parsed.
     """
+    start = buf.find(_FIRST_KEY)
+    if start > 0:
+        buf = buf[start:]
     text = buf.decode("utf-8", errors="replace")
 
     partial = _Partial()
@@ -185,8 +171,8 @@ _PER_RANGE_PREFIXES = ("R", "GS", "GI", "O", "S", "I", "UG")
 def _split_keyed_index(key: str) -> tuple[str, int] | None:
     """Split a per-range key into prefix + numeric suffix.
 
-    Examples: ``"R0" → ("R", 0)``, ``"GS4" → ("GS", 4)``, ``"HW" → None``,
-    ``"Calibrated" → None``.
+    Examples: ``"R0" -> ("R", 0)``, ``"GS4" -> ("GS", 4)``, ``"HW" -> None``,
+    ``"Calibrated" -> None``.
     """
     # Walk back from the end while digits, then take the suffix.
     suffix_start = len(key)
@@ -203,10 +189,9 @@ def _split_keyed_index(key: str) -> tuple[str, int] | None:
 
 
 class _Partial:
-    """Mutable accumulator used during parsing. Calls [`finish`][] to seal."""
+    """Mutable accumulator: ``assign`` fills it, ``finish`` seals it."""
 
     def __init__(self) -> None:
-        """Initialise every slot to None; [`assign`][] fills them in."""
         self.calibrated: bool | None = None
         self.r: list[float | None] = [None] * NUM_RANGES
         self.gs: list[float | None] = [None] * NUM_RANGES
@@ -226,7 +211,7 @@ class _Partial:
         if keyed is not None:
             prefix, idx = keyed
             if prefix not in _PER_RANGE_PREFIXES:
-                # Unknown per-range prefix — forward-compat, skip.
+                # Unknown per-range prefix: forward-compat, skip.
                 return
             if idx >= NUM_RANGES:
                 # Forward-compat: a future 6-range firmware would emit
@@ -237,12 +222,12 @@ class _Partial:
                 parsed = float(value)
             except ValueError as exc:
                 raise InvalidValue(f"{prefix}[{idx}]", value) from exc
-            # Real devices emit `-nan` for blank calibration slots
-            # (Nordic's GUI maps them to factory defaults,
-            # serialDevice.ts:340). A non-finite coefficient would
-            # silently poison every sample into NaN; fail loud
-            # instead of measuring garbage.
-            if not isfinite(parsed):
+            if isnan(parsed):
+                # A slot the device left blank: the app's default, as
+                # the app does. A NaN kept here would turn every sample
+                # of that range into NaN.
+                parsed = _BLANK_DEFAULTS[prefix][idx]
+            elif not isfinite(parsed):
                 raise InvalidValue(f"{prefix}[{idx}]", value)
             slot[idx] = parsed
             return
@@ -279,7 +264,7 @@ class _Partial:
             if parsed_mode not in (1, 2):
                 raise InvalidValue("mode", value)
             self.mode = parsed_mode
-        # Unknown scalar key (e.g. VERSION_OUT) — forward-compat, drop.
+        # Unknown scalar key (e.g. VERSION_OUT): forward-compat, drop.
 
     def _slot_for(self, prefix: str) -> list[float | None]:
         # Mapping kept explicit so pyright knows every branch returns
@@ -307,9 +292,9 @@ class _Partial:
             raise MissingField("HW")
         if self.ia is None:
             raise MissingField("IA")
-        # VDD and mode are runtime state, not calibration — some
+        # VDD and mode are runtime state, not calibration: some
         # firmware revisions omit them. Default conservatively: 3300 mV
-        # (the nominal 3.3 V bench setpoint) and mode 1 (ammeter, the
+        # (the nominal 3.3 V bench voltage) and mode 1 (Ampere meter, the
         # passive mode). A present-but-garbage value still raises
         # InvalidValue in assign().
         return CalibrationCoefficients(
@@ -329,10 +314,7 @@ class _Partial:
 
 
 def _seal(prefix: str, arr: list[float | None]) -> RangeArray:
-    """Convert a partial 5-element list into a fixed-length tuple.
-
-    Raises [`MissingField`][] on the first absent slot.
-    """
+    """Turn a filled 5-slot list into a ``RangeArray``; ``MissingField`` on a gap."""
     out: list[float] = []
     for idx, value in enumerate(arr):
         if value is None:

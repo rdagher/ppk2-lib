@@ -1,6 +1,6 @@
-"""Sync host driver — port discovery and the session state machine.
+"""Sync host driver: port discovery and the session state machine.
 
-Depends on [`ppk2.protocol`][] and ``serial`` (pyserial).
+Depends on ``ppk2.protocol`` and ``serial`` (pyserial).
 """
 
 from ppk2.client.discovery import (
@@ -19,7 +19,6 @@ from ppk2.client.session import (
     VOLTAGE_LIMIT_HARDWARE_MAX_MV,
     VOLTAGE_LIMIT_HARDWARE_MIN_MV,
     HandshakeFailed,
-    MetadataParseError,
     Mode,
     SerialIOError,
     Session,
@@ -34,7 +33,6 @@ __all__ = [
     "DataPortNotFound",
     "DiscoveryError",
     "HandshakeFailed",
-    "MetadataParseError",
     "Mode",
     "NotFound",
     "PortInfo",

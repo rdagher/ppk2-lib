@@ -2,21 +2,26 @@
 
 Covers the chunked metadata-read accumulator without touching pyserial.
 The full open / handshake path is HIL-tier (needs a real PPK2) and lives
-in ``tests/client/test_hardware.py``.
+in ``tests/hil/test_client.py``.
 """
 
 from collections import deque
+from time import monotonic
 from typing import TYPE_CHECKING, cast
 
 import pytest
 
+from ppk2.client import session as session_module
 from ppk2.client.session import (
     VOLTAGE_LIMIT_HARDWARE_MAX_MV,
     VOLTAGE_LIMIT_HARDWARE_MIN_MV,
+    HandshakeFailed,
     Session,
+    _recover_and_negotiate,  # pyright: ignore[reportPrivateUsage]
     read_until_end,
 )
-from ppk2.protocol import CalibrationCoefficients, SpikeFilter
+from ppk2.protocol import CalibrationCoefficients, Opcode, SpikeFilter
+from tests.protocol.fixtures import METADATA_RAW
 
 if TYPE_CHECKING:
     import serial
@@ -81,6 +86,37 @@ class _ChunkedReader:
         return chunk[:n]
 
 
+class _VanishingPort:
+    """A port whose input flush fails the way a just re-enumerated device's does.
+
+    pyserial raises a bare ``termios.error`` there, which is neither a
+    ``SerialException`` nor an ``OSError``; any ``Exception`` stands in
+    for it here, so the test also runs where ``termios`` does not exist.
+    """
+
+    def __init__(self, response: bytes) -> None:
+        self._response = deque([response])
+        self.in_waiting = 0
+
+    def write(self, data: bytes) -> int:
+        return len(data)
+
+    def reset_input_buffer(self) -> None:
+        raise RuntimeError(6, "Device not configured")
+
+    def read(self, _n: int, /) -> bytes:
+        return self._response.popleft() if self._response else b""
+
+
+def test_handshake_survives_a_failing_input_flush() -> None:
+    """The flush is best effort: its failure must not escape the handshake."""
+    port = _VanishingPort(METADATA_RAW.read_bytes())
+
+    coeffs = _recover_and_negotiate(cast("serial.Serial", port))
+
+    assert coeffs.hw != 0
+
+
 def test_read_until_end_accumulates_across_chunks() -> None:
     """Regression for the chunked-read case where END only appears in a later chunk."""
     header = b"Calibrated: 0\nR0: 1.0\n"
@@ -121,7 +157,7 @@ def test_session_set_user_gain_replaces_coeffs_ug_in_place() -> None:
 
     # Other ranges unaffected.
     assert session.coefficients().ug == (1.0, 1.0, 1.07, 1.0, 1.0)
-    # No wire bytes — fully host-side.
+    # No wire bytes: fully host-side.
     assert port.written == b""
 
 
@@ -138,6 +174,18 @@ def test_session_set_user_gain_after_start_measuring_raises() -> None:
         session.set_user_gain(0, 1.5)
 
 
+def test_session_stop_measuring_reopens_configuration() -> None:
+    """After a stop the pre-start setters work again."""
+    port = _RecordingPort()
+    session = Session(cast("serial.Serial", port), _identity_coeffs())
+    session._measuring = True  # pyright: ignore[reportPrivateUsage]
+
+    session.stop_measuring()
+
+    session.set_user_gain(0, 1.5)
+    assert session.coefficients().ug[0] == 1.5
+
+
 def test_session_set_user_gain_propagates_value_error_on_bad_range() -> None:
     """Bad range_idx raises from set_user_gain's own range check before any state mutation."""
     port = _RecordingPort()
@@ -152,7 +200,7 @@ def test_session_set_user_gain_propagates_value_error_on_bad_range() -> None:
 
 
 def test_session_spike_filter_starts_at_defaults() -> None:
-    """A freshly-built session reports the Nordic-GUI default knobs."""
+    """A freshly-built session reports the defaults of Nordic's app."""
     port = _RecordingPort()
     session = Session(cast("serial.Serial", port), _identity_coeffs())
 
@@ -171,7 +219,7 @@ def test_session_set_spike_filter_partial_update_keeps_other_knobs() -> None:
     assert sf.samples == SpikeFilter().samples
     assert sf.alpha5 == SpikeFilter().alpha5
 
-    # No wire bytes — spike-filter is host-side only.
+    # No wire bytes: spike-filter is host-side only.
     assert port.written == b""
 
 
@@ -217,7 +265,7 @@ def test_session_voltage_limit_defaults_to_hardware_max() -> None:
 
 
 def test_session_set_voltage_limit_lowers_ceiling() -> None:
-    """Tightened limit is stored; existing setpoint is untouched."""
+    """Tightened limit is stored; existing supply voltage is untouched."""
     port = _RecordingPort()
     session = Session(cast("serial.Serial", port), _identity_coeffs())
 
@@ -250,7 +298,7 @@ def test_session_set_source_voltage_above_limit_raises() -> None:
     with pytest.raises(ValueError, match="exceeds voltage limit"):
         session.set_source_voltage(3300)
 
-    # No wire bytes — limit failed before write.
+    # No wire bytes: limit failed before write.
     assert port.written == b""
 
 
@@ -285,7 +333,7 @@ class _StreamingPort:
 
     ``read(n)`` returns ``b""`` (pyserial's timeout shape) so the
     drain loops spin on their deadline; the event log lets tests
-    assert drains happen on the right side of the FET-toggle write.
+    assert drains happen on the right side of the power-on write.
     """
 
     def __init__(self, backlog: bytes = b"") -> None:
@@ -311,7 +359,7 @@ class _StreamingPort:
 
 
 def test_power_on_pre_drains_then_toggles_then_latches() -> None:
-    """Drain ~0.3 s BEFORE the FET toggle, toggle, then drain latch_s after."""
+    """Drain ~0.3 s BEFORE the power-on command, send it, then drain latch_s after."""
     port = _StreamingPort()
     session = Session(cast("serial.Serial", port), _identity_coeffs())
 
@@ -327,7 +375,7 @@ def test_power_on_pre_drains_then_toggles_then_latches() -> None:
 
 
 def test_power_on_latch_zero_skips_the_post_toggle_drain() -> None:
-    """latch_s=0 hands the latch to the capture loop — no reads after the toggle."""
+    """latch_s=0 hands the latch to the capture loop: no reads after the toggle."""
     port = _StreamingPort()
     session = Session(cast("serial.Serial", port), _identity_coeffs())
 
@@ -342,7 +390,7 @@ def test_power_on_latch_zero_skips_the_post_toggle_drain() -> None:
 
 
 def test_drop_pending_backlog_is_a_single_bounded_read() -> None:
-    """One in_waiting-sized read — not a drain-until-empty loop."""
+    """One in_waiting-sized read: not a drain-until-empty loop."""
     port = _StreamingPort(backlog=b"\x00" * 4096)
     session = Session(cast("serial.Serial", port), _identity_coeffs())
 
@@ -358,4 +406,115 @@ def test_drop_pending_backlog_on_empty_buffer_reads_nothing() -> None:
     session = Session(cast("serial.Serial", port), _identity_coeffs())
 
     assert session.drop_pending_backlog() == 0
-    assert port.events == []  # in_waiting == 0 → no read at all
+    assert port.events == []  # in_waiting == 0 -> no read at all
+
+
+# ─── close waits for the stream to end ──────────────────────────────────
+
+
+class _ClosingPort:
+    """Serial mock for ``close``: a stream tail to read, then silence, and an event log."""
+
+    def __init__(self, tail_reads: int | None) -> None:
+        """``tail_reads`` reads return data before the silence; ``None`` never goes silent."""
+        self.events: list[str] = []
+        self.timeout: float | None = 0.1
+        self.read_timeouts: set[float | None] = set()
+        self._tail_reads = tail_reads
+
+    def write(self, data: bytes) -> int:
+        self.events.append(f"write:{data.hex()}")
+        return len(data)
+
+    def read(self, n: int) -> bytes:
+        self.read_timeouts.add(self.timeout)
+        if self._tail_reads is None:
+            self.events.append("read:data")
+            return b"\x00" * 4
+        if self._tail_reads > 0:
+            self._tail_reads -= 1
+            self.events.append("read:data")
+            return b"\x00" * min(n, 4096)
+        self.events.append("read:quiet")
+        return b""
+
+    def close(self) -> None:
+        self.events.append("close")
+
+
+def test_close_reads_the_stream_out_before_closing_the_port() -> None:
+    """Stop and power-off go out, the tail is read until silence, then the port closes."""
+    port = _ClosingPort(tail_reads=3)
+    session = Session(cast("serial.Serial", port), _identity_coeffs())
+
+    session.close()
+
+    stop = f"write:{bytes([Opcode.AVERAGE_STOP.byte()]).hex()}"
+    fet_off = f"write:{bytes([Opcode.DEVICE_RUNNING_SET.byte(), 0x00]).hex()}"
+    assert port.events == [
+        stop,
+        fet_off,
+        "read:data",
+        "read:data",
+        "read:data",
+        "read:quiet",
+        "close",
+    ]
+    assert port.read_timeouts == {0.05}
+
+
+def test_close_gives_up_on_a_stream_that_never_stops() -> None:
+    """A PPK2 that keeps streaming does not hold ``close`` for more than its cap."""
+    port = _ClosingPort(tail_reads=None)
+    session = Session(cast("serial.Serial", port), _identity_coeffs())
+
+    started = monotonic()
+    session.close()
+
+    assert monotonic() - started < 1.0
+    assert port.events[-1] == "close"
+
+
+def test_close_twice_touches_the_port_once() -> None:
+    port = _ClosingPort(tail_reads=0)
+    session = Session(cast("serial.Serial", port), _identity_coeffs())
+
+    session.close()
+    session.close()
+
+    assert port.events.count("close") == 1
+
+
+def test_stop_measuring_reads_the_stream_out_and_keeps_the_read_timeout() -> None:
+    """The end of the stream is read before the session goes on, with its timeout restored."""
+    port = _ClosingPort(tail_reads=2)
+    session = Session(cast("serial.Serial", port), _identity_coeffs())
+
+    session.stop_measuring()
+
+    stop = f"write:{bytes([Opcode.AVERAGE_STOP.byte()]).hex()}"
+    assert port.events == [stop, "read:data", "read:data", "read:quiet"]
+    assert port.timeout == 0.1
+
+
+def test_a_failed_handshake_releases_the_port(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Left open, the port keeps its lock and the next open attempt fails on it."""
+    opened: list[_ClosingPort] = []
+
+    def fake_serial(*_args: object, **_kwargs: object) -> _ClosingPort:
+        opened.append(_ClosingPort(tail_reads=0))
+        return opened[-1]
+
+    def no_answer(_port: object) -> CalibrationCoefficients:
+        raise HandshakeFailed(3, "read metadata: no END")
+
+    monkeypatch.setattr(session_module.serial, "Serial", fake_serial)
+    monkeypatch.setattr(session_module, "_empty_serial", lambda _port: None)  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
+    monkeypatch.setattr(session_module, "_recover_and_negotiate", no_answer)
+    monkeypatch.setattr(session_module, "sleep", lambda _s: None)  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
+
+    with pytest.raises(HandshakeFailed):
+        Session.open("/dev/does-not-matter")
+
+    assert opened, "no open attempt was made"
+    assert all(port.events[-1] == "close" for port in opened)
