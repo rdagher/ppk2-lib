@@ -1,4 +1,4 @@
-"""Validation harness — port-agnostic comparators and capture orchestration.
+"""Validation harness: port-agnostic comparators and capture orchestration.
 
 Run as Python modules so relative imports between the scripts work:
 

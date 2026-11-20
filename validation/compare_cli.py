@@ -1,10 +1,10 @@
-"""Cross-validate two GUI-parity CSVs and emit a Markdown report.
+"""Compare two CSV captures and write a Markdown report.
 
-Port-agnostic: feed it any two CSVs produced by a ppk2-compatible
-capture binary (this repo's ``ppk2``, any other ppk2-compatible CLI, or
-the Nordic Power Profiler GUI's CSV export). The comparison reports
-schema, sample rate, current statistics, KS test, per-pin duty and
-edge rates.
+Feed it any two CSVs in the export format of Nordic's Power Profiler
+app: from this repo's ``ppk2``, from another tool that writes the same
+format, or from the app itself. The comparison reports schema, sample
+rate, current statistics, KS test, and the duty and edge rate of each
+digital input.
 
 Usage:
     uv run --group validation python -m validation.compare_cli A.csv B.csv
@@ -29,7 +29,7 @@ LOGIC_COLS = ["D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7"]
 
 
 def load_csv(path: Path) -> pd.DataFrame:
-    """Read a GUI-parity CSV with the D0-D7 column kept as a string."""
+    """Read a CSV in the app's export format, with the D0-D7 column kept as a string."""
     return pd.read_csv(path, dtype={"D0-D7": str})
 
 
@@ -93,17 +93,17 @@ def build_report(
         b: Second capture.
         skip_initial_s: Trim this many leading seconds from BOTH
             captures before computing statistics. Use ~2 s for
-            captures taken with boot-inclusive semantics (t=0 at
-            FET-on): the DUT's boot inrush is a per-power-cycle
-            physical event that legitimately differs between two
-            sequential captures, so including it makes the mean gate
-            measure boot variance, not implementation agreement.
+            captures that start at power-on: the DUT's boot inrush
+            is a per-power-cycle physical event that legitimately
+            differs between two sequential captures, so including it
+            makes the mean gate measure boot variance, not
+            implementation agreement.
         mean_tolerance_pct: Acceptance threshold for the mean-current
             delta. The 1.0 default was calibrated on an active-burst
             workload (~38 µA mean dominated by deterministic bursts).
             For idle-level DUTs (tens of µA), same-binary replicate
-            runs on the reference bench (see ``firmware/bench-dut/``)
-            differ by ~2-3 % — set the tolerance from a replicate
+            runs on the reference bench (see ``tests/hil/bench-dut/``)
+            differ by ~2-3 %: set the tolerance from a replicate
             pair, or treat the mean as informational and gate on
             headers + KS + duty/edges.
     """
@@ -120,14 +120,14 @@ def build_report(
 
     trim_note = f" (first {skip_initial_s:g} s trimmed from both)" if skip_initial_s > 0 else ""
     lines = [
-        f"# Cross-validation — {a_label} vs {b_label}{trim_note}",
+        f"# Cross-validation: {a_label} vs {b_label}{trim_note}",
         "",
-        f"- **{a_label}:** `{a_path}` — {a_s['rows']:,} rows, {a_s['duration_s']:.2f} s",
-        f"- **{b_label}:** `{b_path}` — {b_s['rows']:,} rows, {b_s['duration_s']:.2f} s",
+        f"- {a_label}: `{a_path}`, {a_s['rows']:,} rows, {a_s['duration_s']:.2f} s",
+        f"- {b_label}: `{b_path}`, {b_s['rows']:,} rows, {b_s['duration_s']:.2f} s",
         "",
         "## Schema",
         "",
-        f"Headers byte-identical: **{headers_match}**",
+        f"Headers byte-identical: {headers_match}",
         "",
         "## Sample rate",
         "",
@@ -140,21 +140,21 @@ def build_report(
         "",
         f"| Statistic | {a_label} | {b_label} | Δ |",
         "|---|---:|---:|---:|",
-        f"| Mean (µA) | {a_s['mean_uA']:.3f} | {b_s['mean_uA']:.3f} | **{mean_delta:+.2f} %** |",
+        f"| Mean (µA) | {a_s['mean_uA']:.3f} | {b_s['mean_uA']:.3f} | {mean_delta:+.2f} % |",
         f"| Std  (µA) | {a_s['std_uA']:.3f} | {b_s['std_uA']:.3f} | "
         f"{_pct_delta(a_s['std_uA'], b_s['std_uA']):+.2f} % |",
         f"| Max  (µA) | {a_s['max_uA']:.3f} | {b_s['max_uA']:.3f} | "
         f"{_pct_delta(a_s['max_uA'], b_s['max_uA']):+.2f} % |",
-        f"| Min  (µA) | {a_s['min_uA']:.3f} | {b_s['min_uA']:.3f} | — |",
+        f"| Min  (µA) | {a_s['min_uA']:.3f} | {b_s['min_uA']:.3f} | |",
         "",
         "## Distributional comparison (Kolmogorov-Smirnov)",
         "",
         "Two-sample KS on 100 k subsampled rows from each capture:",
         "",
-        f"- **KS statistic:** {ks_stat:.4f}",
-        f"- **p-value:** {ks_p:.4f}",
+        f"- KS statistic: {ks_stat:.4f}",
+        f"- p-value: {ks_p:.4f}",
         "",
-        "## Logic pins (rate-based, duration-independent)",
+        "## Digital inputs (rate-based, duration-independent)",
         "",
         f"| Pin | {a_label} duty (%) | {b_label} duty (%) | "
         f"{a_label} edges/s | {b_label} edges/s |",
@@ -171,11 +171,11 @@ def build_report(
         "",
         "## Acceptance contract",
         "",
-        f"- Headers byte-identical: **{'pass' if headers_match else 'FAIL'}**",
+        f"- Headers byte-identical: {'pass' if headers_match else 'FAIL'}",
         f"- Mean-current Δ within ±{mean_tolerance_pct:g} %: "
-        f"**{'pass' if abs(mean_delta) <= mean_tolerance_pct else 'FAIL'}** "
+        f"{'pass' if abs(mean_delta) <= mean_tolerance_pct else 'FAIL'} "
         f"({mean_delta:+.2f} %)",
-        f"- KS statistic < 0.05: **{'pass' if ks_stat < 0.05 else 'FAIL'}** ({ks_stat:.4f})",
+        f"- KS statistic < 0.05: {'pass' if ks_stat < 0.05 else 'FAIL'} ({ks_stat:.4f})",
         "",
     ]
     return "\n".join(lines)
@@ -218,7 +218,7 @@ def main() -> int:
             "Acceptance threshold for the mean-current delta. The 1.0 "
             "default suits active-burst workloads; idle-level DUTs show "
             "2-3 %% same-binary replicate spread on the reference bench "
-            "(see ``firmware/bench-dut/``) — calibrate from a replicate "
+            "(see ``tests/hil/bench-dut/``): calibrate from a replicate "
             "pair."
         ),
     )

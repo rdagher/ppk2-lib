@@ -1,101 +1,70 @@
 # Validation
 
-Two port-agnostic tools for comparing GUI-parity CSV captures against
-any other ppk2-compatible binary (or against a Nordic Power Profiler
-GUI export).
+Two scripts that compare captures of the same bench: one made by this
+tool against one exported from Nordic's Power Profiler app, or two
+builds of this tool against each other.
 
-## `compare_cli.py`
-
-Diff two CSVs and emit a Markdown report. Works on any pair of
-GUI-parity CSVs — captures from this CLI, captures from another
-ppk2-compatible binary, exports from the Nordic GUI.
+## Compare two captures
 
 ```sh
-uv run --group validation python -m validation.compare_cli path/to/a.csv path/to/b.csv \
-    --label-a "this build" --label-b "GUI baseline" \
-    --out report.md
+uv run --group validation python -m validation.compare_cli a.csv b.csv \
+    --label-a "this build" --label-b "app export" --out report.md
 ```
 
-Reports cover: header byte-equality, sample rate, current mean/std/max,
-two-sample Kolmogorov–Smirnov on the current distributions, per-pin
-duty cycle and rising-edge rate. Exits 0 if the acceptance contract
-passes:
+The report gives, for both files:
 
-- Headers byte-identical
-- Mean-current Δ within ±1 %
-- KS statistic < 0.05
+- the header and the sample rate,
+- the mean, standard deviation and maximum of the current,
+- a two-sample Kolmogorov-Smirnov (KS) test on the current,
+- the duty cycle and edge rate of each digital input.
 
-## `cross_validate.py`
+The exit code is 0 when:
 
-Capture from two binaries back-to-back, then run `compare_cli` on the
-results. Useful for any A/B validation — this project's `ppk2` against
-another ppk2-compatible CLI, two builds of this project, or against a
-reference binary you trust.
+- the headers are identical,
+- the mean currents are within 1 % of each other,
+- the KS statistic is below 0.05.
 
-Run as a module from the repo root (mirrors the `just cross-validate`
-recipe; a by-path invocation would fail to import `validation.compare_cli`):
+## Capture twice and compare
 
 ```sh
 uv run --group validation python -m validation.cross_validate \
-    --binary-a $(which ppk2) \
-    --binary-b /path/to/other/ppk2 \
-    --label-a "this build" --label-b "other build" \
+    --binary-a $(which ppk2) --binary-b /path/to/other/ppk2 \
     --seconds 60
 ```
 
-## What you need on the bench
+This runs both binaries one after the other on the bench that is
+plugged in, then compares the two files. Both must accept `capture
+--out PATH --seconds N` and write the CSV described in the
+[file formats](../docs/measure/formats.md#csv) page. Run it from the
+repository root. The captures are taken in Ampere meter mode.
 
-A PPK2 plugged into the host, plus a DUT wired to it (ammeter mode
-during these captures — the harness doesn't toggle the regulator).
-Both binaries must accept `<binary> capture --out PATH --seconds N`
-with the same semantics — the GUI-parity 11-column CSV output is
-documented in [`docs/PROTOCOL.md`](../docs/PROTOCOL.md#11-csv-format)
-(§ CSV format).
+## When the 1 % rule does not fit
 
-## Acceptance contract origin
+The 1 % limit on the mean suits a device under test (DUT) that spends
+its time in a workload. It is too tight in two cases:
 
-The ±1 % mean-current and KS < 0.05 thresholds match the committed
-GUI-parity comparison rounds
-([`validation/evidence/noise_floor_gui/`](evidence/noise_floor_gui/));
-they're tight enough to
-catch real calibration drift and loose enough that natural
-sample-to-sample variation between two independent captures of the
-same workload doesn't trip the test.
+- A capture that starts at power-on contains the boot inrush, which
+  can dominate a small mean. Skip it with `--skip-initial-s 2`.
+- A DUT idling at a few tens of µA. Two identical runs differ by 2
+  to 3 % there (18.14 against 17.70 µA on 2026-07-10). Measure that
+  spread with two runs of the same binary and set
+  `--mean-tolerance-pct` from it, or rely on the header, the KS test
+  and the pin rates.
 
-**Caveat — the ±1 % mean gate assumes an active workload.** It was
-calibrated on a DUT whose mean (~38 µA) was dominated by
-deterministic periodic bursts. Two situations break that assumption:
+A signal with two levels is also sensitive to where each capture
+starts in the cycle. Compare it level by level, as the
+[workload round](evidence/trace_demo/README.md) does.
 
-- **Boot-inclusive captures** (the capture path starts at FET-on, so
-  the DUT's boot inrush is in the trace): the inrush is a
-  per-power-cycle physical event, and at idle-level currents it can
-  dominate the mean. Trim it with `--skip-initial-s 2` before
-  gating.
-- **Idle-level DUTs** (tens of µA steady): same-binary replicate
-  runs on this bench differ by ~2-3 % in steady-state mean (thermal
-  drift, regulator settling, power-cycle history). Measured
-  2026-07-10: two back-to-back captures with the identical binary
-  gave steady means of 18.14 vs 17.70 µA (Δ 2.5 %). At that scale,
-  calibrate `--mean-tolerance-pct` from a same-binary replicate
-  pair, or gate on the deterministic invariants (headers, KS,
-  per-pin duty + edge rates) and treat the mean as informational.
+## What is in `evidence/`
 
-The byte-level proof of implementation agreement is this repo's
-parity fixture
-([`tests/protocol/test_stream.py`](../tests/protocol/test_stream.py)
-+ [`tests/fixtures/`](../tests/fixtures/))
-— two implementations that pass it produce identical output for
-identical input; capture-level deltas beyond it measure the bench,
-not the code.
+- [`noise_floor_gui/`](evidence/noise_floor_gui/): open leads, no
+  DUT. Checks the 0.2 µA floor.
+- [`trace_demo/`](evidence/trace_demo/README.md): a workload firmware
+  on two dev kits, with energy per marked region. Its captures and
+  its firmware are stored with it.
 
-## DUTs for new rounds
+For a new round, the [bench firmware](../tests/hil/bench-dut/) of the
+hardware tests gives a known signal on D0 and D1.
 
-- **No DUT** — open leads validate the noise floor and clamp (see
-  [`evidence/noise_floor_gui/`](evidence/noise_floor_gui/)); needs
-  nothing but the PPK2.
-- **[`firmware/bench-dut/`](../firmware/bench-dut/)** — deterministic
-  logic (D0 5 Hz, D1 0.5 Hz) for duty-cycle, edge-rate, and
-  distribution parity; reproducible from this repo alone.
-- The committed [`evidence/trace_demo/`](evidence/trace_demo/) round
-  used a retired workload firmware for wide-dynamic-range per-region
-  energy parity; its source is archived inside the round.
+The parser itself is checked separately, sample by sample, against
+Nordic's parser: see [`tests/fixtures/`](../tests/fixtures/README.md).

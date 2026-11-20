@@ -113,7 +113,7 @@ def main() -> int:
     sys.stderr.write(
         "cross_validate: ACCEPTANCE PASS\n"
         if verdict == 0
-        else "cross_validate: ACCEPTANCE FAIL — see report\n"
+        else "cross_validate: ACCEPTANCE FAIL: see report\n"
     )
     return verdict
 
