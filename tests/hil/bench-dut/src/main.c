@@ -1,15 +1,18 @@
 /*
  * nRF54LM20 PPK2 bench-DUT.
  *
- * Toggles two GPIOs at fixed rates so the PPK2's logic channels see
+ * Toggles two GPIOs at fixed rates so the PPK2's digital inputs see
  * a deterministic reference signal during HIL captures:
  *
- *   D0 — 5 Hz   (toggle every 100 ms → 200 ms period, 50 % duty)
- *   D1 — 0.5 Hz (toggle every 1000 ms → 2 s period,   50 % duty)
+ *   D0: 5 Hz   (toggle every 100 ms -> 200 ms period, 50 % duty)
+ *   D1: 0.5 Hz (toggle every 1000 ms -> 2 s period,   50 % duty)
  *
- * Two Zephyr kernel timers fire from the system tick — toggles run in
- * ISR context so there's no scheduler jitter on the edge timing. The
- * main thread sleeps forever once the timers are armed.
+ * Two Zephyr kernel timers fire from the system tick: toggles run in
+ * ISR context so there's no scheduler jitter on the edge timing.
+ *
+ * The main thread is the workload: it busy-waits while D0 is high and
+ * sleeps while it is low, so the current trace has two plateaus that
+ * follow the marker.
  */
 
 #include <errno.h>
@@ -31,10 +34,17 @@ static const struct gpio_dt_spec d1 = GPIO_DT_SPEC_GET(D1_NODE, gpios);
 #define D0_HALF_PERIOD K_MSEC(100)
 #define D1_HALF_PERIOD K_MSEC(1000)
 
+static volatile bool d0_high;
+static K_SEM_DEFINE(d0_rose, 0, 1);
+
 static void d0_toggle(struct k_timer *timer)
 {
 	ARG_UNUSED(timer);
-	(void)gpio_pin_toggle_dt(&d0);
+	d0_high = !d0_high;
+	(void)gpio_pin_set_dt(&d0, d0_high);
+	if (d0_high) {
+		k_sem_give(&d0_rose);
+	}
 }
 
 static void d1_toggle(struct k_timer *timer)
@@ -68,7 +78,10 @@ int main(void)
 	k_timer_start(&d1_timer, D1_HALF_PERIOD, D1_HALF_PERIOD);
 
 	for (;;) {
-		k_sleep(K_FOREVER);
+		k_sem_take(&d0_rose, K_FOREVER);
+		while (d0_high) {
+			k_busy_wait(100);
+		}
 	}
 	return 0;
 }

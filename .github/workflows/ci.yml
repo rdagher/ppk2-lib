@@ -1,6 +1,6 @@
 # The active CI: fast tier (pyright/ruff, tests, wheel) + per-board
 # firmware matrix + commented HIL placeholders. The NCS toolchain env
-# is installed once by prepare-ncs and frozen in the Actions cache —
+# is installed once by prepare-ncs and frozen in the Actions cache :
 # no container images involved. .gitlab-ci.yml carries the same shape
 # for a future GitLab deployment.
 name: ci
@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 # Every uv command installs strictly from the committed uv.lock and
-# fails if pyproject drifted from it — CI never re-resolves.
+# fails if pyproject drifted from it: CI never re-resolves.
 # NCS_VERSION is the single source for the toolchain version: cache
 # key, install, and build paths all derive from it, so a bump can't
 # leave a stale key pointing at an old SDK.
@@ -89,7 +89,7 @@ jobs:
       - run: uv build
 
   # Firmware only rebuilds when firmware sources (or this workflow)
-  # change — docs/python-only pushes skip the heavy jobs entirely.
+  # change: docs/python-only pushes skip the heavy jobs entirely.
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -105,10 +105,9 @@ jobs:
         with:
           filters: |
             firmware:
-              - 'firmware/**'
+              - 'tests/hil/bench-dut/**'
               - '.github/workflows/ci.yml'
             hil:
-              - 'firmware/**'
               - 'src/**'
               - 'tests/**'
               - '.github/workflows/ci.yml'
@@ -123,7 +122,7 @@ jobs:
     steps:
       # One key holds the frozen env: NCS install, nrfutil binary,
       # its sdk-manager command. lookup-only: prepare just checks the
-      # key exists — the restore happens in the build jobs.
+      # key exists: the restore happens in the build jobs.
       - name: Cache toolchain env
         id: cache
         uses: actions/cache@v4
@@ -147,7 +146,7 @@ jobs:
           nrfutil sdk-manager install "$NCS_VERSION"
           rm -rf "$HOME/ncs/downloads" "$HOME/ncs/tmp"
 
-  # One job per board, both apps — the artifact is the per-DK bundle
+  # One job per board: the artifact is the per-DK bundle
   # the HIL bench consumes.
   firmware:
     name: fw ${{ matrix.board }}
@@ -168,7 +167,7 @@ jobs:
       # Restore-only: the env was frozen by prepare-ncs; nothing is
       # installed here. A miss here means prepare-ncs's save failed
       # (cache saves are warning-only) or the key was evicted mid-run
-      # — re-run the workflow.
+      #: re-run the workflow.
       - name: Restore toolchain env
         uses: actions/cache/restore@v4
         with:
@@ -179,7 +178,7 @@ jobs:
           key: ncs-${{ env.NCS_VERSION }}-toolchain
           fail-on-cache-miss: true
 
-      - name: Build both apps
+      - name: Build the bench DUT
         id: build
         run: |
           export PATH="$HOME/.local/bin:$PATH"
@@ -191,7 +190,7 @@ jobs:
             nrfutil sdk-manager toolchain launch --ncs-version "$NCS_VERSION" -- \
               west build --board "${{ matrix.board }}" --pristine=always \
                 --build-dir "$GITHUB_WORKSPACE/build/$APP" \
-                "$GITHUB_WORKSPACE/firmware/$APP"
+                "$GITHUB_WORKSPACE/tests/hil/$APP"
             cp "$GITHUB_WORKSPACE/build/$APP/merged.hex" \
               "$GITHUB_WORKSPACE/hex/$APP-$DK.hex"
           done

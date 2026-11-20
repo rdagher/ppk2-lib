@@ -1,8 +1,8 @@
 /*
  * nRF54LM20DK PPK2 bench-DUT pin assignment.
  *
- * P1.12 → PPK2 D0 (5 Hz square wave)
- * P1.13 → PPK2 D1 (0.5 Hz square wave)
+ * P1.12 -> PPK2 D0 (5 Hz square wave)
+ * P1.13 -> PPK2 D1 (0.5 Hz square wave)
  *
  * Both pins live on the Arduino-compatible expansion headers and
  * are validated against this DK revision (same pair used by a
@@ -15,12 +15,12 @@
 
 		ppk2_d0: ppk2_d0 {
 			gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
-			label = "PPK2 D0 — 5 Hz";
+			label = "PPK2 D0: 5 Hz";
 		};
 
 		ppk2_d1: ppk2_d1 {
 			gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
-			label = "PPK2 D1 — 0.5 Hz";
+			label = "PPK2 D1: 0.5 Hz";
 		};
 	};
 

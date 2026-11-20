@@ -1,6 +1,6 @@
-# PPK2 bench-DUT — local recipes (multi-board).
+# PPK2 bench-DUT: local recipes (multi-board).
 #
-# Standalone justfile — invoked from inside firmware/bench-dut/
+# Standalone justfile: invoked from inside tests/hil/bench-dut/
 # only. The top-level repo justfile deliberately doesn't surface
 # these recipes because building requires the Nordic NCS toolchain
 # and a board on USB, neither of which is in scope for `just ci`.
@@ -31,7 +31,7 @@ APP_PATH := justfile_directory()
 _default:
     @just --list --unsorted
 
-# Toolchain wrapper — runs args inside the NCS toolchain context with
+# Toolchain wrapper: runs args inside the NCS toolchain context with
 # CWD set to the workspace so west finds its manifest. Private (`_`
 # prefix); composed by `build` / `flash` below.
 _tc *args:

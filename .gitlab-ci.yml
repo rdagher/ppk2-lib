@@ -48,7 +48,7 @@ wheel:
 
 # Seed the NCS cache once per cold key so the board matrix doesn't
 # stampede three parallel ~9 GB installs. The env lives in the
-# GitLab cache — caches only hold paths inside the project dir,
+# GitLab cache: caches only hold paths inside the project dir,
 # hence .ncs/ + .nrfutil/ (NRFUTIL_HOME + the sdk-manager
 # install-dir config). The ~9 GB env needs a runner cache limit to
 # match. Guard is the install's terminal artifact, so a partial
@@ -58,7 +58,7 @@ prepare-ncs:
   image: ubuntu:24.04
   rules:
     - changes:
-        paths: [firmware/**/*, .gitlab-ci.yml]
+        paths: [tests/hil/bench-dut/**/*, .gitlab-ci.yml]
   cache:
     key: ncs-$NCS_VERSION-toolchain
     paths: [.ncs/, .nrfutil/]
@@ -88,7 +88,7 @@ firmware:
   image: ubuntu:24.04
   rules:
     - changes:
-        paths: [firmware/**/*, .gitlab-ci.yml]
+        paths: [tests/hil/bench-dut/**/*, .gitlab-ci.yml]
   cache:
     key: ncs-$NCS_VERSION-toolchain
     paths: [.ncs/, .nrfutil/]
@@ -111,7 +111,7 @@ firmware:
       for APP in bench-dut; do
         nrfutil sdk-manager toolchain launch --ncs-version "$NCS_VERSION" -- \
           west build --board "$BOARD" --pristine=always \
-            --build-dir "$CI_PROJECT_DIR/build/$APP" "$CI_PROJECT_DIR/firmware/$APP"
+            --build-dir "$CI_PROJECT_DIR/build/$APP" "$CI_PROJECT_DIR/tests/hil/$APP"
         cp "$CI_PROJECT_DIR/build/$APP/merged.hex" "$CI_PROJECT_DIR/hex/$APP-$DK.hex"
       done
   artifacts:
@@ -124,7 +124,7 @@ firmware:
 # pulls the matching hexes from the firmware matrix. Flash bench-dut
 # under PPK2 power, then run the hardware-marked pytest tier.
 # The rules track firmware + the Python stack (the bench tests both)
-# and must stay a subset of the firmware job's rules — `needs` on a
+# and must stay a subset of the firmware job's rules: `needs` on a
 # rule-excluded job makes the pipeline invalid. NOTE on activation:
 # widen the prepare-ncs + firmware rules with src/**/* and tests/**/*
 # for the same reason.
@@ -134,7 +134,7 @@ firmware:
 #   tags: [ppk2-bench, nrf52840dk]
 #   rules:
 #     - changes:
-#         paths: [firmware/**/*, src/**/*, tests/**/*, .gitlab-ci.yml]
+#         paths: [src/**/*, tests/**/*, .gitlab-ci.yml]
 #   needs: ["firmware: [nrf52840dk/nrf52840]"]
 #   script:
 #     - uv sync --all-extras
@@ -147,7 +147,7 @@ firmware:
 #   tags: [ppk2-bench, nrf54lm20dk]
 #   rules:
 #     - changes:
-#         paths: [firmware/**/*, src/**/*, tests/**/*, .gitlab-ci.yml]
+#         paths: [src/**/*, tests/**/*, .gitlab-ci.yml]
 #   needs: ["firmware: [nrf54lm20dk/nrf54lm20b/cpuapp]"]
 #   script:
 #     - uv sync --all-extras

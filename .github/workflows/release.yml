@@ -1,6 +1,6 @@
-# Tag-driven release: push a `v*` tag → build wheel + sdist with uv,
+# Tag-driven release: push a `v*` tag -> build wheel + sdist with uv,
 # smoke-test the wheel in a clean venv, attach both to a GitHub
-# Release. No PyPI publish — the experimental phase distributes via
+# Release. No PyPI publish: the experimental phase distributes via
 # GitHub only (`pip install git+…` or the attached wheel).
 name: release
 

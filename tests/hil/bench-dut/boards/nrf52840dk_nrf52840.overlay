@@ -1,8 +1,8 @@
 /*
  * nRF52840 DK (PCA10056) PPK2 bench-DUT pin assignment.
  *
- * P0.28 → PPK2 D0 (5 Hz square wave)   — Arduino header A2
- * P0.29 → PPK2 D1 (0.5 Hz square wave) — Arduino header A3
+ * P0.28 -> PPK2 D0 (5 Hz square wave)  : Arduino header A2
+ * P0.29 -> PPK2 D1 (0.5 Hz square wave): Arduino header A3
  *
  * Both pins sit on the Arduino R3 analog header and are unclaimed
  * in the default board DTS: P0.29 appears only in the disabled spi0
@@ -18,12 +18,12 @@
 
 		ppk2_d0: ppk2_d0 {
 			gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
-			label = "PPK2 D0 — 5 Hz";
+			label = "PPK2 D0: 5 Hz";
 		};
 
 		ppk2_d1: ppk2_d1 {
 			gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
-			label = "PPK2 D1 — 0.5 Hz";
+			label = "PPK2 D1: 0.5 Hz";
 		};
 	};
 
