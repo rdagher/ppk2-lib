@@ -53,5 +53,5 @@ versions.
 - A capture starts about 10 ms before the DUT's power comes up. The
   [protocol page](docs/measure/protocol.md#10-known-caveats) has
   the measurements.
-- `.ppk2` files follow the layout the app documents. Loading one in the
-  app itself is still to be confirmed.
+- `.ppk2` files follow the layout the app documents. One 30 s file
+  was opened in the app and showed the figures of its CSV.

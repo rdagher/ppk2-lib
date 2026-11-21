@@ -8,6 +8,7 @@ What the three levels of the [method](method.md) found.
 | Noise floor, 60 s | Same header, same distribution (KS 0.0002) | The build of 2026-07-17 |
 | Workload on an nRF52840 DK | Current per marked region within 0.27 %, charge within 0.31 % | The build of 2026-08-19 |
 | Workload on an nRF54LM20 DK | Current per marked region within 0.05 %, charge within 0.03 % | The build of 2026-08-19 |
+| A `.ppk2` file opened in the app | Loads; average, maximum and charge of a 10 s window equal to those of the CSV | The current code, 2026-11-21 |
 | Ten hardware tests | All pass | The current code, 2026-11-20 |
 
 ## Parser
@@ -87,6 +88,23 @@ the KS statistic is 0.0048.
 
 ![Both captures of the nRF54LM20 DK, overlaid, and the distribution of the current per region](../img/parity_nrf54lm20.png)
 
+## Session file
+
+A 30 s capture in Source meter mode at 3.3 V was converted with
+`ppk2 convert` and loaded in the app. For the last 10 s of the trace:
+
+| | The app, from the `.ppk2` file | Computed from the CSV |
+|---|---|---|
+| Average | 699.32 µA | 699.32 µA |
+| Maximum | 171.80 mA | 171.80 mA |
+| Charge | 6.99 mC | 6.993 mC |
+| D0 pulses | 50 | 50 |
+| D1 pulses | 5 | 5 |
+
+The trace ends at 30.00319 s in both. This checks that the app reads
+what `ppk2` writes. The two files are not in the repository: the CSV is
+123 MB.
+
 ## Hardware tests
 
 All ten pass. They were last run on 2026-11-20 with the current code,
@@ -109,8 +127,6 @@ On purpose, and outside what the comparisons above exercise:
   power by hand. `ppk2 capture` does both, and its file begins about
   10 ms before the power comes up.
 
-And one comparison that has not been made: a `.ppk2` file written by
-this package has not yet been opened in the app.
 
 ## Limitations
 

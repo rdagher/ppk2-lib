@@ -125,10 +125,16 @@ source at v4.4.1. Unit tests check what `ppk2` writes against that
 layout: the three files, the bytes of a sample, the overview, the
 handling of lost samples.
 
-One of these files has not yet been opened in the app itself. Until
-that is done, treat the format as written to the description and not as
-proven to load. Nordic gives no guarantee that the format stays the
-same between versions of the app.
+A session file written by `ppk2 convert` was opened in the app on
+2026-11-21: 30 s and 3,000,320 samples, with digital inputs. It loaded
+without an error. Over the last 10 s the app showed an average of
+699.32 µA, a maximum of 171.80 mA and a charge of 6.99 mC. These are
+the figures computed from the CSV of the same capture, and D0 and D1
+toggled as in the CSV. The
+[results](../validation/results.md#session-file) have the table.
+
+This is one file on one version of the app. Nordic gives no guarantee
+that the format stays the same between versions.
 
 ### Size and write procedure
 
