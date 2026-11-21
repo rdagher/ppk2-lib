@@ -3,7 +3,8 @@
 
 One figure per mode: the app's capture and the first ``ppk2 capture``
 overlaid from power-on, and the distribution of the current with D0
-high and with D0 low. The figures are also copied to ``docs/img/``,
+high and with D0 low. One more shows two wake-ups of the DUT, one with
+a reading the spike filter left in. The figures are also copied to ``docs/img/``,
 where the documentation site reads them. Run from the repository root::
 
     just plots
@@ -36,10 +37,50 @@ def ecdf(ax: plt.Axes, samples: np.ndarray, label: str) -> None:
     ax.plot(xs, np.arange(len(xs)) / len(xs), label=label, linewidth=1.2)
 
 
+def wakeups(out_dir: Path) -> None:
+    """Two wake-ups of one capture: one clean, one with a reading the filter left in."""
+    rows = powered(load(HERE / "captures" / "source_ppk2_1.csv.xz"))
+    ua = np.array([row[1] for row in rows])
+    d0 = np.array([row[2] for row in rows]) == 1
+    edges = np.nonzero(d0[1:] & ~d0[:-1])[0] + 1
+    edges = edges[(edges > SKIP) & (edges < len(ua) - 100)]
+    highest = np.array([ua[e - 100 : e + 100].max() for e in edges])
+    picks = (
+        (edges[highest < 5_000][0], "a wake-up as it should read", "#2a78d6"),
+        (edges[highest > 20_000][0], "a wake-up with a reading the filter left in", "#eb6834"),
+    )
+    fig, ax = plt.subplots(figsize=(9, 4.2))
+    x = np.arange(-100, 100) * 0.01
+    for edge, label, colour in picks:
+        ax.step(
+            x,
+            np.maximum(ua[edge - 100 : edge + 100], 0.1),
+            where="post",
+            label=label,
+            color=colour,
+            linewidth=1.4,
+        )
+    ax.set_yscale("log")
+    ax.set_xlabel("time from the rising edge of D0 (ms)")
+    ax.set_ylabel("current (µA, log)")
+    ax.set_title("Two wake-ups of the same DUT in one capture, 10 µs per sample", loc="left")
+    ax.grid(True, which="major", alpha=0.3)
+    ax.legend(loc="upper left", frameon=False)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    fig.tight_layout()
+    out = out_dir / "wakeup.png"
+    fig.savefig(out, dpi=110)
+    plt.close(fig)
+    shutil.copyfile(out, SITE_IMAGES / "wakeup.png")
+    print(f"wrote {out}")
+
+
 def main() -> None:
-    """Render one figure per mode."""
+    """Render one figure per mode, then the wake-ups."""
     out_dir = HERE / "plots"
     out_dir.mkdir(exist_ok=True)
+    wakeups(out_dir)
     for mode, title in MODES:
         fig = plt.figure(figsize=(11, 7))
         ax_t = fig.add_subplot(2, 1, 1)

@@ -88,7 +88,7 @@ included:
 | `captures/<mode>_ppk2_1.csv.xz`, `captures/<mode>_ppk2_2.csv.xz` | The two captures of `ppk2 capture` |
 | `ppk2_metadata.txt` | The output of `ppk2 metadata` on the PPK2 used |
 | `summary.py`, `summary.txt` | The script that prints the tables above, and what it printed |
-| `make_plots.py`, `plots/` | The script that draws the plots, and the plots |
+| `make_plots.py`, `plots/` | The script that draws the plots, and the plots. `wakeup.png` shows two wake-ups, one with readings the spike filter left in |
 
 ## Run it again
 

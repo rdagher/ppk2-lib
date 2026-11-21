@@ -257,28 +257,22 @@ send either, and neither does this package.
 The filter does not remove everything, and a DUT that wakes from sleep
 is where it shows.
 
-!!! note "A wake-up, as the PPK2 reports it"
+![Two wake-ups of the same DUT in one capture: one as it should read, one with readings the filter left in](../img/wakeup.png)
 
-    ```text
-    current drawn      1 µA ──────┐          ┌── a few mA ──┐
-    by the DUT                    └─ wakes ──┘              └── 1 µA
+These are two wake-ups of the same DUT, 0.2 s apart in one capture of
+the [validation](../validation/results.md). The two traces lie on each
+other except for 30 µs, where one reads 50 to 120 mA.
 
-    current reported   1 µA ──────█ hundreds of mA, 20 to 30 µs
-    by the PPK2                   └── then the right values ───────
-    ```
+To follow a current that jumps from microamperes to milliamperes, the
+PPK2 changes its measuring range. For 2 or 3 samples during that
+change it sits in its highest range and reports a current the DUT is
+not drawing. The spike filter exists for this. It replaces the first
+two readings after such a change. When there are more, the rest stays
+in the data, as in the orange trace.
 
-    To follow a current that jumps from microamperes to milliamperes,
-    the PPK2 changes its measuring range. For 2 or 3 samples during
-    that change it sits in its highest range and reports a few hundred
-    mA that the DUT is not drawing.
-
-    The spike filter exists for this. It replaces the first two
-    readings after such a change. When there are three, the third one
-    stays in the data.
-
-    One reading of 150 mA lasts 10 µs and adds 1.5 µC. A short event,
-    such as a radio transmission of a few µC, can read half as much
-    again because of it.
+One reading of 100 mA lasts 10 µs and adds 1 µC. A short event, such as
+a radio transmission of a few µC, can read half as much again because
+of it.
 
 Measured on 2026-11-21 on an nRF54LM20 DK that wakes five times a
 second, in the captures of the [validation](../validation/results.md):

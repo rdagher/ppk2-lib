@@ -176,6 +176,7 @@ def test_plots_on_the_site_are_the_ones_the_script_wrote() -> None:
     for copy, source in (
         ("parity_ampere.png", "ampere_parity.png"),
         ("parity_source.png", "source_parity.png"),
+        ("wakeup.png", "wakeup.png"),
     ):
         assert (DOCS / "img" / copy).read_bytes() == (plots / source).read_bytes(), copy
 
