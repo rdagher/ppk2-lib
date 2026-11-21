@@ -142,7 +142,7 @@ def capture(
             help=(
                 "Per-range user gain override, RANGE:GAIN, with RANGE from 0 to 4 "
                 "(the app numbers the ranges 1 to 5). Repeatable; "
-                "e.g. --user-gain 2:1.05 --user-gain 4:0.98. Applied "
+                "e.g. --user-gain 2:1.05 --user-gain 4:0.98. GAIN from 0.9 to 1.1. Applied "
                 "host-side via Session.set_user_gain."
             ),
         ),

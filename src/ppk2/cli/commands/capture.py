@@ -11,7 +11,7 @@ from types import FrameType
 
 import typer
 
-from ppk2 import Mode, Sample, Session
+from ppk2 import USER_GAIN_MAX, USER_GAIN_MIN, Mode, Sample, Session
 from ppk2.cli.commands import MODE_LABELS, resolve_device
 from ppk2.cli.csv import noise_floor, vdd_to_mv
 from ppk2.cli.signals import signals_to_systemexit
@@ -187,7 +187,7 @@ def parse_user_gain_spec(spec: str) -> tuple[int, float]:
 
     Raises:
         typer.BadParameter: If it is not ``RANGE:GAIN``, the range is not
-            0-4, or the gain is not a finite number.
+            0-4, or the gain is not from 0.9 to 1.1.
     """
     label = "--user-gain"
     parts = spec.split(":")
@@ -216,11 +216,10 @@ def parse_user_gain_spec(spec: str) -> tuple[int, float]:
             f"{label} gain must be a float (got '{gain_str}')",
             param_hint=label,
         ) from exc
-    # Reject NaN / ±inf: they pass float() but would poison the
-    # host-side calibration math (set_user_gain is host-side only).
-    if gain != gain or gain in (float("inf"), float("-inf")):
+    # The range of Nordic's app. NaN fails the comparison too.
+    if not USER_GAIN_MIN <= gain <= USER_GAIN_MAX:
         raise typer.BadParameter(
-            f"{label} gain must be finite (got '{gain_str}')",
+            f"{label} gain must be from {USER_GAIN_MIN} to {USER_GAIN_MAX} (got '{gain_str}')",
             param_hint=label,
         )
     return range_idx, gain

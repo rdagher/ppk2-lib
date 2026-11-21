@@ -6,6 +6,7 @@ in ``tests/hil/test_client.py``.
 """
 
 from collections import deque
+from dataclasses import replace
 from time import monotonic
 from typing import TYPE_CHECKING, cast
 
@@ -171,7 +172,7 @@ def test_session_set_user_gain_after_start_measuring_raises() -> None:
     session._measuring = True  # pyright: ignore[reportPrivateUsage]
 
     with pytest.raises(RuntimeError, match="before start_measuring"):
-        session.set_user_gain(0, 1.5)
+        session.set_user_gain(0, 1.1)
 
 
 def test_session_stop_measuring_reopens_configuration() -> None:
@@ -182,8 +183,36 @@ def test_session_stop_measuring_reopens_configuration() -> None:
 
     session.stop_measuring()
 
-    session.set_user_gain(0, 1.5)
-    assert session.coefficients().ug[0] == 1.5
+    session.set_user_gain(0, 1.1)
+    assert session.coefficients().ug[0] == 1.1
+
+
+@pytest.mark.parametrize("gain", [0.89, 1.11, 5.0, float("nan")])
+def test_session_set_user_gain_rejects_a_gain_outside_the_range_of_the_app(gain: float) -> None:
+    session = Session(cast("serial.Serial", _RecordingPort()), _identity_coeffs())
+
+    with pytest.raises(ValueError, match=r"from 0\.9 to 1\.1"):
+        session.set_user_gain(2, gain)
+
+    assert session.coefficients().ug == (1.0, 1.0, 1.0, 1.0, 1.0)
+
+
+def test_session_resets_reported_user_gains_outside_the_range_of_the_app() -> None:
+    """As Nordic's app at connect: one gain out of range, all five back to 1.0."""
+    reported = replace(_identity_coeffs(), ug=(1.0, 1.05, 5.0, 1.0, 1.0))
+
+    with pytest.warns(RuntimeWarning, match="all five are taken as 1.0"):
+        session = Session(cast("serial.Serial", _RecordingPort()), reported)
+
+    assert session.coefficients().ug == (1.0, 1.0, 1.0, 1.0, 1.0)
+
+
+def test_session_keeps_reported_user_gains_inside_the_range() -> None:
+    reported = replace(_identity_coeffs(), ug=(0.9, 1.05, 1.1, 1.0, 1.0))
+
+    session = Session(cast("serial.Serial", _RecordingPort()), reported)
+
+    assert session.coefficients().ug == (0.9, 1.05, 1.1, 1.0, 1.0)
 
 
 def test_session_set_user_gain_propagates_value_error_on_bad_range() -> None:

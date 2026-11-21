@@ -116,7 +116,7 @@ captured 500736 samples over 5.01 s (100035 Hz)
 |---|---|---|
 | `--out`, `-o PATH` | required | The file to write. A name ending in `.ppk2`, in any letter case, gives a session file, any other name a CSV |
 | `--seconds`, `-s FLOAT` | 30 | How long to capture |
-| `--user-gain RANGE:GAIN` | none | A gain for one range, 0 to 4. Can be repeated. See [gains](architecture.md#gains) |
+| `--user-gain RANGE:GAIN` | none | A gain from 0.9 to 1.1 for one range, 0 to 4. Can be repeated. See [gains](architecture.md#gains) |
 
 What to know about a capture:
 

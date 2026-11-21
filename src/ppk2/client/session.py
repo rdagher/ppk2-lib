@@ -11,6 +11,7 @@ switches the DUT off and closes the port.
 ...     s.capture(on_sample)  # until on_sample returns False
 """
 
+import warnings
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import replace
@@ -51,6 +52,10 @@ VOLTAGE_LIMIT_HARDWARE_MIN_MV: int = 800
 #: Highest voltage the on-board regulator can supply, in millivolts: a
 #: hard ceiling. ``Session.set_voltage_limit`` can only lower it.
 VOLTAGE_LIMIT_HARDWARE_MAX_MV: int = 5000
+
+#: The user gains Nordic's app accepts, per range.
+USER_GAIN_MIN: float = 0.9
+USER_GAIN_MAX: float = 1.1
 
 
 class SessionError(Exception):
@@ -108,6 +113,15 @@ class Session:
         ``set_source_voltage`` says otherwise. Same as Nordic's app.
         """
         self._port = port
+        if not all(USER_GAIN_MIN <= g <= USER_GAIN_MAX for g in coeffs.ug):
+            # As Nordic's app does when it connects.
+            warnings.warn(
+                f"the PPK2 reports a user gain outside {USER_GAIN_MIN} to "
+                f"{USER_GAIN_MAX} ({coeffs.ug}); all five are taken as 1.0",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            coeffs = replace(coeffs, ug=(1.0, 1.0, 1.0, 1.0, 1.0))
         self._coeffs = coeffs
         self._vdd_mv = coeffs.vdd_mv
         self._spike_filter = SpikeFilter()
@@ -350,10 +364,11 @@ class Session:
         Args:
             range_idx: Which of the five measurement ranges, 0-4. The
                 app numbers them 1 to 5.
-            gain: The gain, typically near 1.0.
+            gain: The gain, from 0.9 to 1.1 as in the app.
 
         Raises:
-            ValueError: If ``range_idx`` is not 0-4.
+            ValueError: If ``range_idx`` is not 0-4, or ``gain`` is not
+                from 0.9 to 1.1.
             RuntimeError: If called while a stream runs, between
                 ``start_measuring`` and ``stop_measuring``.
         """
@@ -365,6 +380,8 @@ class Session:
             )
         if not 0 <= range_idx <= 4:
             raise ValueError(f"range_idx must be 0 to 4, got {range_idx}")
+        if not USER_GAIN_MIN <= gain <= USER_GAIN_MAX:
+            raise ValueError(f"gain must be from {USER_GAIN_MIN} to {USER_GAIN_MAX}, got {gain}")
         old_ug = self._coeffs.ug
         new_ug: RangeArray = (
             gain if range_idx == 0 else old_ug[0],

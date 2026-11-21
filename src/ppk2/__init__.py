@@ -13,6 +13,8 @@ For library use, import from this top level:
 """
 
 from ppk2.client import (
+    USER_GAIN_MAX,
+    USER_GAIN_MIN,
     VOLTAGE_LIMIT_HARDWARE_MAX_MV,
     VOLTAGE_LIMIT_HARDWARE_MIN_MV,
     Ambiguous,
@@ -61,6 +63,8 @@ __all__ = [
     "DEFAULT_SPIKE_FILTER_SAMPLES",
     "MAX_BUFFERED_CORRUPTED",
     "NUM_RANGES",
+    "USER_GAIN_MAX",
+    "USER_GAIN_MIN",
     "VOLTAGE_LIMIT_HARDWARE_MAX_MV",
     "VOLTAGE_LIMIT_HARDWARE_MIN_MV",
     "Ambiguous",

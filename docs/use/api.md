@@ -74,6 +74,10 @@ there.
 
 ::: ppk2.client.session.VOLTAGE_LIMIT_HARDWARE_MAX_MV
 
+::: ppk2.client.session.USER_GAIN_MIN
+
+::: ppk2.client.session.USER_GAIN_MAX
+
 ## Samples and the stream parser
 
 `StreamParser` is what a capture runs on. Give it the bytes of each

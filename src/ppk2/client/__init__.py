@@ -16,6 +16,8 @@ from ppk2.client.discovery import (
     list_ppk2s,
 )
 from ppk2.client.session import (
+    USER_GAIN_MAX,
+    USER_GAIN_MIN,
     VOLTAGE_LIMIT_HARDWARE_MAX_MV,
     VOLTAGE_LIMIT_HARDWARE_MIN_MV,
     HandshakeFailed,
@@ -27,6 +29,8 @@ from ppk2.client.session import (
 
 __all__ = [
     "DEFAULT_DISCOVERY_TIMEOUT_S",
+    "USER_GAIN_MAX",
+    "USER_GAIN_MIN",
     "VOLTAGE_LIMIT_HARDWARE_MAX_MV",
     "VOLTAGE_LIMIT_HARDWARE_MIN_MV",
     "Ambiguous",

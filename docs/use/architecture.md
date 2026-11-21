@@ -256,6 +256,11 @@ session.set_user_gain(2, 1.05)  # range 2 here, Range 3 in the app
 ppk2 capture --out trace.csv --seconds 10 --user-gain 2:1.05 --user-gain 4:0.98
 ```
 
+A gain goes from 0.9 to 1.1, as in the app; a value outside is refused.
+If the PPK2 itself reports a gain outside that range, all five are
+taken as 1.0 and a warning says so, which is what the app does when it
+connects.
+
 The gain is applied on the computer and nothing is sent to the PPK2.
 Its firmware accepts the command for user gains and ignores it, and the
 app also applies its gains on the computer.

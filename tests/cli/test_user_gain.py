@@ -29,7 +29,13 @@ def test_parse_user_gain_zero_range_and_unit_gain() -> None:
 
 
 def test_parse_user_gain_high_range() -> None:
-    assert parse_user_gain_spec("4:0.5") == (4, 0.5)
+    assert parse_user_gain_spec("4:0.9") == (4, 0.9)
+
+
+@pytest.mark.parametrize("gain_str", ["0.5", "0.89", "1.11", "5"])
+def test_parse_user_gain_rejects_a_gain_outside_the_range_of_the_app(gain_str: str) -> None:
+    with pytest.raises(typer.BadParameter, match=r"from 0\.9 to 1\.1"):
+        parse_user_gain_spec(f"2:{gain_str}")
 
 
 @pytest.mark.parametrize(
