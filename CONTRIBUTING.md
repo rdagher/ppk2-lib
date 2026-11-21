@@ -1,15 +1,28 @@
-# Doc patterns
+# Contributing
 
-For anyone who edits this documentation.
+The checks to run before a change is proposed:
+
+```sh
+just ci      # type check, lint, unit tests, and the pages against the code
+just docs    # build the site; fails on a broken internal link
+```
+
+`just test-hw` runs the hardware tests on a bench; `tests/hil/README.md`
+says how it is wired.
+
+The rest of this page is the rule book of the documentation, for
+anyone who edits it, person or model.
 
 ## Three purposes
 
-The documentation exists for three things, and has one part for each.
-A page that serves none of them does not belong.
+The documentation exists for three things. The first has two parts,
+one per reader, and the others one each. A page that serves none of
+them does not belong.
 
 | Purpose | The reader asks | Part |
 |---|---|---|
-| The user | How do I capture, from a terminal, a script or CI? | Using it |
+| The user, at a terminal | How do I capture, from a terminal or in CI? | User guide |
+| The user, writing Python | How do I drive a PPK2 from my own code? | Developer guide |
 | The measurement protocol and principle | What exactly is measured, and how does one talk to a PPK2? | How it measures |
 | Cross-validation against Nordic's app | Why believe the numbers? | Validation against Nordic's app |
 
@@ -17,7 +30,7 @@ Keep the parts in proportion. The user part should be short enough to
 read at a bench. The validation part is what the package's claim rests
 on: it gets the method and the results in full, with the numbers.
 
-## Three homes
+## Where each kind of text lives
 
 Each piece of documentation has one natural home. In the wrong one it
 drifts away from the code, or sits where readers do not look.
@@ -25,7 +38,8 @@ drifts away from the code, or sits where readers do not look.
 | Kind | Home | Reader |
 |---|---|---|
 | API reference: what a function takes, returns and raises | Docstrings in `src/ppk2/`, rendered into the API reference page | Someone using the library |
-| User manual: how to capture, recipes, troubleshooting | The pages under `docs/use/` | Anyone using the tool |
+| User manual: how to capture, recipes, troubleshooting | The pages under `docs/user/` | Anyone using the command |
+| How the library is built and used from Python | The pages under `docs/develop/` | Someone writing Python against it |
 | Why and evidence: decisions, measurements, what was tried | The protocol page's known caveats, the validation pages, commit messages | Contributors and maintainers |
 
 To decide:

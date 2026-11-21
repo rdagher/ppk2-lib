@@ -14,6 +14,14 @@ hardware, but the API may still change between 0.x versions.
 pip install "git+https://github.com/rdagher/ppk2-lib"
 ```
 
+With [uv](https://docs.astral.sh/uv/), as a tool that has its own
+environment, or for one run without installing:
+
+```sh
+uv tool install "git+https://github.com/rdagher/ppk2-lib"
+uvx --from "git+https://github.com/rdagher/ppk2-lib" ppk2 list
+```
+
 You need Python 3.11 or newer. The unit tests run on Linux, macOS and
 Windows with Python 3.11 and 3.13. The hardware tests have only run on
 macOS 26, so Windows and Linux are untested on a bench. On Windows,
@@ -74,11 +82,12 @@ returns `False`.
 ## Documentation
 
 The documentation is in [`docs/`](docs/index.md) and builds into a site
-with `just docs`. It has three parts.
+with `just docs`. It has four parts.
 
 | Part | Pages |
 |---|---|
-| Using it | [Getting started](docs/use/getting-started.md), [the `ppk2` command](docs/use/command.md), [recipes](docs/use/recipes.md), [architecture](docs/use/architecture.md), [API reference](docs/use/api.md), [troubleshooting](docs/use/troubleshooting.md) |
+| User guide | [Getting started](docs/user/getting-started.md), [the `ppk2` command](docs/user/command.md), [recipes](docs/user/recipes.md), [troubleshooting](docs/user/troubleshooting.md) |
+| Developer guide | [Architecture](docs/develop/architecture.md), [API reference](docs/develop/api.md) |
 | How it measures | [Measurement principle](docs/measure/principle.md), [protocol](docs/measure/protocol.md), [file formats](docs/measure/formats.md) |
 | Validation against Nordic's app | [Method](docs/validation/method.md), [results](docs/validation/results.md) |
 

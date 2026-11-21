@@ -73,21 +73,22 @@ ua = np.loadtxt("tests.csv", delimiter=",", skiprows=1, usecols=1)
 assert ua.mean() < 2000, f"mean current {ua.mean():.0f} µA is over the budget"
 ```
 
-The [recipes](use/recipes.md) go further: the current of one marked
+The [recipes](user/recipes.md) go further: the current of one marked
 piece of code, and comparing two builds.
 
-## Three parts
+## Four parts
 
-This documentation answers three questions.
+This documentation answers four questions.
 
 | Question | Part | Pages |
 |---|---|---|
-| How do I use it? | Using it | [Getting started](use/getting-started.md), [the `ppk2` command](use/command.md), [recipes](use/recipes.md), [architecture](use/architecture.md), [API reference](use/api.md), [troubleshooting](use/troubleshooting.md) |
+| How do I capture from a terminal? | User guide | [Getting started](user/getting-started.md), [the `ppk2` command](user/command.md), [recipes](user/recipes.md), [troubleshooting](user/troubleshooting.md) |
+| How do I write Python against it? | Developer guide | [Architecture](develop/architecture.md), [API reference](develop/api.md) |
 | What exactly is measured, and how does one talk to a PPK2? | How it measures | [Measurement principle](measure/principle.md), [protocol](measure/protocol.md), [file formats](measure/formats.md) |
 | Why believe the numbers? | Validation against Nordic's app | [Method](validation/method.md), [results](validation/results.md) |
 
 If this is your first time, start with
-[getting started](use/getting-started.md).
+[getting started](user/getting-started.md).
 
 ## What it is good for
 
@@ -101,7 +102,7 @@ If this is your first time, start with
 - Captures in the app's own formats: `ppk2` writes the CSV the app
   exports and its `.ppk2` session file.
 
-The [recipes](use/recipes.md) show each of these.
+The [recipes](user/recipes.md) show each of these.
 
 ## What it is not for
 

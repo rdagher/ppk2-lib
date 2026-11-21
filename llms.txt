@@ -19,22 +19,22 @@ DUT and the digital inputs are named as in Nordic's app and user guide.
 
 ## Docs
 
-Three parts: using it, how it measures, validation against Nordic's app.
+Four parts: user guide, developer guide, how it measures, validation against Nordic's app.
 
 - [README](README.md): install, a first capture, where everything is
-- [Introduction](docs/index.md): the three parts, what it is good for and what it is not for
-- [Getting started](docs/use/getting-started.md): install, the two wirings, the digital inputs, a first capture, reading the file
-- [The ppk2 command](docs/use/command.md): every command and option, exit codes, signals
-- [Recipes](docs/use/recipes.md): flashing a DUT powered by the PPK2, current of a marked region, long captures, comparing two builds
-- [Architecture](docs/use/architecture.md): the three layers, the life of a session, the capture callback, settings, threads, design choices
-- [API reference](docs/use/api.md): discovery, Session, stream parser, calibration, commands
-- [Troubleshooting](docs/use/troubleshooting.md): every error line and what to do
+- [Introduction](docs/index.md): why it exists, terminal, script and CI snippets, the four parts, what it is good for and what it is not for
+- [Getting started](docs/user/getting-started.md): install, the two wirings, the digital inputs, a first capture, reading the file
+- [The ppk2 command](docs/user/command.md): every command and option, exit codes, signals
+- [Recipes](docs/user/recipes.md): flashing a DUT powered by the PPK2, current of a marked region, long captures, comparing two builds
+- [Architecture](docs/develop/architecture.md): the three layers, the life of a session, the capture callback, settings, threads, design choices
+- [API reference](docs/develop/api.md): discovery, Session, stream parser, calibration, commands
+- [Troubleshooting](docs/user/troubleshooting.md): every error line and what to do
 - [Measurement principle](docs/measure/principle.md): modes, ranges, calibration formula, spike filter, the 0.2 µA floor, time, digital inputs, accuracy
 - [Protocol](docs/measure/protocol.md): the bytes and the behaviour of the PPK2, a session on the wire, known caveats
 - [File formats](docs/measure/formats.md): the CSV and the `.ppk2` session file
 - [Validation, method](docs/validation/method.md): the three levels of comparison with Nordic's app, the bench procedure
 - [Validation, results](docs/validation/results.md): tables and plots per round, differences from the app, limits
-- [Doc patterns](docs/contributing/doc-patterns.md): where each kind of documentation goes, Nordic's wording
+- [Contributing](CONTRIBUTING.md): the rules for the documentation: where each kind goes, Nordic's wording, numbers and units
 - [Changelog](CHANGELOG.md)
 
 ## Hardware tests

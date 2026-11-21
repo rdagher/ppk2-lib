@@ -10,6 +10,16 @@ ppk2-lib is not on PyPI yet. Install it from the repository:
 pip install "git+https://github.com/rdagher/ppk2-lib"
 ```
 
+If you only want the command, [uv](https://docs.astral.sh/uv/) installs
+it as a tool, in an environment of its own:
+
+```sh
+uv tool install "git+https://github.com/rdagher/ppk2-lib"
+```
+
+`uvx --from "git+https://github.com/rdagher/ppk2-lib" ppk2 list` runs
+it once without installing anything.
+
 This gives you the `ppk2` command and the `ppk2` Python package. You
 need Python 3.11 or newer. Two dependencies come with it, `pyserial`
 and `typer`; there is nothing to compile.

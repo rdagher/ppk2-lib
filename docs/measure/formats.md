@@ -160,4 +160,4 @@ lost samples out.
 
 In the library a lost sample is not disguised. It arrives as a `Sample`
 whose current is NaN, as the
-[architecture page](../use/architecture.md#the-capture-callback) shows.
+[architecture page](../develop/architecture.md#the-capture-callback) shows.

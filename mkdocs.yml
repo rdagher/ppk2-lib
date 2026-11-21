@@ -1,7 +1,7 @@
 # Documentation site. Built with Zensical, which reads this file as is:
 #   just docs          (into site/)
 #   just docs-serve    (preview on localhost:8000)
-# docs/contributing/doc-patterns.md says what goes where.
+# CONTRIBUTING.md says what goes where.
 site_name: ppk2-lib
 site_description: A Python library and command-line tool for Nordic's Power Profiler Kit II
 site_url: https://rdagher.github.io/ppk2-lib/
@@ -10,13 +10,14 @@ repo_name: rdagher/ppk2-lib
 
 nav:
   - Introduction: index.md
-  - Using it:
-      - Getting started: use/getting-started.md
-      - The ppk2 command: use/command.md
-      - Recipes: use/recipes.md
-      - Architecture: use/architecture.md
-      - API reference: use/api.md
-      - Troubleshooting: use/troubleshooting.md
+  - User guide:
+      - Getting started: user/getting-started.md
+      - The ppk2 command: user/command.md
+      - Recipes: user/recipes.md
+      - Troubleshooting: user/troubleshooting.md
+  - Developer guide:
+      - Architecture: develop/architecture.md
+      - API reference: develop/api.md
   - How it measures:
       - Measurement principle: measure/principle.md
       - Protocol: measure/protocol.md
@@ -24,8 +25,6 @@ nav:
   - Validation against Nordic's app:
       - Method: validation/method.md
       - Results: validation/results.md
-  - Contributing:
-      - Doc patterns: contributing/doc-patterns.md
 
 theme:
   name: material

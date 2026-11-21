@@ -349,7 +349,7 @@ The waits, and which of them the PPK2 really needs:
 | Reading until 50 ms without a byte, for 0.5 s at most, at the end | Otherwise the end of the stream goes to the next program | Yes |
 | 0.5 s, then 1 s, between attempts to open | A port left stuck by a capture that ended badly | When that happens |
 
-The [architecture page](../use/architecture.md#life-of-a-session)
+The [architecture page](../develop/architecture.md#life-of-a-session)
 shows the same sequence from the side of the Python calls.
 
 ### Where a session differs from Nordic's app

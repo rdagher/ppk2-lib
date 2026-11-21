@@ -85,7 +85,7 @@ with Session.open(find_ppk2().device) as session:
 
 The callback is the only way out of `capture`: it must return `False`
 at some point. More in
-[`docs/use/architecture.md`](../../../docs/use/architecture.md) and
+[`docs/develop/architecture.md`](../../../docs/develop/architecture.md) and
 [`docs/measure/protocol.md`](../../../docs/measure/protocol.md).
 
 ## Compare two captures

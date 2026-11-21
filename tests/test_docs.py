@@ -37,6 +37,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 PAGES = [
     ROOT / "README.md",
+    ROOT / "CONTRIBUTING.md",
     ROOT / "llms.txt",
     ROOT / ".claude/skills/ppk2/SKILL.md",
     *sorted(DOCS.rglob("*.md")),
@@ -118,7 +119,7 @@ def test_options_used_on_the_page_exist(page: Path, helps: dict[str, str]) -> No
 
 
 def test_shared_options_table_names_the_right_commands(helps: dict[str, str]) -> None:
-    text = (DOCS / "use/command.md").read_text()
+    text = (DOCS / "user/command.md").read_text()
     rows = re.findall(r"(?m)^\| `(--[a-z-]+)[^`]*` \| [^|]+ \| ((?:`\w+`(?:, )?)+) \|", text)
     assert [option for option, _ in rows] == ["--serial", "--port", "--vdd", "--source"]
     for option, accepted in rows:
@@ -128,7 +129,7 @@ def test_shared_options_table_names_the_right_commands(helps: dict[str, str]) ->
 
 
 def test_option_defaults_in_the_tables_are_the_real_ones(helps: dict[str, str]) -> None:
-    text = (DOCS / "use/command.md").read_text()
+    text = (DOCS / "user/command.md").read_text()
     rows = re.findall(r"(?m)^\| `(--[a-z-]+)[^|]*\| ([^|]+?) \|", text)
     assert len(rows) >= 7
     for option, cell in rows:
@@ -183,7 +184,7 @@ def test_plots_on_the_site_are_the_ones_the_script_wrote() -> None:
 
 
 def test_error_lines_quoted_for_troubleshooting_are_the_real_ones() -> None:
-    page = (DOCS / "use/troubleshooting.md").read_text()
+    page = (DOCS / "user/troubleshooting.md").read_text()
     assert str(NotFound()) in page
     assert str(DataPortNotFound(("a",))).split(":")[0] in page
     assert str(Ambiguous(2)).replace("2 ", "N ", 1) in page

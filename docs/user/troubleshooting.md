@@ -112,5 +112,5 @@ app's capture as CSV, and compare the two files. The repository's
 
 ## See also
 
-- [API reference](api.md): the errors as Python exceptions.
+- [API reference](../develop/api.md): the errors as Python exceptions.
 - [Protocol, known caveats](../measure/protocol.md#10-known-caveats)

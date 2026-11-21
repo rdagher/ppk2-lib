@@ -140,7 +140,7 @@ uA = UG[r] * (x * (GS[r] * x + GI[r]) + S[r] * vdd + I[r]) * 1e6
 of the converter and 163840 is 2^14 × 10. The second line corrects the
 gain, adds the part that depends on the supply voltage, and applies the
 user gain. This is the formula of the app. In Python it is
-[`current_micro_amps`](../use/api.md#ppk2.protocol.calibration.current_micro_amps).
+[`current_micro_amps`](../develop/api.md#ppk2.protocol.calibration.current_micro_amps).
 
 The sample word `0x015c0097` decodes to a reading of 151 in range 0,
 with counter 23 and D0 high. With the range 0 values of the PPK2
@@ -184,7 +184,7 @@ does: give the voltage the DUT really runs at.
 ### User gain
 
 `UG` multiplies the result of one range. It is 1.0 on the PPK2 measured
-here. [`Session.set_user_gain`](../use/architecture.md#gains) and
+here. [`Session.set_user_gain`](../develop/architecture.md#gains) and
 `--user-gain` change it for one session, on the computer only.
 
 ## After a range change: the spike filter
@@ -220,7 +220,7 @@ same thing as the app.
 | Coefficient for range 5 | `alpha5` | 0.06 | 0 to 1 |
 
 A smaller coefficient is a heavier average.
-[`Session.set_spike_filter`](../use/architecture.md#settings-of-a-session)
+[`Session.set_spike_filter`](../develop/architecture.md#settings-of-a-session)
 changes the three numbers. The command line has no option for this, on
 purpose: a file written by `ppk2 capture` always uses the app's
 defaults.
@@ -281,7 +281,7 @@ involved, so rows are exactly 10 µs apart.
 
 The eight inputs of the logic port are read at the same instants as the
 current, and travel in the same sample word. That is what allows a
-[marked region](../use/recipes.md#current-of-a-marked-region) of code to
+[marked region](../user/recipes.md#current-of-a-marked-region) of code to
 be measured exactly.
 
 - In the library, `Sample.logic` is a number in which D0 is bit 0. In
