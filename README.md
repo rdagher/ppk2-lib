@@ -99,10 +99,11 @@ The [changelog](CHANGELOG.md) lists what 0.1.0 contains and its limits.
 
 The parser gives the same samples as the parser of Nordic's app on a
 recorded stream that crosses all five measurement ranges. Captures of
-the same bench by the app and by `ppk2 capture` agree within 0.31 % on
-the current and the charge of each marked region.
+the same bench by the app and by `ppk2 capture`, minutes apart, agree
+within 0.11 % on the current and the charge of each marked region, in
+both modes.
 
-![The app's capture and this tool's, overlaid, on the nRF54LM20 DK](validation/evidence/trace_demo/plots/nrf54lm20_ampere_parity.png)
+![The app's capture and this tool's, overlaid from power-on, in Ampere meter mode](validation/evidence/bench_dut/plots/ampere_parity.png)
 
 All of this was measured on one PPK2. The reference is Nordic's app,
 not a calibrated instrument.

@@ -214,8 +214,8 @@ when they do not overlap.
 Know how much two identical runs differ before you read a difference
 as a result. Two captures of the same firmware, 5 s each, taken one
 after the other on the bench of this repository, gave means 0.31 %
-apart and a KS statistic of 0.0204. At a few tens of µA the spread is
-larger: two identical runs of an idle DUT differed by 2 to 3 %. Measure
+apart and a KS statistic of 0.0204. At a few µA the spread can be
+larger. Measure
 the spread of your own bench with two runs of one build, and trust only
 differences well above it.
 

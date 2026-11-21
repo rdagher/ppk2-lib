@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""Draw the plots of this round from the captures in ``captures/``.
+
+One figure per mode: the app's capture and the first ``ppk2 capture``
+overlaid from power-on, and the distribution of the current with D0
+high and with D0 low. The figures are also copied to ``docs/img/``,
+where the documentation site reads them. Run from the repository root::
+
+    just plots
+"""
+
+import shutil
+import sys
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+HERE = Path(__file__).parent
+SITE_IMAGES = HERE.parents[2] / "docs" / "img"
+sys.path.insert(0, str(HERE.parents[1]))
+from regions import load, powered  # noqa: E402
+
+SKIP = 200_000  # samples: the 2 s after power-on, which hold the boot
+MODES = (
+    ("ampere", "nRF54LM20 DK, Ampere meter mode, 3.3 V"),
+    ("source", "nRF54LM20 DK, Source meter mode, 3.3 V"),
+)
+LABELS = (("app", "Power Profiler app"), ("ppk2_1", "ppk2 capture"))
+
+
+def ecdf(ax: plt.Axes, samples: np.ndarray, label: str) -> None:
+    """Plot the empirical CDF of ``samples``, thinned to 20,000 points."""
+    xs = np.sort(samples)
+    xs = xs[:: max(1, len(xs) // 20_000)]
+    ax.plot(xs, np.arange(len(xs)) / len(xs), label=label, linewidth=1.2)
+
+
+def main() -> None:
+    """Render one figure per mode."""
+    out_dir = HERE / "plots"
+    out_dir.mkdir(exist_ok=True)
+    for mode, title in MODES:
+        fig = plt.figure(figsize=(11, 7))
+        ax_t = fig.add_subplot(2, 1, 1)
+        ax_h = fig.add_subplot(2, 2, 3)
+        ax_l = fig.add_subplot(2, 2, 4)
+        for name, label in LABELS:
+            rows = powered(load(HERE / "captures" / f"{mode}_{name}.csv.xz"))
+            ua = np.array([row[1] for row in rows])
+            d0 = np.array([row[2] for row in rows]) == 1
+            # From power-on, 3 s, one point in ten.
+            shown = np.maximum(ua[:300_000:10], 0.1)
+            ax_t.plot(np.arange(len(shown)) / 10_000, shown, label=label, linewidth=0.6, alpha=0.75)
+            ecdf(ax_h, ua[SKIP:][d0[SKIP:]], label)
+            ecdf(ax_l, ua[SKIP:][~d0[SKIP:]], label)
+        ax_t.set_yscale("log")
+        ax_t.set_xlabel("time since power-on (s)")
+        ax_t.set_ylabel("current (µA, log)")
+        ax_t.set_title(f"{title}: both captures from power-on")
+        ax_t.legend(loc="upper right")
+        ax_h.set_title("distribution of the current, D0 high")
+        ax_l.set_title("distribution of the current, D0 low")
+        ax_h.set_xlim(0, 3000)
+        ax_l.set_xscale("log")
+        for ax in (ax_h, ax_l):
+            ax.set_xlabel("current (µA)")
+            ax.legend(loc="lower right")
+            ax.grid(True, alpha=0.3)
+        fig.tight_layout()
+        out = out_dir / f"{mode}_parity.png"
+        fig.savefig(out, dpi=110)
+        plt.close(fig)
+        shutil.copyfile(out, SITE_IMAGES / f"parity_{mode}.png")
+        print(f"wrote {out}")
+
+
+if __name__ == "__main__":
+    main()

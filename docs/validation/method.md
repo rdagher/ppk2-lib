@@ -46,8 +46,10 @@ list the differences.
 
 ## Capture comparison
 
-A round compares one capture made by the app with one made by
-`ppk2 capture`, on a bench that is not touched in between.
+A round compares captures made by the app and by `ppk2 capture`, on a
+bench that is not touched in between. They are taken within minutes of
+each other, because a bench drifts: with the temperature, and with the
+DUT itself.
 
 ### Procedure
 
@@ -58,9 +60,16 @@ A round compares one capture made by the app with one made by
 3. Quit the app. Only one program can hold the PPK2.
 4. Capture the same duration with `ppk2 capture`, in the same mode and
    at the same voltage.
-5. Compare the two files.
+5. Compare the files.
 
-Both captures begin at power-on, so the DUT boots in both.
+Better still, capture with `ppk2 capture` before the app as well as
+after. The difference between those two captures is the drift of the
+bench, and the app's capture lies between them.
+
+All captures begin at power-on, so the DUT boots in each. Record with
+the round what a reader needs to repeat it: the version of the app,
+the firmware of the PPK2 and its calibration text (`ppk2 metadata`),
+and the commit of this package.
 
 ### Compared quantities
 
@@ -76,9 +85,8 @@ It passes when the headers are identical, the means are within 1 % and
 the KS statistic is below 0.05.
 
 For a firmware that marks its work with D0 and D1, a second script,
-`attribute.py`, computes the current, the charge, the number and the
-width of the
-marked regions in each file.
+`validation/regions.py`, computes the current, the charge, the number
+and the width of the marked regions in each file.
 
 ### Per-region comparison
 
@@ -91,8 +99,8 @@ instrument:
 - A firmware with two levels, a workload and an idle, is cut at a
   different point of its cycle in each capture. The two levels are then
   mixed in different proportions.
-- An idle current drifts over minutes. Two identical runs of one tool
-  on an idle DUT at a few tens of µA differed by 2 to 3 %.
+- A current drifts over minutes. Two captures of `ppk2 capture` four
+  minutes apart differed by 0.05 % in the round of this release.
 
 So a round is judged region by region. For each marked region the
 mean current is compared, and the charge, which is that current added
@@ -131,5 +139,6 @@ PPK2_HIL_SOURCE_MV=3300 just test-hw  # Source meter mode at 3.3 V
   it says nothing about how close the PPK2 is to the true current.
 - Other units and other systems. Everything was measured on one PPK2,
   under macOS.
-- Lost samples on real hardware. Their handling is tested on
-  constructed streams only.
+- Lost samples. Their handling is tested on streams built for the
+  purpose and by freezing a capture on the bench, not against the app,
+  from which this package differs here on purpose.

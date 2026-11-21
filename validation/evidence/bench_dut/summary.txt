@@ -1,0 +1,36 @@
+== ampere meter mode
+                                             app      ppk2 capture 1      ppk2 capture 2
+D0 regions                                   143                 147                 147
+current of a D0 region, µA        1380.42 ± 1.84      1381.65 ± 1.97      1380.94 ± 1.63
+charge of a D0 region, µC          138.02 ± 0.18       138.14 ± 0.20       138.07 ± 0.16
+D1 regions                                    14                  14                  14
+current of a D1 region, µA         699.29 ± 2.62       699.90 ± 3.04       700.06 ± 2.57
+idle median, µA                             1.40                1.40                1.40
+samples at zero, %                         1.911               0.654               0.663
+between 0 and 0.2 µA                           0                   0                   0
+negative                                       0                   0                   0
+lowest above zero, µA                      0.204               0.201               0.201
+difference from the app, D0 current: capture 1 0.09 %, capture 2 0.04 %; between the two captures 0.05 %
+difference from the app, D0 charge: capture 1 0.09 %, capture 2 0.04 %; between the two captures 0.05 %
+difference from the app, D1 current: capture 1 0.09 %, capture 2 0.11 %; between the two captures 0.02 %
+26 s after boot, capture 1 against the app: means 0.14 % apart, KS 0.0037, D0 high 0.0075, D0 low 0.0071
+26 s after boot, capture 2 against the app: means 0.04 % apart, KS 0.0032, D0 high 0.0064, D0 low 0.0044
+
+== source meter mode
+                                             app      ppk2 capture 1      ppk2 capture 2
+D0 regions                                   143                 147                 147
+current of a D0 region, µA        1385.92 ± 0.82      1385.39 ± 1.03      1385.64 ± 0.79
+charge of a D0 region, µC          138.57 ± 0.09       138.52 ± 0.11       138.54 ± 0.09
+D1 regions                                    14                  14                  14
+current of a D1 region, µA         700.87 ± 2.80       700.67 ± 1.77       700.85 ± 2.24
+idle median, µA                             1.35                1.35                1.35
+samples at zero, %                         2.073               0.039               0.047
+between 0 and 0.2 µA                           0                   0                   0
+negative                                       0                   0                   0
+lowest above zero, µA                      0.215               0.215               0.215
+difference from the app, D0 current: capture 1 0.04 %, capture 2 0.02 %; between the two captures 0.02 %
+difference from the app, D0 charge: capture 1 0.04 %, capture 2 0.02 %; between the two captures 0.02 %
+difference from the app, D1 current: capture 1 0.03 %, capture 2 0.00 %; between the two captures 0.03 %
+26 s after boot, capture 1 against the app: means 0.05 % apart, KS 0.0034, D0 high 0.0065, D0 low 0.0046
+26 s after boot, capture 2 against the app: means 0.02 % apart, KS 0.0056, D0 high 0.0064, D0 low 0.0112
+

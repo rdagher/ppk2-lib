@@ -47,7 +47,7 @@ ci-hil: ci test-hw
 # Redraw the validation plots from the stored captures (no hardware).
 # `git status` is clean afterwards if the plots are up to date.
 plots:
-    uv run --group validation python validation/evidence/trace_demo/make_plots.py
+    uv run --group validation python validation/evidence/bench_dut/make_plots.py
 
 # Compare two CSV captures and write a Markdown report (no hardware).
 compare-cli a b:

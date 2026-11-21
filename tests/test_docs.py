@@ -172,10 +172,10 @@ def test_worked_calibration_example_is_what_the_formula_gives() -> None:
 
 
 def test_plots_on_the_site_are_the_ones_the_script_wrote() -> None:
-    plots = ROOT / "validation/evidence/trace_demo/plots"
+    plots = ROOT / "validation/evidence/bench_dut/plots"
     for copy, source in (
-        ("parity_nrf52840.png", "nrf52840_source_parity.png"),
-        ("parity_nrf54lm20.png", "nrf54lm20_ampere_parity.png"),
+        ("parity_ampere.png", "ampere_parity.png"),
+        ("parity_source.png", "source_parity.png"),
     ):
         assert (DOCS / "img" / copy).read_bytes() == (plots / source).read_bytes(), copy
 

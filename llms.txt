@@ -45,8 +45,7 @@ Four parts: user guide, developer guide, measurements, validation against Nordic
 ## Validation
 
 - [Comparison scripts](validation/README.md): statistics of two captures, and when the limits fit
-- [Workload round](validation/evidence/trace_demo/README.md): the app against `ppk2 capture` on two dev kits, current and charge per region
-- [Noise-floor round](validation/evidence/noise_floor_gui/README.md): the 0.2 µA floor against the app
+- [Round of this release](validation/evidence/bench_dut/README.md): the app against `ppk2 capture` in both modes, current and charge per region, versions used
 
 ## Optional
 

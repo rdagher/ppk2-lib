@@ -39,8 +39,9 @@ versions.
 - The parser gives the same samples as the app's on a recorded stream
   that crosses all five measurement ranges.
 - Captures of the same bench by the app and by `ppk2 capture` agree:
-  current and charge per marked region within 0.31 %, and the same distribution at
-  the noise floor. See [`validation/evidence/`](validation/evidence/).
+  current and charge per marked region within 0.11 %, in both modes,
+  and the same 0.2 µA floor. See
+  [`validation/evidence/`](validation/evidence/bench_dut/README.md).
 - Hardware tests and their bench firmware are in
   [`tests/hil/`](tests/hil/README.md).
 

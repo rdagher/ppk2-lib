@@ -1,15 +1,16 @@
 # Results
 
-What the three levels of the [method](method.md) found.
+What the three levels of the [method](method.md) found, all on the
+code of this release.
 
 | Level | Result | Run on |
 |---|---|---|
 | The parser, 600 samples | Every current equal to three decimals, every digital byte identical | The current code |
-| Noise floor, 60 s | Same header, same distribution (KS 0.0002) | The build of 2026-07-17 |
-| Workload on an nRF52840 DK | Current per marked region within 0.27 %, charge within 0.31 % | The build of 2026-08-19 |
-| Workload on an nRF54LM20 DK | Current per marked region within 0.05 %, charge within 0.03 % | The build of 2026-08-19 |
-| A `.ppk2` file opened in the app | Loads; average, maximum and charge of a 10 s window equal to those of the CSV | The current code, 2026-11-21 |
-| Ten hardware tests | All pass | The current code, 2026-11-20 |
+| Captures in Ampere meter mode | Current and charge per marked region within 0.11 % of the app's | 2026-11-21 |
+| Captures in Source meter mode | Current and charge per marked region within 0.04 % of the app's | 2026-11-21 |
+| The 0.2 µA floor | No value between 0 and 0.2 µA, in either tool | 2026-11-21 |
+| A `.ppk2` file opened in the app | Loads; average, maximum and charge of a 10 s window equal to those of the CSV | 2026-11-21 |
+| Ten hardware tests | All pass, in both modes | 2026-11-21 |
 
 ## Parser
 
@@ -18,75 +19,84 @@ the same current to three decimals for every sample, and the same
 digital inputs. The stream crosses all five measurement ranges, so the
 calibration of each range and the spike filter are part of what agrees.
 
-## Noise floor
+## Captures
 
-A PPK2 in Ampere meter mode with nothing connected, 60 s with each
-tool. The app reports any current below 0.2 µA as zero, and so must
-`ppk2 capture`.
+An nRF54LM20 DK runs the [bench firmware](https://github.com/rdagher/ppk2-lib/tree/main/tests/hil/bench-dut):
+D0 toggles at 5 Hz and D1 at 0.5 Hz, and the CPU is busy while D0 is
+high. The bench was captured for 30 s by the app and by `ppk2 capture`,
+within minutes of each other and without being touched in between.
 
-| Capture | Samples at zero | Samples above zero | Their maximum | Their mean | Negative | Between 0 and 0.2 µA |
-|---|---:|---:|---:|---:|---:|---:|
-| App | 99.852 % | 8,880 | 0.347 µA | 0.240 µA | 0 | 0 |
-| `ppk2 capture` | 99.868 % | 7,955 | 0.435 µA | 0.241 µA | 0 | 0 |
+| | |
+|---|---|
+| Date | 2026-11-21, between 19:31 and 19:40 |
+| PPK2 | One unit, firmware 1.2.4 (`db16a94`), the version the app installs. Its calibration text is in the evidence folder |
+| App | Power Profiler 4.4.1, in nRF Connect for Desktop 5.4.1 |
+| This package | Commit `3525ef8`, with Python 3.13.13 and pyserial 3.5 |
+| Host | macOS 26.5.1 |
+| DUT | nRF54LM20 DK with the bench firmware: D0 toggles at 5 Hz, D1 at 0.5 Hz, and the CPU is busy while D0 is high |
+| Captures | 30 s each at 100,000 samples per second, starting at power-on |
 
-The headers are identical and the KS statistic between the two is
-0.0002. The few samples above the floor are noise spikes, and their
-number varies from one capture to the next. The two files of this round
-were too large to keep; the comparison report is stored.
+### Ampere meter mode, 3.3 V
 
-## Workload firmware
+The app's capture was taken between two of `ppk2 capture`.
 
-The same firmware on two dev kits, captured for about 30 s with each
-tool. It raises D0 around a 600 ms workload and D1 around a sweep of
-ten workloads.
-
-### nRF52840 DK, Source meter mode at 3.0 V
-
-| | App | `ppk2 capture` | Difference |
+| | App (19:34) | `ppk2 capture` (19:31) | `ppk2 capture` (19:35) |
 |---|---|---|---|
-| D0 workloads | 31, 596.96 ms wide | 31, 596.69 ms wide | |
-| Current of a D0 workload | 3,760.2 ± 2.5 µA | 3,751 ± 11 µA | 0.23 % |
-| Charge of a D0 workload | 2,244.7 ± 1.4 µC | 2,238.5 ± 6.6 µC | 0.28 % |
-| D1 sweeps | 3, 7,470.81 ms wide | 3, 7,468.04 ms wide | |
-| Current of a D1 sweep | 3,135.1 ± 1.6 µA | 3,126.50 ± 0.70 µA | 0.27 % |
-| Charge of a D1 sweep | 23,421 ± 13 µC | 23,348.8 ± 2.6 µC | 0.31 % |
-| Pulses at boot | 3 | 3 | |
-| Idle mean | 646.01 µA | 636.86 µA | 1.4 % |
+| D0 regions | 143 | 147 | 147 |
+| Current of a D0 region | 1380.4 ± 1.8 µA | 1381.6 ± 2.0 µA | 1380.9 ± 1.6 µA |
+| Charge of a D0 region | 138.02 ± 0.18 µC | 138.14 ± 0.20 µC | 138.07 ± 0.16 µC |
+| D1 regions | 14 | 14 | 14 |
+| Current of a D1 region | 699.3 ± 2.6 µA | 699.9 ± 3.0 µA | 700.1 ± 2.6 µA |
+| Idle median | 1.40 µA | 1.40 µA | 1.40 µA |
+| Difference from the app, D0 current | | 0.09 % | 0.04 % |
+| Difference from the app, D1 current | | 0.09 % | 0.11 % |
+| KS statistic against the app | | 0.0037 | 0.0032 |
+
+The two captures of `ppk2 capture` differ from each other by 0.05 % on
+the D0 current. So the difference from the app is of the size of the
+bench's own drift over four minutes.
+
+![Both captures in Ampere meter mode, overlaid from power-on, and the distribution of the current](../img/parity_ampere.png)
+
+### Source meter mode, 3.3 V
+
+Here both captures of `ppk2 capture` follow the app's.
+
+| | App (19:38) | `ppk2 capture` (19:38) | `ppk2 capture` (19:39) |
+|---|---|---|---|
+| D0 regions | 143 | 147 | 147 |
+| Current of a D0 region | 1385.92 ± 0.82 µA | 1385.4 ± 1.0 µA | 1385.64 ± 0.79 µA |
+| Charge of a D0 region | 138.57 ± 0.09 µC | 138.52 ± 0.11 µC | 138.54 ± 0.09 µC |
+| D1 regions | 14 | 14 | 14 |
+| Current of a D1 region | 700.9 ± 2.8 µA | 700.7 ± 1.8 µA | 700.9 ± 2.2 µA |
+| Idle median | 1.35 µA | 1.35 µA | 1.35 µA |
+| Difference from the app, D0 current | | 0.04 % | 0.02 % |
+| Difference from the app, D1 current | | 0.03 % | 0.00 % |
+| KS statistic against the app | | 0.0034 | 0.0056 |
+
+![Both captures in Source meter mode, overlaid from power-on, and the distribution of the current](../img/parity_source.png)
 
 The current of a region is its mean current, and its charge is that
 current added up over its width. Each is given as the mean ± the
-standard deviation over the regions. The difference is that of the
-means, `ppk2 capture` against the app, as a share of the app's,
-computed before rounding.
+standard deviation over the regions. A difference is that of the means,
+as a share of the app's, computed before rounding. The KS statistic
+compares the distributions of the current over the same 26 s, starting
+2 s after power-on.
 
-After the first 2.5 s, the KS statistic inside the workload is 0.0253,
-with means of 3,760.6 and 3,752.5 µA. At idle it is 0.1460: the idle
-level moved by about 9 µA in the minutes between the two captures.
+### The 0.2 µA floor
 
-Over the whole trace, the means are 0.51 % apart and the KS statistic
-is 0.0506, just over the 0.05 limit. That is the effect of the two
-levels and of the idle drift, which is why the round is judged per
-region.
+The app records any current below 0.2 µA as zero, and so must
+`ppk2 capture`. Over the whole of each capture, the unpowered start
+included:
 
-![Both captures of the nRF52840 DK, overlaid, and the distribution of the current per region](../img/parity_nrf52840.png)
-
-### nRF54LM20 DK, Ampere meter mode at 3.3 V
-
-| | App | `ppk2 capture` | Difference |
+| | App | `ppk2 capture` 1 | `ppk2 capture` 2 |
 |---|---|---|---|
-| D0 workloads | 30, 599.71 ms wide | 31, 599.97 ms wide | |
-| Current of a D0 workload | 1,445.6 ± 1.3 µA | 1,445.4 ± 1.9 µA | 0.01 % |
-| Charge of a D0 workload | 866.93 ± 0.73 µC | 867.2 ± 1.2 µC | 0.03 % |
-| D1 sweeps | 3, 7,497.86 ms wide | 3, 7,500.58 ms wide | |
-| Current of a D1 sweep | 1,159.67 ± 0.63 µA | 1,159.0 ± 1.1 µA | 0.05 % |
-| Charge of a D1 sweep | 8,695.1 ± 4.6 µC | 8,693.5 ± 8.3 µC | 0.02 % |
-| Idle median | 4.25 µA | 4.29 µA | |
-
-After the first 2.5 s, the KS statistic is 0.0065 inside the workload
-and 0.0091 at idle. Over the whole trace the means are 0.35 % apart and
-the KS statistic is 0.0048.
-
-![Both captures of the nRF54LM20 DK, overlaid, and the distribution of the current per region](../img/parity_nrf54lm20.png)
+| Ampere meter: values between 0 and 0.2 µA | 0 | 0 | 0 |
+| Ampere meter: negative values | 0 | 0 | 0 |
+| Ampere meter: lowest value above zero | 0.204 µA | 0.201 µA | 0.201 µA |
+| Source meter: values between 0 and 0.2 µA | 0 | 0 | 0 |
+| Source meter: negative values | 0 | 0 | 0 |
+| Source meter: lowest value above zero | 0.215 µA | 0.215 µA | 0.215 µA |
 
 ## Session file
 
@@ -107,10 +117,15 @@ what `ppk2` writes. The two files are not in the repository: the CSV is
 
 ## Hardware tests
 
-All ten pass. They were last run on 2026-11-20 with the current code,
-in Source meter mode at 3.3 V on an nRF54LM20 DK. The run in Ampere
-meter mode of the same day predates the last changes to how a session
-closes.
+All ten pass in both modes, at 3.3 V on an nRF54LM20 DK. They were
+last run on 2026-11-21: in Ampere meter mode on the code of the
+captures above, in Source meter mode one change earlier.
+
+One more check was made by hand: a running capture was frozen for 3 s,
+which makes the computer lose samples. Three such captures recovered,
+with 18 to 34 samples marked lost and normal currents afterwards. The
+[protocol page](../measure/protocol.md#5-stream-reassembly) says how
+the parser finds its place again.
 
 ## Differences from the app
 
@@ -130,19 +145,16 @@ On purpose, and outside what the comparisons above exercise:
 
 ## Limitations
 
-- One PPK2, under macOS.
+- One PPK2, one dev kit, one computer under macOS.
 - The reference is the app. Agreement with it says nothing about the
   absolute accuracy of the PPK2, which Nordic gives as better than
   ±20 %.
-- The whole-capture rounds were taken with the builds of their day,
-  three and four months before this release. The parser check and the
-  hardware tests run on the current code. A fresh round with the
-  current build is still to be done.
+- Each capture lasts 30 s. Longer captures were not compared.
 
 ## Reproducing the results
 
-The captures, the firmware and the scripts of the rounds are in
-[`validation/evidence/`](https://github.com/rdagher/ppk2-lib/tree/main/validation/evidence),
+The captures and the scripts are in
+[`validation/evidence/bench_dut/`](https://github.com/rdagher/ppk2-lib/tree/main/validation/evidence/bench_dut),
 the recording and its reference in
 [`tests/fixtures/`](https://github.com/rdagher/ppk2-lib/tree/main/tests/fixtures).
 From a checkout:
@@ -151,12 +163,14 @@ From a checkout:
 # the parser against the stored reference
 just test
 
-# current and charge per marked region of a stored capture
-python validation/evidence/trace_demo/firmware/attribute.py \
-    validation/evidence/trace_demo/captures/nrf54lm20_ampere_cli.csv.gz
+# the tables above, from the six stored captures
+uv run --group validation python validation/evidence/bench_dut/summary.py
 
-# the plots above, and the KS statistic and mean per region
+# the plots above
 just plots
+
+# current and charge per marked region of one capture
+python validation/regions.py validation/evidence/bench_dut/captures/source_app.csv.xz
 
 # two captures of your own bench
 uv run --group validation python -m validation.compare_cli app.csv ours.csv --skip-initial-s 2

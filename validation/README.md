@@ -45,26 +45,25 @@ its time in a workload. It is too tight in two cases:
 
 - A capture that starts at power-on contains the boot inrush, which
   can dominate a small mean. Skip it with `--skip-initial-s 2`.
-- A DUT idling at a few tens of µA. Two identical runs differ by 2
-  to 3 % there (18.14 against 17.70 µA on 2026-07-10). Measure that
-  spread with two runs of the same binary and set
-  `--mean-tolerance-pct` from it, or rely on the header, the KS test
-  and the pin rates.
+- A DUT idling at a few µA, where two identical runs can differ by
+  more than 1 %. Measure that spread with two runs of the same binary
+  and set `--mean-tolerance-pct` from it, or rely on the header, the KS
+  test and the pin rates.
 
 A signal with two levels is also sensitive to where each capture
 starts in the cycle. Compare it level by level, as the
-[workload round](evidence/trace_demo/README.md) does.
+[round of this release](evidence/bench_dut/README.md) does, with
+`validation/regions.py`.
 
 ## What is in `evidence/`
 
-- [`noise_floor_gui/`](evidence/noise_floor_gui/): open leads, no
-  DUT. Checks the 0.2 µA floor.
-- [`trace_demo/`](evidence/trace_demo/README.md): a workload firmware
-  on two dev kits, with current and charge per marked region. Its captures and
-  its firmware are stored with it.
+- [`bench_dut/`](evidence/bench_dut/README.md): the round of this
+  release. The app against `ppk2 capture` in both modes on an
+  nRF54LM20 DK, with the six captures, the versions used, and the
+  scripts that print the tables and draw the plots.
 
-For a new round, the [bench firmware](../tests/hil/bench-dut/) of the
-hardware tests gives a known signal on D0 and D1.
+Its DUT runs the [bench firmware](../tests/hil/bench-dut/) of the
+hardware tests, which gives a known signal on D0 and D1.
 
 The parser itself is checked separately, sample by sample, against
 Nordic's parser: see [`tests/fixtures/`](../tests/fixtures/README.md).
