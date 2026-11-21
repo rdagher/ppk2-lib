@@ -99,8 +99,9 @@ Three things to watch:
 
 - A capture can start or end in the middle of a region. Drop the first
   and the last row if they are cut.
-- A lost sample has no row in the CSV, so it is missing from the sum.
-  The summary at the end of a capture says whether any were lost.
+- A lost sample is a row of 0.2 µA in the CSV, as in Nordic's app, so
+  it lowers the sum. The summary at the end of a capture says whether
+  any were lost.
 - Energy needs the voltage the DUT really ran at. In Ampere meter mode,
   measure it and use it both for `--vdd` and for `VDD` above.
 

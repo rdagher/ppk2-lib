@@ -3,7 +3,6 @@
 import gzip
 import json
 import zipfile
-from math import isnan
 from pathlib import Path
 
 import pytest
@@ -41,7 +40,7 @@ def test_rows_become_frames(tmp_path: Path) -> None:
     assert sample_rate(dst) == 100_000
 
 
-def test_a_jump_in_timestamps_becomes_nan_frames(tmp_path: Path) -> None:
+def test_a_jump_in_timestamps_is_filled_with_0_2_ua(tmp_path: Path) -> None:
     """Lost samples have no CSV row; the trace after them must not slide earlier."""
     src, dst = tmp_path / "t.csv", tmp_path / "t.ppk2"
     write_csv(src, [(0.0, 1.0, 0), (0.01, 2.0, 0), (0.05, 3.0, 0)])  # 0.02-0.04 lost
@@ -50,7 +49,7 @@ def test_a_jump_in_timestamps_becomes_nan_frames(tmp_path: Path) -> None:
 
     currents = [current for current, _ in frames(dst)]
     assert currents[:2] == [1.0, 2.0]
-    assert all(isnan(c) for c in currents[2:5])
+    assert all(abs(c - 0.2) < 1e-6 for c in currents[2:5])  # float32
     assert currents[5] == 3.0
 
 
@@ -117,7 +116,7 @@ def test_rate_survives_a_lost_sample_between_the_first_rows(tmp_path: Path) -> N
     assert sample_rate(dst) == 100_000
     currents = [current for current, _ in frames(dst)]
     assert currents[0] == 1.0
-    assert isnan(currents[1])
+    assert abs(currents[1] - 0.2) < 1e-6  # a float32
     assert currents[2:] == [2.0, 3.0]
 
 

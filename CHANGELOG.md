@@ -29,7 +29,8 @@ versions.
 - `ppk2.client`: discovery of the data port, and a `Session` with
   Ampere meter and Source meter modes, power switching, user gain, a
   voltage limit and spike-filter settings.
-- Lost samples are reported and keep their place in the trace.
+- Lost samples are reported and keep their place in the trace. The
+  files record each as 0.2 µA, as Nordic's app does.
 - A session leaves the PPK2 quiet for the next program, and opens a
   PPK2 that another program left streaming.
 

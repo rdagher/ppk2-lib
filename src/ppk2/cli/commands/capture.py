@@ -73,7 +73,6 @@ def capture(
             # Opened once the PPK2 answers: a capture that cannot start
             # leaves an earlier file of the same name alone.
             trace = stack.enter_context(TraceFile(out))
-            lost_note = "kept as gaps in the .ppk2" if trace.is_ppk2 else "skipped from CSV"
             session.set_mode(mode)
             session.set_source_voltage(mv)
             for range_idx, gain in user_gains:
@@ -97,7 +96,8 @@ def capture(
                 sys.stderr.write(
                     f"  warning: data loss detected at sample ~{n_samples + n_dataloss}; "
                     f"{total} placeholders so far. Likely cause: USB cable / hub / host "
-                    f"contention. Capture continues; placeholders are {lost_note}.\n"
+                    "contention. Capture continues; each is recorded as 0.2 µA, "
+                    "as in Nordic's app.\n"
                 )
                 sys.stderr.flush()
 
@@ -105,9 +105,10 @@ def capture(
                 nonlocal n_samples, n_dataloss, sum_ua, last_progress
                 if stop_requested.flag:
                     return False
-                # NaN is a lost sample: it keeps its place in the file's
-                # timeline and stays out of the mean. Real values go
-                # through the 0.2 µA clamp first.
+                # NaN is a lost sample: the file records it as 0.2 µA,
+                # as Nordic's app does, and it stays out of the mean
+                # printed here. Real values go through the 0.2 µA clamp
+                # first.
                 ua = noise_floor(s.current_micro_amps)
                 trace.add(ua, s.logic)
                 if isnan(ua):
@@ -161,7 +162,7 @@ def capture(
             sys.stderr.write(
                 f"  warning: {n_dataloss} data-loss placeholder samples "
                 f"({100.0 * n_dataloss / n_total:.3f} % of stream) "
-                f"{lost_note}\n"
+                "recorded as 0.2 µA each, as in Nordic's app\n"
             )
         if wall > 0.5 and n_total > 0 and rate < _RATE_WATCHDOG_FRACTION * _SAMPLE_RATE_HZ:
             sys.stderr.write(

@@ -360,7 +360,7 @@ unless another file is named):
 | Subject | Nordic's app | This package |
 |---|---|---|
 | User gains at connect | Sets all five to 1.0 when one is outside 0.9 to 1.1 (`:205-221`) | The same, with a warning |
-| A lost sample | Recorded as a sample of 0.2 µA (`:333`) | Kept as a gap: no row in a CSV, NaN in a session file |
+| A lost sample | Recorded as a sample of 0.2 µA (`:333`) | The same in the files `ppk2` writes. NaN in the library, so that a script can tell |
 | Supply voltage at connect | Sends `REGULATOR_SET` with the reported voltage (`:472`). No setting for it in Ampere meter mode | Sends it when `set_source_voltage` is called, in both modes, since the calibration uses it |
 | Power and mode | Switches power off before going to Source meter mode and on after going to Ampere meter mode (`:594-607`). Enables power at connect in Ampere meter mode (`:486`) | `set_mode` does not touch the power. `power_on` and `power_off` are separate calls |
 | Finding the data port | Takes the first of the two ports (`src/device/serialDevice.ts:94`) | Asks each port for its calibration text |

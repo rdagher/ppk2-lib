@@ -8,7 +8,7 @@ toward the stream rate but write no rows.
 
 import signal
 from collections.abc import Callable
-from math import isnan, nan
+from math import nan
 from pathlib import Path
 from time import sleep
 
@@ -154,7 +154,7 @@ def test_clean_short_capture_exits_0_without_watchdog(
     assert len(out.read_text().splitlines()) == 1 + 10  # header + rows
 
 
-def test_nan_placeholders_skip_rows_but_count_in_stream_stats(
+def test_lost_samples_are_rows_of_0_2_ua_and_are_counted(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
@@ -164,7 +164,9 @@ def test_nan_placeholders_skip_rows_but_count_in_stream_stats(
     code = dispatch(["capture", "-o", str(out), "-s", "30"])
     captured = capsys.readouterr()
     assert code == 0
-    assert len(out.read_text().splitlines()) == 1 + 2  # header + 2 real rows
+    rows = out.read_text().splitlines()[1:]
+    assert len(rows) == 5
+    assert [r.split(",")[1] for r in rows].count("0.200") == 3
     assert "3 data-loss placeholder samples" in captured.err
 
 
@@ -183,12 +185,12 @@ def test_ctrl_c_flushes_csv_prints_interrupted_and_exits_130(
     assert len(out.read_text().splitlines()) == 1 + 1
 
 
-def test_ppk2_output_keeps_a_slot_for_lost_samples(
+def test_ppk2_output_records_a_lost_sample_as_0_2_ua(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
-    """``--out x.ppk2`` writes a session file; a lost sample stays in the timeline."""
+    """``--out x.ppk2`` writes a session file; a lost sample is 0.2 µA, as in the app."""
     _install(monkeypatch, _FakeSession(samples=[_REAL, _NAN, _REAL]))
     out = tmp_path / "trace.ppk2"
 
@@ -198,6 +200,6 @@ def test_ppk2_output_keeps_a_slot_for_lost_samples(
     assert code == 0, captured.err
     currents = [current for current, _ in frames(out)]
     assert currents[0] == currents[2] == 12.5
-    assert isnan(currents[1])
+    assert abs(currents[1] - 0.2) < 1e-6  # a float32
     assert [pairs for _, pairs in frames(out)] == [0x555A, 0x5555, 0x555A]
-    assert "kept as gaps in the .ppk2" in captured.err
+    assert "data-loss placeholder" in captured.err

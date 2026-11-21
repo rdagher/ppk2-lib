@@ -146,7 +146,8 @@ needs the `Timestamp(ms)` and `Current(uA)` columns and reads the
 digital inputs from `D0-D7` if the column is there. The sample rate
 comes from the timestamps and must be a power of ten up to 100,000.
 
-A gap in the timestamps is kept as lost samples. A gap of more than
+A gap in the timestamps is filled with samples of 0.2 µA, the way a
+[lost sample](../measure/formats.md#lost-samples) is recorded. A gap of more than
 one second is refused, and so are timestamps that go back. If the
 conversion fails, an earlier file of the same name is left as it was.
 

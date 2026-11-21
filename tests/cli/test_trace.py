@@ -12,12 +12,13 @@ def test_csv_rows_are_stamped_from_the_sample_index(tmp_path: Path) -> None:
     out = tmp_path / "t.csv"
     with TraceFile(out) as trace:
         trace.add(1.0, 0b01)
-        trace.add(nan, 0)  # a lost sample: no row, the next timestamp skips its slot
+        trace.add(nan, 0b11)  # a lost sample: 0.2 µA and inputs low, as in the app
         trace.add(2.0, 0b10)
 
     assert out.read_text().splitlines() == [
         CSV_HEADER,
         "0,1.000,10000000,1,0,0,0,0,0,0,0",
+        "0.01,0.200,00000000,0,0,0,0,0,0,0,0",
         "0.02,2.000,01000000,0,1,0,0,0,0,0,0",
     ]
 

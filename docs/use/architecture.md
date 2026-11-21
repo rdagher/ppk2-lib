@@ -208,7 +208,8 @@ block still closes the session.
 
 A lost sample arrives as a `Sample` whose current is NaN and whose
 `logic` is 0. It keeps its place, so the count of samples still gives
-the time. To be told as it happens, pass `on_dataloss`. It is called
+the time. The files `ppk2` writes record it as 0.2 µA instead, as
+Nordic's app does. To be told as it happens, pass `on_dataloss`. It is called
 with the total so far, at most once per read:
 
 ```python

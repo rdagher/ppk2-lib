@@ -35,8 +35,10 @@ clock: rows are exactly 0.01 ms apart.
 
 What else to know:
 
-- A lost sample has no row. The timestamp of the next row skips its
-  place, as in the app's export, so the time axis stays right.
+- A lost sample is a row with a current of `0.200` and all digital
+  inputs at 0. Nordic's app records a lost sample this way, and the
+  files follow it so that they can be compared. See
+  [lost samples](#lost-samples) below.
 - A value below 0.2 µA is written as `0.000`, as in the app.
 - When the app exports at a lower sample rate, its digital columns can
   also hold `-` and `X`. At the full rate both tools write only `0` and
@@ -103,7 +105,7 @@ packet-beta
 
 | Field | Bytes | Content |
 |---|---|---|
-| Current | 0 to 3 | Microamperes, a 32-bit float, little-endian. A lost sample is NaN |
+| Current | 0 to 3 | Microamperes, a 32-bit float, little-endian. A lost sample is 0.2 |
 | Digital channels | 4 and 5 | Two bits per channel, big-endian: `01` low, `10` high. D0 is in the lowest pair |
 
 `ppk2` writes a current below 0.2 µA as zero, which is how the app
@@ -140,3 +142,22 @@ session file is built from it and put in place in one step. If that
 fails, the `.frames` file stays, and an earlier session file of the
 same name is left untouched. A capture without a single sample writes
 no file.
+
+## Lost samples
+
+When the computer does not keep up, the PPK2's samples are lost in
+transit. Nordic's app records each lost sample as a reading of 0.2 µA
+with its digital inputs low, to keep the time axis right. `ppk2`
+writes the same in both formats, so a file made here and one saved by
+the app treat a loss alike.
+
+That value is made up. Each lost sample pulls a sum or a mean towards
+0.2 µA: losing 1 % of the samples of a 1 mA trace lowers its mean by
+about 1 %. Nothing in the file tells such a row from a real reading of
+0.2 µA. What tells you is the capture itself: it warns once 500 samples
+are lost and gives the total at the end. The mean it prints leaves the
+lost samples out.
+
+In the library a lost sample is not disguised. It arrives as a `Sample`
+whose current is NaN, as the
+[architecture page](../use/architecture.md#the-capture-callback) shows.

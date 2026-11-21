@@ -92,10 +92,10 @@ They can. Without power on the DUT, the inputs are not driven.
 
 ## Warnings about lost samples or the stream rate
 
-The computer did not keep up with the PPK2. The trace keeps its length
-and the lost samples are marked, but they are missing from sums and
-means. Try another USB port or cable, without a hub, and close what
-else loads the machine.
+The computer did not keep up with the PPK2. The trace keeps its
+length, and each lost sample is recorded as 0.2 µA, as in Nordic's app,
+which lowers sums and means in proportion. Try another USB port or
+cable, without a hub, and close what else loads the machine.
 
 ## `Calibrated: false`
 

@@ -4,13 +4,13 @@ import gzip
 import struct
 import sys
 from itertools import chain, islice, pairwise
-from math import nan
 from pathlib import Path
 from typing import NoReturn, TextIO
 
 import typer
 
 from ppk2.cli.ppk2file import SAMPLE_RATES, Ppk2FileWriter
+from ppk2.cli.trace import LOST_SAMPLE_UA
 
 # Rows read ahead to find the sample period: enough to hold two
 # neighbouring samples even where some were lost.
@@ -21,9 +21,10 @@ def convert(src: Path, dst: Path) -> None:
     """Rewrite the CSV capture ``src`` (plain or ``.gz``) as the ``.ppk2`` file ``dst``.
 
     The sample rate is the smallest step between the first timestamps.
-    A CSV has no row for a lost sample, only a jump in its timestamps,
-    and a ``.ppk2`` has no timestamps at all: each jump is filled with
-    NaN frames so the rest of the trace stays where it was in time.
+    A ``.ppk2`` has no timestamps, so a jump in those of the CSV is
+    filled: one frame of ``LOST_SAMPLE_UA`` per missing row, as Nordic's
+    app records a lost sample, and the rest of the trace stays where it
+    was in time.
 
     On any error nothing is written, and an existing ``dst`` is kept.
     """
@@ -39,7 +40,9 @@ def convert(src: Path, dst: Path) -> None:
     note = ""
     if lost:
         note = (
-            ", 1 lost sample kept as a gap" if lost == 1 else f", {lost} lost samples kept as gaps"
+            ", 1 missing row filled with 0.2 µA"
+            if lost == 1
+            else f", {lost} missing rows filled with 0.2 µA"
         )
     sys.stderr.write(f"wrote {dst}: {count} samples at {rate} S/s ({count / rate:.2f} s){note}\n")
 
@@ -92,7 +95,7 @@ def _convert(src: Path, dst: Path) -> tuple[int, int, int]:
                 if slot - out.count > rate:
                     _fail(f"{src}: timestamps jump by over a second at line {row}")
                 for _ in range(slot - out.count):
-                    out.add(nan, 0)
+                    out.add(LOST_SAMPLE_UA, 0)
                     lost += 1
                 try:
                     out.add(current, logic)
