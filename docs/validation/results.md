@@ -118,8 +118,7 @@ what `ppk2` writes. The two files are not in the repository: the CSV is
 ## Hardware tests
 
 All ten pass in both modes, at 3.3 V on an nRF54LM20 DK. They were
-last run on 2026-11-21: in Ampere meter mode on the code of the
-captures above, in Source meter mode one change earlier.
+last run on 2026-11-21, on the code of the captures above.
 
 One more check was made by hand: a running capture was frozen for 3 s,
 which makes the computer lose samples. Three such captures recovered,
