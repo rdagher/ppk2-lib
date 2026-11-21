@@ -235,4 +235,4 @@ just docs-serve    # preview on http://localhost:8000
 ```
 
 The site is built with [Zensical](https://zensical.org), which reads
-`mkdocs.yml` at the root of the repository.
+`zensical.toml` at the root of the repository.

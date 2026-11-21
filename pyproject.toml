@@ -51,7 +51,7 @@ dev = [
     "pyright>=1.1.380",
     "ruff>=0.7",
 ]
-# The documentation site (mkdocs.yml, built with Zensical).
+# The documentation site (zensical.toml, built with Zensical).
 docs = [
     "zensical>=0.1.3",
     "mkdocstrings-python>=1.16",
