@@ -270,9 +270,17 @@ second, in the captures of the [validation](../validation/results.md):
 | Ampere meter, `ppk2 capture` | 140 | 58 |
 | Ampere meter, the app | 137 | 56 |
 
-It is the same in both modes and in the app's own captures. Whether
-those 20 to 30 µs carry a real current, the PPK2 cannot tell: it is
-switching its measuring resistor at that moment.
+It is the same in both modes and in the app's own captures.
+
+Nordic describes the cause in its course on low-power Bluetooth LE
+products. When the measuring resistor is switched, the supply voltage
+at the DUT steps, and the decoupling capacitors take an inrush current,
+seen as an overshoot. Lab instruments compensate for it better than
+the PPK2 does. The app's documentation adds that the first samples
+after a switch can read higher than the actual value, which is what the
+filter is for. So part of the burst is a real current into the
+capacitors and part may be overshoot, and the PPK2 does not say how
+much of each.
 
 What it costs depends on what is measured:
 
