@@ -254,11 +254,31 @@ send either, and neither does this package.
 
 ### Limit: waking from sleep
 
-The filter does not remove everything. When a DUT wakes from a sleep of
-a few µA, the PPK2 jumps from its lowest range straight to its highest
-for 2 or 3 samples. It reports a few hundred mA there before it
-settles. The filter covers the first two of those samples. A third one
-gets through.
+The filter does not remove everything, and a DUT that wakes from sleep
+is where it shows.
+
+!!! note "A wake-up, as the PPK2 reports it"
+
+    ```text
+    current drawn      1 µA ──────┐          ┌── a few mA ──┐
+    by the DUT                    └─ wakes ──┘              └── 1 µA
+
+    current reported   1 µA ──────█ hundreds of mA, 20 to 30 µs
+    by the PPK2                   └── then the right values ───────
+    ```
+
+    To follow a current that jumps from microamperes to milliamperes,
+    the PPK2 changes its measuring range. For 2 or 3 samples during
+    that change it sits in its highest range and reports a few hundred
+    mA that the DUT is not drawing.
+
+    The spike filter exists for this. It replaces the first two
+    readings after such a change. When there are three, the third one
+    stays in the data.
+
+    One reading of 150 mA lasts 10 µs and adds 1.5 µC. A short event,
+    such as a radio transmission of a few µC, can read half as much
+    again because of it.
 
 Measured on 2026-11-21 on an nRF54LM20 DK that wakes five times a
 second, in the captures of the [validation](../validation/results.md):
