@@ -252,7 +252,7 @@ def test_lost_samples_keep_the_timeline_exact(lost: int) -> None:
 
 
 def test_max_buffered_corrupted_constant_matches_nordic_threshold() -> None:
-    """Pinning the constant value: Nordic's serialDevice.ts:268 fires on length > 4."""
+    """The constant has the value Nordic's app uses (serialDevice.ts:268)."""
     assert MAX_BUFFERED_CORRUPTED == 5
 
 
@@ -343,8 +343,7 @@ def test_genuine_loss_keeps_the_samples_that_arrived_after_the_gap() -> None:
 def test_dataloss_gap_uses_true_mod64_arithmetic_across_counter_wrap() -> None:
     """The placeholder count is the TRUE mod-64 gap, exercised across the 63->0 wrap.
 
-    Pins the gap off-by-one fix: shipped Nordic (serialDevice.ts:269-271
-    @ 63ae4b7) computes ``(counter - expected + 63) & 63``, one short
+    Nordic's app (serialDevice.ts:269-271 @ 63ae4b7) counts one short
     of the true distance. With expected=2 and trigger counter=1 the
     true mod-64 gap is 63; the shipped arithmetic would emit 62. The
     wrap also proves the expected-counter advances correctly through
@@ -376,7 +375,7 @@ def test_dataloss_gap_uses_true_mod64_arithmetic_across_counter_wrap() -> None:
         emitted.append,
     )
     placeholders = emitted[1:-6]
-    assert len(placeholders) == 63  # shipped Nordic's `+ 63` would give 62
+    assert len(placeholders) == 63  # Nordic's app would give 62
     assert all(math.isnan(s.current_micro_amps) for s in placeholders)
     assert all(s.logic == 0 for s in placeholders)
     assert [s.logic for s in emitted[-6:-1]] == [0xFF] * 5  # the held samples

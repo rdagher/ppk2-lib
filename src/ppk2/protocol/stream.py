@@ -47,8 +47,7 @@ class Sample:
 
 
 #: Mismatched samples held before the gap is declared lost. Same as
-#: Nordic's app, whose check (``corruptedSamples.length > 4``, before the
-#: push, ``serialDevice.ts:268`` @ ``63ae4b7``) fires with exactly 5 held.
+#: Nordic's app (``serialDevice.ts:268`` @ ``63ae4b7``).
 MAX_BUFFERED_CORRUPTED = 5
 
 #: Default EMA coefficient for ranges 0-3 (the app's "Coefficient for
@@ -347,7 +346,7 @@ class StreamParser:
                     self._suspect.extend(pack("<I", raw))
                     return False
                 follows = (follows + 1) & _COUNTER_MASK
-            # The true mod-64 distance (Nordic's `+ 63` is one short).
+            # The mod-64 distance. Nordic's app counts one less.
             gap = (counter - self._expected_counter) & _COUNTER_MASK
             for _ in range(gap):
                 emit(_NAN_SAMPLE)

@@ -245,14 +245,13 @@ Two limits follow from the counter having 6 bits:
 
 This logic follows the app's `handleRawDataSet` (`pc-nrfconnect-ppk`
 at `63ae4b7`, `src/device/serialDevice.ts:246-296`, unchanged through
-v4.4.1), written anew. It differs in five places. In the first three
-the app's code does not do what its own comments say.
+v4.4.1), written anew. It differs in five places.
 
 - A held sample is emitted once. The app emits every word on arrival
   (`:284-285`) and the held ones again when they are released, so a
   glitch duplicates samples.
-- A lost gap has its full length. The app computes `(counter -
-  expected + 63) & 63` (`:269-271`), which is one short.
+- A lost gap has its full length. The app's count of the missing
+  samples (`:269-271`) comes out one short.
 - Samples received after a gap come after it. The app has already
   emitted them, so they sit before the placeholders.
 - A range above 4 drops the word. The app clamps it to 5
