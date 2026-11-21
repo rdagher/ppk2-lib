@@ -53,8 +53,5 @@ versions.
 - A capture starts about 10 ms before the DUT's power comes up. The
   [protocol page](docs/measure/protocol.md#10-known-caveats) has
   the measurements.
-- A capture always switches the DUT on at its start and off at its end.
-  A DUT that is already running cannot be captured without a power
-  cycle.
 - `.ppk2` files follow the layout the app documents. Loading one in the
   app itself is still to be confirmed.
