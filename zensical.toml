@@ -33,6 +33,10 @@ nav = [
 ]
 
 [project.theme]
+# The classic variant is the look of Material for MkDocs. No web fonts:
+# the site uses the reader's system fonts and loads nothing from outside.
+variant = "classic"
+font = false
 features = [
   "content.code.copy",
   "navigation.footer",
@@ -40,6 +44,22 @@ features = [
   "navigation.top",
   "toc.follow",
 ]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "blue grey"
+accent = "blue"
+toggle.icon = "lucide/moon"
+toggle.name = "Dark"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "blue grey"
+accent = "blue"
+toggle.icon = "lucide/sun"
+toggle.name = "Light"
 
 [project.markdown_extensions]
 admonition = {}
