@@ -212,12 +212,11 @@ statistic between the two distributions: 0 when they are the same, 1
 when they do not overlap.
 
 Know how much two identical runs differ before you read a difference
-as a result. Two captures of the same firmware, 5 s each, taken one
-after the other on the bench of this repository, gave means 0.31 %
-apart and a KS statistic of 0.0204. At a few µA the spread can be
-larger. Measure
-the spread of your own bench with two runs of one build, and trust only
-differences well above it.
+as a result. In the [validation](../validation/results.md), two
+captures of the same firmware taken four minutes apart differ by 0.05 %
+on the current of a marked region. At a few µA the spread can be
+larger. Measure the spread of your own bench with two runs of one
+build, and trust only differences well above it.
 
 Two more cautions:
 

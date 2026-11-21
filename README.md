@@ -129,8 +129,9 @@ whose licence allows reading and running it but not redistributing it.
 - Nordic's Power Profiler app,
   [pc-nrfconnect-ppk](https://github.com/nordicsemi/pc-nrfconnect-ppk).
   It is the reference for this package: the protocol was read in its
-  source at [v4.4.1](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts), and every result
-  is checked against it.
+  source, last checked at
+  [v4.4.1](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts),
+  and every result is checked against it.
 - Nordic's `ppk2` skill of Nordic MCP: a local server that lets an AI
   assistant drive the kit and watch a live trace. A separate program
   with a different aim.

@@ -164,7 +164,7 @@ Switches power to the DUT, as the app's Enable power output does.
 
 Power lasts only while the command runs, because the PPK2 cuts it when
 its serial port closes. `ppk2 power on` without `--hold` therefore
-powers the DUT for about a second and is of little use. With `--hold`
+powers the DUT only for an instant and is of little use. With `--hold`
 it waits for Ctrl-C.
 
 ## `ppk2 run`

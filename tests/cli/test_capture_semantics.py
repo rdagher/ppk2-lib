@@ -2,8 +2,8 @@
 
 Pins: n == 0 -> exit 1 with the mode/power diagnostic; sub-95 % realized
 rate -> the dropped-samples watchdog; Ctrl-C -> "interrupted: CSV
-flushed" + exit 130 with the partial CSV intact; NaN placeholders count
-toward the stream rate but write no rows.
+flushed" + exit 130 with the partial CSV intact; lost samples count
+toward the stream rate and are rows of 0.2 µA.
 """
 
 import signal
@@ -122,7 +122,7 @@ def test_zero_samples_exits_1_with_mode_power_diagnostic(
     code = dispatch(["capture", "-o", str(out), "-s", "0.1"])
     captured = capsys.readouterr()
     assert code == 1
-    assert "no samples captured: check the PPK2 mode and the DUT's power" in captured.err
+    assert "error: no samples captured: check the PPK2 mode and the DUT's power" in captured.err
     assert out.read_text().splitlines() == [CSV_HEADER]
 
 

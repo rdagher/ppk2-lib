@@ -20,7 +20,7 @@ import numpy as np
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parents[1]))
-from regions import SYNC_PULSE_MAX_S, collect_pulses, load, powered  # noqa: E402
+from regions import collect_pulses, load, powered  # noqa: E402
 
 SKIP = 200_000  # samples: the 2 s after power-on, which hold the boot
 WINDOW = 2_600_000  # samples: the same 26 s in every capture
@@ -40,7 +40,7 @@ def measure(name: str) -> dict[str, object]:
     everything = load(HERE / "captures" / f"{name}.csv.xz")
     currents = np.array([row[1] for row in everything])
     rows = powered(everything)
-    d0 = [p for p in collect_pulses(rows, 0) if p.duration_s >= SYNC_PULSE_MAX_S]
+    d0 = collect_pulses(rows, 0)
     d1 = collect_pulses(rows, 1)
     start_ms = d0[0].start_s * 1000.0
     idle = [ua for t, ua, a, b in rows if t > start_ms and not a and not b]

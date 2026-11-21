@@ -132,7 +132,7 @@ Capture the same DUT with the app and with `ppk2 capture`, export the
 app's capture as CSV, and compare the two files. The repository's
 `validation/compare_cli.py` does it and writes a report. The
 [validation](../validation/method.md) describes the procedure, and its
-[results](../validation/results.md) show it on two dev kits.
+[results](../validation/results.md) show it on one dev kit, in both modes.
 
 ## See also
 

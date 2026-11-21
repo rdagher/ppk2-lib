@@ -24,7 +24,7 @@ def test_noise_floor_matches_device_actions() -> None:
     assert noise_floor(0.199) == 0.0
     assert noise_floor(0.2) == 0.2
     assert noise_floor(14.53) == 14.53
-    # NaN passes through so the skip-row path still sees it.
+    # NaN passes through: TraceFile is what replaces it.
     assert isnan(noise_floor(nan))
 
 
@@ -71,12 +71,9 @@ def test_write_csv_row_matches_the_apps_layout() -> None:
 
 
 def test_write_csv_row_writes_whatever_it_is_given() -> None:
-    """write_csv_row does not filter NaN: that policy lives in the callers.
+    """write_csv_row writes the row as given, NaN included.
 
-    Both capture loops skip (and count) data-loss placeholders before
-    calling this helper; the loop-level skip is pinned in
-    tests/cli/test_capture_semantics.py. The helper itself writes the
-    row verbatim, NaN included.
+    What a lost sample becomes in a file is decided by TraceFile.
     """
     buf = StringIO()
     write_csv_row(buf, 0.05, nan, 0xFF)

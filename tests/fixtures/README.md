@@ -13,12 +13,12 @@ the unit tests need no hardware.
 The stream was recorded on 2026-11-20 in Source meter mode at 3.3 V,
 with the [bench firmware](../hil/bench-dut/) on an nRF54LM20 DK.
 
-## Where the expected values come from
+## Origin of the expected values
 
 `parsed_poweron.csv` is what the parser of Nordic's Power Profiler app
 gives for `stream_poweron.bin`, with `metadata.raw` as calibration
-(`pc-nrfconnect-ppk` v4.4.1, commit `39bba39`,
-`src/device/serialDevice.ts`). To produce it again you need Node 24 or
+(`pc-nrfconnect-ppk` v4.4.1, `src/device/serialDevice.ts`). It was run
+from commit `39bba39`, six documentation commits after the tag. To produce it again you need Node 24 or
 newer and a checkout of the app:
 
 ```sh
@@ -34,7 +34,7 @@ the logger.
 `metadata.parsed.json` is what the same code reads from `metadata.raw`.
 The script writes both files.
 
-## What the stream covers
+## Coverage
 
 Bit extraction, the calibration of each range, the spike filter across
 range changes, and the logic byte. It has no lost sample and no corrupt

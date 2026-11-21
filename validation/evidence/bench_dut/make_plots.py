@@ -37,8 +37,23 @@ def ecdf(ax: plt.Axes, samples: np.ndarray, label: str) -> None:
     ax.plot(xs, np.arange(len(xs)) / len(xs), label=label, linewidth=1.2)
 
 
+LEAK_UA = 20_000  # a sample above this at a wake-up is one the spike filter left in
+
+
+def count_wakeups() -> None:
+    """Print, per capture, the wake-ups and how many keep a sample above ``LEAK_UA``."""
+    for name in ("source_ppk2_1", "source_app", "ampere_ppk2_1", "ampere_app"):
+        rows = powered(load(HERE / "captures" / f"{name}.csv.xz"))
+        ua = np.array([row[1] for row in rows])
+        d0 = np.array([row[2] for row in rows]) == 1
+        edges = np.nonzero(d0[1:] & ~d0[:-1])[0] + 1
+        edges = edges[(edges > SKIP) & (edges < len(ua) - 400)]
+        leaked = sum(ua[e - 300 : e + 300].max() > LEAK_UA for e in edges)
+        print(f"{name}: {len(edges)} wake-ups, {leaked} with a sample above 20 mA")
+
+
 def wakeups(out_dir: Path) -> None:
-    """Two wake-ups of one capture: one clean, one with a reading the filter left in."""
+    """Two wake-ups of one capture: one clean, one with readings the filter left in."""
     rows = powered(load(HERE / "captures" / "source_ppk2_1.csv.xz"))
     ua = np.array([row[1] for row in rows])
     d0 = np.array([row[2] for row in rows]) == 1
@@ -81,6 +96,7 @@ def main() -> None:
     out_dir = HERE / "plots"
     out_dir.mkdir(exist_ok=True)
     wakeups(out_dir)
+    count_wakeups()
     for mode, title in MODES:
         fig = plt.figure(figsize=(11, 7))
         ax_t = fig.add_subplot(2, 1, 1)

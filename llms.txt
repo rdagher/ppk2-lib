@@ -33,7 +33,7 @@ Four parts: user guide, developer guide, measurements, validation against Nordic
 - [Protocol](docs/measure/protocol.md): the bytes and the behaviour of the PPK2, a session on the wire, known caveats
 - [File formats](docs/measure/formats.md): the CSV and the `.ppk2` session file
 - [Method](docs/validation/method.md): the three levels of comparison with Nordic's app, the bench procedure
-- [Results](docs/validation/results.md): tables and plots per round, differences from the app, limits
+- [Results](docs/validation/results.md): tables and plots of the round, differences from the app, limits
 - [Contributing](CONTRIBUTING.md): the rules for the documentation: where each kind goes, Nordic's wording, numbers and units
 - [Changelog](CHANGELOG.md)
 

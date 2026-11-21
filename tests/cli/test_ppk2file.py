@@ -54,7 +54,7 @@ def test_frame_is_float32_le_then_big_endian_bit_pairs(tmp_path: Path) -> None:
     assert frames(out) == [(12.5, 0x5555), (12.5, 0xAAAA), (12.5, 0x5556), (12.5, 0x9555)]
 
 
-def test_below_the_floor_reads_zero_and_lost_samples_stay_nan(tmp_path: Path) -> None:
+def test_below_the_floor_reads_zero_and_nan_is_stored_as_given(tmp_path: Path) -> None:
     out = tmp_path / "t.ppk2"
     with Ppk2FileWriter(out) as writer:
         for current in (0.19, -3.0, 0.2, nan):

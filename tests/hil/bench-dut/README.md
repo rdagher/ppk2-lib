@@ -10,8 +10,9 @@ whose timing is known in advance.
 
 Two kernel timers toggle the pins from interrupt context, so the edges
 do not depend on the scheduler. The main thread spins while D0 is high
-and sleeps while it is low. The current therefore has two levels that
-follow D0: on the nRF54LM20 DK at 3.3 V, about 1.4 mA and 14 µA.
+and sleeps while it is low. The current therefore has two levels that follow D0. On the nRF54LM20
+DK at 3.3 V they are about 1.4 mA, and 1.4 µA in the median. The mean of
+the low level is 15 µA, the boot and the wake-ups included.
 
 ## Boards
 
@@ -41,7 +42,7 @@ VCC  to the board's VDD (the level reference for the inputs)
 Then put the PPK2 in the board's supply, in Ampere meter or Source
 meter mode.
 
-## Build and flash
+## Building and flashing
 
 You need the nRF Connect SDK toolchain installed by nrfutil, under
 `/opt/nordic/ncs`. The firmware is built and tested with SDK v3.3.1.
@@ -62,7 +63,7 @@ builds the three images on every firmware change.
 If the PPK2 powers the board, the board is off until a command turns
 it on: flash with `ppk2 run --source --vdd 3.3 -- just flash`.
 
-## Check the signal
+## Signal check
 
 ```sh
 ppk2 capture --seconds 30 --out trace.csv

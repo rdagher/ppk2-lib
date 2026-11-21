@@ -102,7 +102,7 @@ If this is your first time, start with
 - Captures in the app's own formats: `ppk2` writes the CSV the app
   exports and its `.ppk2` session file.
 
-The [recipes](user/recipes.md) show each of these.
+The [recipes](user/recipes.md) show several of these.
 
 ## Limitations
 

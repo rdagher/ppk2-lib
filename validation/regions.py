@@ -4,9 +4,7 @@
 Reads a capture in the app's CSV format, from ``ppk2 capture`` or
 exported from Nordic's app, plain or compressed (``.gz``, ``.xz``):
 
-- D0 high: one workload. Pulses shorter than 5 ms are counted apart,
-  for a firmware that sends a few at boot as a marker.
-- D1 high: one sweep of workloads, or whatever the firmware marks.
+- D0 high and D1 high: the regions the firmware marks.
 - Neither high: idle.
 
 The charge of a region is the integral of its current: each row is one
@@ -32,7 +30,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 SAMPLE_PERIOD_S = 10e-6  # 100 kSPS
-SYNC_PULSE_MAX_S = 0.005  # D0 pulses shorter than this are the boot sync burst
 POWER_ON_UA = 200.0  # rail-up detection: logic pins float while the DUT is unpowered
 
 
@@ -116,7 +113,7 @@ def stats_line(name: str, pulses: list[Pulse]) -> str:
 
 
 def main() -> None:
-    """Parse the CSV, split pulses per marker, print the report."""
+    """Print the report of a capture."""
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("csv_path", help="a capture in the app's CSV format")
     args = ap.parse_args()
@@ -131,24 +128,18 @@ def main() -> None:
         rows = powered(rows)
 
     d0 = collect_pulses(rows, 0)
-    sync = [p for p in d0 if p.duration_s < SYNC_PULSE_MAX_S]
-    workloads = [p for p in d0 if p.duration_s >= SYNC_PULSE_MAX_S]
-    sweeps = collect_pulses(rows, 1)
+    d1 = collect_pulses(rows, 1)
 
     total_s = (rows[-1][0] - rows[0][0]) / 1000.0
-    # Idle floor: exclude the boot region (rail-up to the end of the
-    # sync burst / first workload), which otherwise pollutes the stats
-    # with run-level boot current.
-    boot_end_ms = (workloads[0].start_s * 1000.0) if workloads else 0.0
+    # Idle: from the first marked region on, which leaves the boot out.
+    boot_end_ms = (d0[0].start_s * 1000.0) if d0 else 0.0
     idle_ua = [ua for t, ua, d0v, d1v in rows if t > boot_end_ms and not d0v and not d1v]
 
     print(f"capture: {len(rows)} samples, {total_s:.2f} s")
-    if sync:
-        print(f"boot sync burst: {len(sync)} short D0 pulses (t={sync[0].start_s:.3f} s)")
-    if workloads:
-        print(stats_line("D0 workloads", workloads))
-    if sweeps:
-        print(stats_line("D1 sweeps", sweeps))
+    if d0:
+        print(stats_line("D0 regions", d0))
+    if d1:
+        print(stats_line("D1 regions", d1))
     if idle_ua:
         print(
             f"{'idle (no marker)':<22} median "

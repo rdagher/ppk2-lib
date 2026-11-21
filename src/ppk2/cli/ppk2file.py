@@ -129,7 +129,7 @@ class Ppk2FileWriter:
         self.close()
 
     def add(self, current_ua: float, logic: int) -> None:
-        """Append one sample; NaN marks a lost one and keeps its place in time."""
+        """Append one sample. NaN is stored as it is: TraceFile replaces it before."""
         if current_ua < 0.2:
             current_ua = 0.0  # the app reads anything below 0.2 µA as zero
         self._raw.write(_FRAME.pack(current_ua, _PAIRS[logic & 0xFF]))

@@ -172,7 +172,9 @@ def capture(
             # completed as the block unwinds: shorter, but valid.
             raise typer.Exit(code=130)
         if n_total == 0:
-            sys.stderr.write("no samples captured: check the PPK2 mode and the DUT's power\n")
+            sys.stderr.write(
+                "error: no samples captured: check the PPK2 mode and the DUT's power\n"
+            )
             sys.stderr.flush()
             raise typer.Exit(code=1)
 

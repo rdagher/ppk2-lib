@@ -4,7 +4,7 @@ Two scripts that compare captures of the same bench: one made by this
 tool against one exported from Nordic's Power Profiler app, or two
 builds of this tool against each other.
 
-## Compare two captures
+## Comparing two captures
 
 ```sh
 uv run --group validation python -m validation.compare_cli a.csv b.csv \
@@ -24,7 +24,7 @@ The exit code is 0 when:
 - the mean currents are within 1 % of each other,
 - the KS statistic is below 0.05.
 
-## Capture twice and compare
+## Capturing twice and comparing
 
 ```sh
 uv run --group validation python -m validation.cross_validate \
@@ -38,7 +38,7 @@ plugged in, then compares the two files. Both must accept `capture
 [file formats](../docs/measure/formats.md#csv) page. Run it from the
 repository root. The captures are taken in Ampere meter mode.
 
-## When the 1 % rule does not fit
+## Limits of the 1 % rule
 
 The 1 % limit on the mean suits a device under test (DUT) that spends
 its time in a workload. It is too tight in two cases:
@@ -55,7 +55,7 @@ starts in the cycle. Compare it level by level, as the
 [round of this release](evidence/bench_dut/README.md) does, with
 `validation/regions.py`.
 
-## What is in `evidence/`
+## Evidence
 
 - [`bench_dut/`](evidence/bench_dut/README.md): the round of this
   release. The app against `ppk2 capture` in both modes on an

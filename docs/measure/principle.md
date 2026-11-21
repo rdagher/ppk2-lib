@@ -261,21 +261,26 @@ is where it shows.
 
 These are two wake-ups of the same DUT, 0.2 s apart in one capture of
 the [validation](../validation/results.md). The two traces lie on each
-other except for 30 µs, where one reads 50 to 120 mA.
+other except for 40 µs, where one reads 50 to 120 mA.
 
 To follow a current that jumps from microamperes to milliamperes, the
 PPK2 changes its measuring range. For 2 or 3 samples during that
-change it sits in its highest range and reports a current the DUT is
-not drawing. The spike filter exists for this. It replaces the first
-two readings after such a change. When there are more, the rest stays
-in the data, as in the orange trace.
+change it sits in its highest range and reports several hundred mA
+that the DUT is not drawing.
 
-One reading of 100 mA lasts 10 µs and adds 1 µC. A short event, such as
-a radio transmission of a few µC, can read half as much again because
-of it.
+The spike filter exists for this. It replaces the readings after a
+range change by a running average, and keeps the first two readings in
+the top range out of that average. A third one enters it. The four
+samples that follow then carry what is left of it: tens of mA that
+fade over 40 µs, as in the orange trace.
 
-Measured on 2026-11-21 on an nRF54LM20 DK that wakes five times a
-second, in the captures of the [validation](../validation/results.md):
+Those four samples add about 3.5 µC. A short event, such as a radio
+transmission of a few µC, can read nearly twice as much because of
+them.
+
+Counted in the captures of the [validation](../validation/results.md),
+where an nRF54LM20 DK wakes five times a second, as `just plots` prints
+it:
 
 | Capture | Wake-ups | With a sample above 20 mA |
 |---|---:|---:|
@@ -300,10 +305,7 @@ What it costs depends on what is measured:
 
 - A stretch that does not contain the wake-up, such as a region marked
   with a digital input, is not affected.
-- The mean of a DUT that wakes often for short events is. A BLE
-  advertiser at a 100 ms interval gave three means. Counting only the
-  events without such a sample: about 41 µA. With the filter as it is:
-  53 µA. With no filter: 130 µA.
+- The mean of a DUT that wakes often for short events reads too high.
 
 For events that repeat, trust the median of their charge and not the
 mean: the leaked samples move the mean and not the median.

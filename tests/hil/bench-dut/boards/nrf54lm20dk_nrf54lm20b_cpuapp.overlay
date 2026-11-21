@@ -5,8 +5,7 @@
  * P1.13 -> PPK2 D1 (0.5 Hz square wave)
  *
  * Both pins live on the Arduino-compatible expansion headers and
- * are validated against this DK revision (same pair used by a
- * sibling benchmark project for its energy trace pins).
+ * are validated against this DK revision.
  */
 
 / {

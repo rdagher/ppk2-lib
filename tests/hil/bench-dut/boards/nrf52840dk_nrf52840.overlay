@@ -7,9 +7,7 @@
  * Both pins sit on the Arduino R3 analog header and are unclaimed
  * in the default board DTS: P0.29 appears only in the disabled spi0
  * pinctrl group ("cannot be used together with i2c0"); the enabled
- * spi1 uses P0.31/P0.30/P1.08. Same pin pair a sibling benchmark
- * validated for its energy-trace instrumentation (chosen there
- * after a PCA10056 schematic check).
+ * spi1 uses P0.31/P0.30/P1.08.
  */
 
 / {

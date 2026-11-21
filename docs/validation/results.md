@@ -34,7 +34,14 @@ within minutes of each other and without being touched in between.
 | This package | Commit `ace11d0`, with Python 3.13.13 and pyserial 3.5 |
 | Host | macOS 26.5.1 |
 | DUT | nRF54LM20 DK with the bench firmware: D0 toggles at 5 Hz, D1 at 0.5 Hz, and the CPU is busy while D0 is high |
-| Captures | 30 s each at 100,000 samples per second, starting at power-on |
+| Captures | 30 s each at 100,000 samples per second. Those of `ppk2 capture` start at power-on, the app's about 0.7 s before it |
+
+The current of a region is its mean current, and its charge is that
+current added up over its width. Each is given as the mean ± the
+standard deviation over the regions. A difference is that of the means,
+as a share of the app's, computed before rounding. The KS statistic
+compares the distributions of the current over the same 26 s, starting
+2 s after power-on.
 
 ### Ampere meter mode, 3.3 V
 
@@ -43,7 +50,7 @@ The app's capture was taken between two of `ppk2 capture`.
 | | App (19:34) | `ppk2 capture` (19:31) | `ppk2 capture` (19:35) |
 |---|---|---|---|
 | D0 regions | 143 | 147 | 147 |
-| Current of a D0 region | 1380.4 ± 1.8 µA | 1381.6 ± 2.0 µA | 1380.9 ± 1.6 µA |
+| Current of a D0 region | 1,380.4 ± 1.8 µA | 1,381.6 ± 2.0 µA | 1,380.9 ± 1.6 µA |
 | Charge of a D0 region | 138.02 ± 0.18 µC | 138.14 ± 0.20 µC | 138.07 ± 0.16 µC |
 | D1 regions | 14 | 14 | 14 |
 | Current of a D1 region | 699.3 ± 2.6 µA | 699.9 ± 3.0 µA | 700.1 ± 2.6 µA |
@@ -65,23 +72,16 @@ Here both captures of `ppk2 capture` follow the app's.
 | | App (19:38) | `ppk2 capture` (19:38) | `ppk2 capture` (19:39) |
 |---|---|---|---|
 | D0 regions | 143 | 147 | 147 |
-| Current of a D0 region | 1385.92 ± 0.82 µA | 1385.4 ± 1.0 µA | 1385.64 ± 0.79 µA |
-| Charge of a D0 region | 138.57 ± 0.09 µC | 138.52 ± 0.11 µC | 138.54 ± 0.09 µC |
+| Current of a D0 region | 1,385.92 ± 0.82 µA | 1,385.4 ± 1.0 µA | 1,385.64 ± 0.79 µA |
+| Charge of a D0 region | 138.570 ± 0.087 µC | 138.52 ± 0.11 µC | 138.541 ± 0.086 µC |
 | D1 regions | 14 | 14 | 14 |
-| Current of a D1 region | 700.9 ± 2.8 µA | 700.7 ± 1.8 µA | 700.9 ± 2.2 µA |
+| Current of a D1 region | 700.9 ± 2.8 µA | 700.7 ± 1.8 µA | 700.8 ± 2.2 µA |
 | Idle median | 1.35 µA | 1.35 µA | 1.35 µA |
 | Difference from the app, D0 current | | 0.04 % | 0.02 % |
 | Difference from the app, D1 current | | 0.03 % | 0.00 % |
 | KS statistic against the app | | 0.0034 | 0.0056 |
 
 ![Both captures in Source meter mode, overlaid from power-on, and the distribution of the current](../img/parity_source.png)
-
-The current of a region is its mean current, and its charge is that
-current added up over its width. Each is given as the mean ± the
-standard deviation over the regions. A difference is that of the means,
-as a share of the app's, computed before rounding. The KS statistic
-compares the distributions of the current over the same 26 s, starting
-2 s after power-on.
 
 ### The 0.2 µA floor
 

@@ -20,9 +20,8 @@ CSV_HEADER = "Timestamp(ms),Current(uA),D0-D7,D0,D1,D2,D3,D4,D5,D6,D7"
 def noise_floor(current_ua: float) -> float:
     """The noise-floor clamp of Nordic's app: anything below 0.2 µA becomes 0.
 
-    Mirrors ``deviceActions.ts:333-337`` @ ``63ae4b7`` ("PPK 2 can only
-    read till 200nA"), negative noise included, and applies before both
-    the CSV row and the running stats. NaN (a lost sample) passes through.
+    As the app does, negative noise included. It applies before both
+    the file and the running mean. NaN (a lost sample) passes through.
     """
     return 0.0 if current_ua < 0.2 else current_ua
 
@@ -46,7 +45,7 @@ def fmt_logic_d0d7(logic: int) -> str:
 def write_csv_row(out: TextIO, t_ms: float, current_ua: float, logic: int) -> None:
     """Write one row in the 11-column format.
 
-    Skipping NaN (a lost sample) is the caller's job.
+    ``TraceFile`` turns a lost sample (NaN) into 0.2 µA before it gets here.
     """
     ts = fmt_ts(t_ms)
     d_str = fmt_logic_d0d7(logic)

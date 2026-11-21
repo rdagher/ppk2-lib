@@ -45,7 +45,7 @@ mode `--vdd` feeds the calibration: give the DUT's real supply voltage.
 Digital inputs: on the logic port, D0 to D7 to GPIOs, `GND` to the
 DUT's ground, `VCC` to the DUT's VDD.
 
-## Flash a DUT powered through the PPK2
+## Flashing a DUT powered through the PPK2
 
 Until a command switches power on, the DUT is off and its debug port
 does not answer.
@@ -88,7 +88,7 @@ at some point. More in
 [`docs/develop/architecture.md`](../../../docs/develop/architecture.md) and
 [`docs/measure/protocol.md`](../../../docs/measure/protocol.md).
 
-## Compare two captures
+## Comparing two captures
 
 ```sh
 just compare-cli A.csv B.csv        # statistics of two captures, side by side
