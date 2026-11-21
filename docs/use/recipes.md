@@ -34,8 +34,7 @@ from ppk2 import Mode, Session, find_ppk2
 with Session.open(find_ppk2().device) as session:
     session.set_mode(Mode.SOURCE)
     session.set_source_voltage(3000)
-    session.start_measuring()
-    session.power_on()  # returns about 1.3 s later, with the DUT powered
+    session.power_on()  # the power is up about 1 ms later
     code = subprocess.run(["west", "flash"]).returncode
 raise SystemExit(code)
 ```

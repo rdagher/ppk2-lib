@@ -62,8 +62,8 @@ class _FakeSession:
     def start_measuring(self) -> None:
         return None
 
-    def power_on(self, latch_s: float = 1.0) -> None:
-        assert latch_s == 0.0, "capture must leave the reads after power-on to the loop"
+    def power_on(self) -> None:
+        return None
 
     def power_off(self) -> None:
         return None

@@ -57,9 +57,9 @@ class Opcode(IntEnum):
     DEVICE_RUNNING_SET = 0x0C
     """Power to the DUT: payload ``0x01`` on, ``0x00`` off. The app's "Enable power output".
 
-    The session sends it on a running stream, 200 ms or more after
-    ``AVERAGE_START``: sent otherwise it has been seen ignored, though
-    not on the unit tested (the protocol page, Known caveats).
+    Applied about 1 ms after it is sent, with or without a stream. One
+    sent within 0.31 s of ``AVERAGE_START`` is held until then (the
+    protocol page, Known caveats).
     """
 
     REGULATOR_SET = 0x0D

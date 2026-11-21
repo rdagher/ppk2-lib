@@ -34,7 +34,7 @@ from ppk2.protocol import (
 _BAUD_RATE = 115_200
 _READ_TIMEOUT_S = 0.1
 _OPEN_SETTLE_S = 0.05
-_START_MEASURING_SETTLE_S = 0.2  # see Session.start_measuring for what this guards against
+_START_BUSY_S = 0.35  # the PPK2 holds commands for 0.31 s after AVERAGE_START
 _STREAM_BYTES_PER_S = 400_000  # 100,000 samples of 4 bytes
 _CAUGHT_UP_BYTES = 4_000  # within 10 ms of the stream: caught up
 _CATCH_UP_CAP_S = 1.5  # how long to try, at most
@@ -282,16 +282,10 @@ class Session:
     # ── Stream control ─────────────────────────────────────────────────
 
     def start_measuring(self) -> None:
-        """Start the 100 kSPS sample stream, then wait 200 ms.
-
-        The wait is a precaution: a ``DEVICE_RUNNING_SET`` sent within
-        about 150 ms of ``AVERAGE_START`` has been seen ignored, though
-        not on the unit tested (the protocol page, Known caveats).
-        """
+        """Start the 100 kSPS sample stream."""
         self._write(bytes([Opcode.AVERAGE_START.byte()]))
         self._stream_started_at = monotonic()
         self._stream_bytes = 0
-        sleep(_START_MEASURING_SETTLE_S)
         self._measuring = True
 
     def stop_measuring(self) -> None:
@@ -307,26 +301,18 @@ class Session:
 
     # ── DUT power ──────────────────────────────────────────────────────
 
-    def power_on(self, latch_s: float = 1.0) -> None:
+    def power_on(self) -> None:
         """Switch power to the DUT on, as the app's "Enable power output" does.
 
-        Call ``start_measuring`` first. Before the command is sent, the
-        stream is read until the host has caught up with it, which
-        takes up to a second after ``start_measuring``: the samples
-        read after this call are then from after the switch, to within
-        about 10 ms. The stream is read for ``latch_s`` after the
-        command, a precaution (the protocol page, Known caveats).
-
-        Args:
-            latch_s: How long to keep reading after the command, in
-                seconds. The default (1.0) gives the switch time to
-                take effect before returning. A capture passes 0.0 and
-                lets its own reads cover that time, so the boot inrush
-                is in the trace.
+        The power comes up about 1 ms after the command. With a stream
+        running, the stream is first read until the host has caught up
+        with it, which takes until about 0.9 s after ``start_measuring``.
+        The samples read after this call are then from the switch on, to
+        within about 10 ms, so a capture that follows has the boot in it
+        (the protocol page, Known caveats).
         """
         self._catch_up()
         self._write(bytes([Opcode.DEVICE_RUNNING_SET.byte(), 0x01]))
-        self._drain_stream(latch_s)
 
     def power_off(self) -> None:
         """Switch power to the DUT off. Idempotent."""
@@ -460,29 +446,25 @@ class Session:
 
     # ── Internals ──────────────────────────────────────────────────────
 
-    def _drain_stream(self, seconds: float) -> None:
-        """Read and discard stream bytes for ``seconds``, keeping up with the rate."""
-        deadline = monotonic() + seconds
-        scratch = bytearray(4096)
-        while monotonic() < deadline:
-            self._read_into(scratch)
-
     def _catch_up(self) -> None:
         """Read and discard until the reads have caught up with the stream.
 
-        For its first second a stream arrives slower than the PPK2
-        produces it, and the host runs up to 0.18 s behind (measured on
-        macOS). Caught up means: as many bytes read as the PPK2 has
-        produced since ``start_measuring``, to within 10 ms. Gives up
-        after ``_CATCH_UP_CAP_S``.
+        For 0.31 s after ``AVERAGE_START`` the PPK2 sends slowly and
+        holds any command it receives, and the host is level with the
+        stream only after about 0.9 s (measured on macOS). Caught up
+        means: past that first stretch, and as many bytes read as the
+        PPK2 has produced since ``start_measuring``, to within 10 ms.
+        Gives up after ``_CATCH_UP_CAP_S``. Does nothing without a
+        stream.
         """
         if not self._measuring:
             return
         deadline = monotonic() + _CATCH_UP_CAP_S
         scratch = bytearray(4096)
         while (now := monotonic()) < deadline:
-            produced = (now - self._stream_started_at) * _STREAM_BYTES_PER_S
-            if self._stream_bytes >= produced - _CAUGHT_UP_BYTES:
+            elapsed = now - self._stream_started_at
+            behind = elapsed * _STREAM_BYTES_PER_S - self._stream_bytes
+            if elapsed >= _START_BUSY_S and behind <= _CAUGHT_UP_BYTES:
                 return
             self._read_into(scratch)
 

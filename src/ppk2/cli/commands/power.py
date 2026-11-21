@@ -35,7 +35,6 @@ def power(
     with signals_to_systemexit("SIGTERM", "SIGHUP"), Session.open(device) as session:
         session.set_mode(mode)
         session.set_source_voltage(mv)
-        session.start_measuring()  # required so DEVICE_RUNNING_SET isn't dropped
         if state is PowerState.ON:
             session.power_on()
             if hold:

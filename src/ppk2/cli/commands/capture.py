@@ -79,10 +79,7 @@ def capture(
             for range_idx, gain in user_gains:
                 session.set_user_gain(range_idx, gain)
             session.start_measuring()
-            # latch_s=0: the capture loop's own reads cover the time the
-            # switch takes, so the DUT's boot inrush lands in the trace
-            # instead of being drained away.
-            session.power_on(latch_s=0.0)
+            session.power_on()
 
             n_samples = 0
             n_dataloss = 0  # NaN placeholders from the stream parser's data-loss path

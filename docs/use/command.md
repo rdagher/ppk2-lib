@@ -123,6 +123,8 @@ What to know about a capture:
 - It switches the DUT on as it starts and off as it ends, in both
   modes, so the boot is in the file. The current rises about 10 ms
   into it.
+- A DUT that is already running cannot be captured without this power
+  cycle.
 - Progress goes to the terminal once per second, the samples go to the
   file only.
 - Currents below 0.2 µA are written as 0, as the app does.

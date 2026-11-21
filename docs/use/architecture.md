@@ -125,11 +125,9 @@ sequenceDiagram
     Session->>PPK2: SET_POWER_MODE, REGULATOR_SET
     Code->>Session: start_measuring()
     Session->>PPK2: AVERAGE_START
-    Note over Session: wait 200 ms
     Code->>Session: power_on()
     Note over Session: read until caught up with the stream
     Session->>PPK2: DEVICE_RUNNING_SET on
-    Note over Session: read for latch_s, 1 s by default
 
     Code->>Session: capture(on_sample)
     loop until on_sample returns False
@@ -169,10 +167,10 @@ stateDiagram-v2
 Three details of this sequence are choices, not requirements of the
 PPK2:
 
-- The waits around `power_on` are precautions. The
-  [known caveats](../measure/protocol.md#10-known-caveats) say where
-  they come from. `ppk2 capture` and `ppk2 run` pass `latch_s=0.0`, so
-  that the DUT's boot is in the trace.
+- On a running stream, `power_on` first reads until the host has
+  caught up with it, so that a capture begins at the power switch. The
+  [known caveats](../measure/protocol.md#10-known-caveats) have the
+  measurements. Without a stream it sends the command at once.
 - The session reads the stream to its end before it closes the port.
   Left unread, the end of one stream would greet the next program that
   opens the PPK2.

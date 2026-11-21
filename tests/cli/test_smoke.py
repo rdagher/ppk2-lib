@@ -45,8 +45,8 @@ class _StubSession:
     def start_measuring(self) -> None:
         return None
 
-    def power_on(self, latch_s: float = 1.0) -> None:
-        del latch_s
+    def power_on(self) -> None:
+        return None
 
     def power_off(self) -> None:
         return None

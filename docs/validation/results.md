@@ -89,7 +89,8 @@ On purpose, and outside what the comparisons above exercise:
   it. This package emits each sample once, counts the full gap, and
   keeps the order. The
   [protocol page](../measure/protocol.md#5-putting-the-stream-back-together)
-  has the four points with their line references.
+  has the four points with their line references. A lost sample is a
+  gap here, where the app records 0.2 µA.
 - Where a capture starts. In the app you start the capture and enable
   power by hand. `ppk2 capture` does both, and its file begins about
   10 ms before the power comes up.

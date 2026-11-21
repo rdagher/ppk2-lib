@@ -53,10 +53,7 @@ def run(
             session.set_mode(mode)
             session.set_source_voltage(mv)
             session.start_measuring()
-            # latch_s=0 + one-shot backlog drop: the reader thread's own
-            # reads cover the time the switch takes, and the trace
-            # starts near power-on so the child's boot inrush is captured.
-            session.power_on(latch_s=0.0)
+            session.power_on()
             session.drop_pending_backlog()
 
             stop_event = threading.Event()

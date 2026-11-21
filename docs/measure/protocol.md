@@ -284,9 +284,10 @@ has the settings and the numbers.
 The PPK2 keeps its mode and its supply voltage when the computer
 disconnects, and reports both in the next calibration text.
 
-This package sends the mode before it starts the stream. Earlier notes
-said that the firmware ignores a mode change during a stream. On the
-PPK2 measured here it did not: the change was applied.
+This package sends the mode before it starts the stream, and Nordic's
+app does not let the mode change while it samples. Earlier notes said
+that the firmware ignores a mode change during a stream. On the PPK2
+measured here it did not: the change was applied.
 
 ## 9. A session on the wire
 
@@ -310,7 +311,7 @@ sequenceDiagram
     Host->>PPK2: REGULATOR_SET
     Host->>PPK2: AVERAGE_START
     PPK2-->>Host: sample words, 100,000 per second
-    Note over Host: wait 0.2 s, then read until caught up
+    Note over Host: read until caught up, about 0.9 s
     Host->>PPK2: DEVICE_RUNNING_SET on
     Note over PPK2: the DUT is powered
 
@@ -344,13 +345,26 @@ The waits, and which of them the PPK2 really needs:
 | Wait | Why | Needed |
 |---|---|---|
 | 0.1 s after the first `AVERAGE_STOP` | Lets a stream that was left running end before the calibration is asked | Not measured without it |
-| 0.2 s after `AVERAGE_START` | `DEVICE_RUNNING_SET` sent sooner was once seen ignored | Not on the PPK2 measured |
-| Reading until caught up with the stream, for 1.5 s at most, before the power switch | Otherwise a capture starts up to 0.1 s before power-on | Yes, on macOS |
+| Reading until caught up with the stream before the power switch: 0.35 s at least, 1.5 s at most | Otherwise a capture starts up to 0.3 s before power-on | Yes |
 | Reading until 50 ms without a byte, for 0.5 s at most, at the end | Otherwise the end of the stream goes to the next program | Yes |
 | 0.5 s, then 1 s, between attempts to open | A port left stuck by a capture that ended badly | When that happens |
 
 The [architecture page](../use/architecture.md#life-of-a-session)
 shows the same sequence from the side of the Python calls.
+
+### Where a session differs from Nordic's app
+
+Read in the app's source at v4.4.1 (`src/actions/deviceActions.ts`
+unless another file is named):
+
+| Subject | Nordic's app | This package |
+|---|---|---|
+| User gains at connect | Sets all five to 1.0 when one is outside 0.9 to 1.1 (`:205-221`) | Uses them as the PPK2 reports them |
+| A lost sample | Recorded as a sample of 0.2 µA (`:333`) | Kept as a gap: no row in a CSV, NaN in a session file |
+| Supply voltage at connect | Sends `REGULATOR_SET` with the reported voltage (`:472`). No setting for it in Ampere meter mode | Sends it when `set_source_voltage` is called, in both modes, since the calibration uses it |
+| Power and mode | Switches power off before going to Source meter mode and on after going to Ampere meter mode (`:594-607`). Enables power at connect in Ampere meter mode (`:486`) | `set_mode` does not touch the power. `power_on` and `power_off` are separate calls |
+| Finding the data port | Takes the first of the two ports (`src/device/serialDevice.ts:94`) | Asks each port for its calibration text |
+| Start of a recording | Start and "Enable power output" are separate buttons | `ppk2 capture` starts the stream, then switches power on |
 
 ## 10. Known caveats
 
@@ -390,16 +404,22 @@ Measured on 2026-11-20 on one PPK2 under macOS:
 
 Reading from the instant `AVERAGE_START` is sent changes nothing: the
 samples arrive slowly at first, at about 170 kB/s for 0.3 s. Once level,
-the host stays about 6.5 ms behind, and the current rises about 1 ms
-after `DEVICE_RUNNING_SET` in the stream's own time.
+the host stays about 6.5 ms behind.
+
+For the same 0.3 s the PPK2 holds the commands it receives. Measured on
+2026-11-21: a `DEVICE_RUNNING_SET` sent 0, 50, 100, 200 or 300 ms after
+`AVERAGE_START` brought the power up 314 to 315 ms into the stream each
+time. Sent at 350 ms or later, it brought it up 1 to 2 ms after it was
+sent.
 
 A power switch sent while the host is behind lands that far into the
 samples still to be read. Sent at 0.5 s, it put the rise of the current
 104 to 109 ms into a capture. `power_on` therefore reads first until
-the host has caught up: until it has read as many bytes as the PPK2
-has produced since `AVERAGE_START`, to within 10 ms. That takes until
-about 0.9 s after the start. In four captures made this way the current
-rose 9 to 11 ms into the file, and a 3 s capture held 301,056 samples.
+the host has caught up: until 0.35 s have passed and it has read as
+many bytes as the PPK2 has produced since `AVERAGE_START`, to within
+10 ms. That takes until about 0.9 s after the start. In seven captures
+made this way the current rose 9 to 11 ms into the file, and a 3 s
+capture held 301,056 samples.
 
 Timestamps come from the sample count, not from the clock, so the trace
 itself is exact either way.
@@ -427,29 +447,35 @@ apart. If that fails, unplug the PPK2 and plug it back. Right after a
 killed process, the driver can also refuse to open the port for a
 second or two.
 
-### Rules kept as precautions
+### Rules this package no longer follows
 
-The session waits 200 ms after `AVERAGE_START` before switching power,
-switches power only while a stream runs, keeps reading around the
-switch, and sets the mode before the stream starts. These rules came
-from cases where a command was ignored. On 2026-11-20 none could be
-reproduced on one PPK2, in both modes. The power switch obeyed with no
-stream, right after `AVERAGE_START`, and with the host not reading. A
-mode change during a stream was applied. The rules stay; they cost
-about half a second per session.
+Earlier versions waited 200 ms after `AVERAGE_START` before switching
+power, switched power only while a stream ran, and kept reading for a
+second after the switch. The rules came from notes that a command had
+been ignored. Nordic's app follows none of them, and none is needed on
+the PPK2 measured, on 2026-11-20 and 2026-11-21:
+
+- The power switch is applied with no stream at all. `ppk2 power` no
+  longer starts one.
+- It is applied with the host not reading.
+- Sent right after `AVERAGE_START` it is not ignored but held for
+  0.31 s, as described above. That delay is probably what the old
+  notes saw.
 
 ### Two commands that do nothing
 
-`AVG_NUM_SET` is ignored: the sample-rate setting in Nordic's app thins
-the data on the host. `SET_USER_GAINS` is accepted and ignored too: on
-2026-07-11 a write changed neither the `UG` values nor the samples.
-Nordic's app applies the user gain on the host, and so does
-`Session.set_user_gain`.
+`AVG_NUM_SET` is ignored: Nordic's app never sends it, and its
+sample-rate setting thins the data on the host. `SET_USER_GAINS` is
+accepted and ignored too: on 2026-07-11 a write changed neither the
+`UG` values nor the samples. Nordic's app does send it, and also
+applies the gain itself to every sample, which is what takes effect.
+`Session.set_user_gain` applies the gain on the host and sends nothing.
 
 ### The counter has 6 bits
 
-Older code in IRNAS's library masked it with `0x03`, which accepts
-every word and hides a lost alignment.
+Nordic's app masks it with 6 bits, and so does this package. A parser
+that ignores the counter cannot tell when it has lost its place in the
+stream.
 
 ### The first PPK is another device
 

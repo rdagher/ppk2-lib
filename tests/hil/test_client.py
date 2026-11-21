@@ -82,18 +82,15 @@ def test_session_open_returns_sane_metadata() -> None:
 def test_capture_sample_rate_is_near_100ksps() -> None:
     """End-to-end capture: sustained rate is within ±10 % of 100 kSPS.
 
-    Uses the capture path's calling convention (``latch_s=0`` +
-    one-shot backlog drop), which deliberately keeps the
-    power-on/boot-inrush samples: so the first few hundred ms drain
-    buffered catch-up above real-time. The rate is therefore measured
-    over a 2 s window that starts after a 1 s warmup: it measures the
-    stream, not the drain.
+    Uses the capture path's calling convention (``power_on`` and a
+    one-shot backlog drop). The rate is measured over a 2 s window
+    that starts after a 1 s warmup.
     """
     port = find_ppk2()
     with Session.open(port.device) as session:
         _configure(session)
         session.start_measuring()
-        session.power_on(latch_s=0.0)
+        session.power_on()
         session.drop_pending_backlog()
 
         started = monotonic()

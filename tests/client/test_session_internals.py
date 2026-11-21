@@ -325,7 +325,7 @@ def test_session_set_voltage_limit_after_start_measuring_raises() -> None:
         session.set_voltage_limit(3300)
 
 
-# ─── power_on latch + one-shot backlog drop ─────────────────────────────
+# ─── power_on catch-up + one-shot backlog drop ──────────────────────────
 
 
 class _StreamingPort:
@@ -365,31 +365,20 @@ _TOGGLE = f"write:{bytes([0x0C, 0x01]).hex()}"
 
 
 def _measuring_session(port: _StreamingPort) -> Session:
-    """A session 0.2 s into its stream: 80 kB produced, none read yet."""
     session = Session(cast("serial.Serial", port), _identity_coeffs())
     session.start_measuring()
     return session
 
 
-def test_power_on_catches_up_then_toggles_then_latches() -> None:
-    """Read until level with the stream, send the command, read for latch_s after."""
+def test_power_on_catches_up_with_the_stream_then_sends_the_command() -> None:
+    """Reads first, past the 0.35 s in which the PPK2 holds commands; nothing after."""
     port = _StreamingPort(flowing=True)
     session = _measuring_session(port)
+    started = monotonic()
 
-    session.power_on(latch_s=0.05)
+    session.power_on()
 
-    toggle_at = port.events.index(_TOGGLE)
-    assert port.events[:toggle_at].count("read") >= 15, "did not catch up before the command"
-    assert "read" in port.events[toggle_at + 1 :], "no read after the command"
-
-
-def test_power_on_latch_zero_reads_nothing_after_the_command() -> None:
-    """latch_s=0 leaves the reads after the command to the capture loop."""
-    port = _StreamingPort(flowing=True)
-    session = _measuring_session(port)
-
-    session.power_on(latch_s=0.0)
-
+    assert monotonic() - started >= 0.3
     assert "read" in port.events[: port.events.index(_TOGGLE)]
     assert port.events[-1] == _TOGGLE
 
@@ -400,7 +389,7 @@ def test_power_on_gives_up_catching_up_on_a_silent_port(monkeypatch: pytest.Monk
     port = _StreamingPort()
     session = _measuring_session(port)
 
-    session.power_on(latch_s=0.0)
+    session.power_on()
 
     assert port.events[-1] == _TOGGLE
 
@@ -409,7 +398,7 @@ def test_power_on_without_a_stream_sends_the_command_at_once() -> None:
     port = _StreamingPort()
     session = Session(cast("serial.Serial", port), _identity_coeffs())
 
-    session.power_on(latch_s=0.0)
+    session.power_on()
 
     assert port.events == [_TOGGLE]
 
