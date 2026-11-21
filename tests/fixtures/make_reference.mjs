@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Regenerate parsed_poweron.csv by running Nordic's own parser, from a
-// pc-nrfconnect-ppk checkout, on stream_poweron.bin (see README.md):
+// Regenerate metadata.parsed.json and parsed_poweron.csv by running
+// Nordic's own parser, from a pc-nrfconnect-ppk checkout, on
+// metadata.raw and stream_poweron.bin (see README.md):
 //
 //     node tests/fixtures/make_reference.mjs /path/to/pc-nrfconnect-ppk
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -23,7 +24,17 @@ const device = new SerialDevice({ serialPorts: [] }, sample => samples.push(samp
 // the response captured from the device.
 const metadata = device.getMetadata();
 device.parser(readFileSync(join(here, 'metadata.raw')));
-device.parseMeta(await metadata);
+const meta = device.parseMeta(await metadata);
+
+// What their parser read: the single values, and the per-range arrays
+// it calibrates with.
+const { r: R, gs: GS, gi: GI, o: O, s: S, i: I, ug: UG } = device.modifiers;
+const { calibrated, vdd, hw, mode, ia } = meta; // their parser lowercases the names
+writeFileSync(
+    join(here, 'metadata.parsed.json'),
+    `${JSON.stringify({ calibrated, vdd, hw, mode, ia, R, GS, GI, O, S, I, UG }, null, 2)}\n`,
+);
+console.log('metadata.parsed.json written');
 
 await device.ppkUpdateRegulator(3300); // the supply voltage the stream was captured at
 await device.ppkAverageStart(); // fresh spike-filter and counter state

@@ -6,7 +6,7 @@ the unit tests need no hardware.
 | File | What it is |
 |---|---|
 | [`metadata.raw`](metadata.raw) | The calibration text a PPK2 sent, 1032 bytes (2026-06-05). |
-| [`metadata.parsed.json`](metadata.parsed.json) | Its expected values. |
+| [`metadata.parsed.json`](metadata.parsed.json) | Those values as read by Nordic's own code. |
 | [`stream_poweron.bin`](stream_poweron.bin) | 600 samples (6 ms) of the same PPK2's stream while it powers a dev kit on. All five measurement ranges, nine range changes. |
 | [`parsed_poweron.csv`](parsed_poweron.csv) | Those samples as parsed by Nordic's own code: current and logic byte. |
 
@@ -31,8 +31,8 @@ redistributing it. [`nordic_hooks.mjs`](nordic_hooks.mjs) replaces the
 two parts that tie the parser to the desktop app, the serial worker and
 the logger.
 
-`metadata.parsed.json` was produced by IRNAS's `ppk2-api-python` 0.9.2.
-On the stream, that library gives the same output as Nordic's parser.
+`metadata.parsed.json` is what the same code reads from `metadata.raw`.
+The script writes both files.
 
 ## What the stream covers
 

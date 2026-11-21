@@ -18,22 +18,22 @@ _HAS_FIXTURE = METADATA_RAW.exists() and METADATA_PARSED_JSON.exists()
 
 
 def _load_fixture() -> tuple[bytes, CalibrationCoefficients]:
-    """Load both raw bytes and the reference parsed JSON; build a ground-truth coeffs."""
+    """The raw calibration text, and what Nordic's parser read from it."""
     raw = METADATA_RAW.read_bytes()
     ref = json.loads(METADATA_PARSED_JSON.read_text())
     coeffs = CalibrationCoefficients(
-        calibrated=ref["Calibrated"] != "0",
-        r=tuple(float(ref["R"][str(i)]) for i in range(5)),  # type: ignore[arg-type]
-        gs=tuple(float(ref["GS"][str(i)]) for i in range(5)),  # type: ignore[arg-type]
-        gi=tuple(float(ref["GI"][str(i)]) for i in range(5)),  # type: ignore[arg-type]
-        o=tuple(float(ref["O"][str(i)]) for i in range(5)),  # type: ignore[arg-type]
-        s=tuple(float(ref["S"][str(i)]) for i in range(5)),  # type: ignore[arg-type]
-        i=tuple(float(ref["I"][str(i)]) for i in range(5)),  # type: ignore[arg-type]
-        ug=tuple(float(ref["UG"][str(i)]) for i in range(5)),  # type: ignore[arg-type]
-        vdd_mv=int(ref["VDD"]),
-        mode=int(ref["mode"]),
-        hw=int(ref["HW"]),
-        ia=int(ref["IA"]),
+        calibrated=bool(ref["calibrated"]),
+        r=tuple(ref["R"]),
+        gs=tuple(ref["GS"]),
+        gi=tuple(ref["GI"]),
+        o=tuple(ref["O"]),
+        s=tuple(ref["S"]),
+        i=tuple(ref["I"]),
+        ug=tuple(ref["UG"]),
+        vdd_mv=ref["vdd"],
+        mode=ref["mode"],
+        hw=ref["hw"],
+        ia=ref["ia"],
     )
     return raw, coeffs
 
