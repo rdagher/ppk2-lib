@@ -188,7 +188,7 @@ def test_error_lines_quoted_for_troubleshooting_are_the_real_ones() -> None:
     page = (DOCS / "user/troubleshooting.md").read_text()
     assert str(NotFound()) in page
     assert str(DataPortNotFound(("a",))).split(":")[0] in page
-    assert str(Ambiguous(2)).replace("2 ", "N ", 1) in page
+    assert str(Ambiguous(2)) in page
     assert str(HandshakeFailed(3, "x")).split(";")[0] in page
 
     cli = "".join(p.read_text() for p in (ROOT / "src/ppk2/cli").rglob("*.py"))

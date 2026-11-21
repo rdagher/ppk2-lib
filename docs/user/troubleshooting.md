@@ -1,6 +1,6 @@
 # Troubleshooting
 
-## First check: `ppk2 list`
+## First check
 
 ```console
 $ ppk2 list
@@ -12,10 +12,14 @@ PPK2  serial=A1B2C3D4E5F6
 It shows every PPK2 the computer sees and the state of its two ports.
 Most of the problems below show up here.
 
-Errors of `ppk2` are one line starting with `error:`, with exit code 1.
-The headings below are those lines.
+An error of `ppk2` is one line starting with `error:`, with exit code
+1. Each section below begins with that line.
 
-## `no PPK2 found (USB 1915:C00A): plug one in or check the cable`
+## No PPK2 found
+
+```text
+error: no PPK2 found (USB 1915:C00A): plug one in or check the cable
+```
 
 The computer does not see a PPK2 at all.
 
@@ -34,22 +38,34 @@ The computer does not see a PPK2 at all.
 
 The Linux and Windows rows have not been tried with a PPK2.
 
-## `could not identify the PPK2 data port`
+## Data port not identified
 
-The ports are there, but none answered. The full line names the ports
-and suggests the cause: another program holds the PPK2, nearly always
-the Power Profiler app. `ppk2 list` then shows a port as
+```text
+error: could not identify the PPK2 data port: none of [...] answered GET_METADATA; close the nRF Connect Power Profiler if it is open, or pass --port to select the port explicitly
+```
+
+The ports are there, but none answered. The line names the ports in
+place of `[...]`. The cause is another program holding the PPK2, nearly
+always the Power Profiler app. `ppk2 list` then shows a port as
 `[busy: held by another process?]`.
 
 Quit the app, or disconnect the PPK2 inside it. If you know the path of
 the data port, `--port` skips the search.
 
-## Port busy: `close the nRF Connect Power Profiler, or whatever else holds the port`
+## Port busy
+
+```text
+close the nRF Connect Power Profiler, or whatever else holds the port
+```
 
 The same cause, met while opening the port: the system reported it as
-busy.
+busy. The line ends with these words.
 
-## `N physical PPK2 devices found; pass --serial <usb-serial> to pick one`
+## Several PPK2s
+
+```text
+error: 2 physical PPK2 devices found; pass --serial <usb-serial> to pick one
+```
 
 Several PPK2s are attached. `ppk2 list` gives their serial numbers:
 
@@ -58,7 +74,11 @@ ppk2 list
 ppk2 capture --serial A1B2C3D4E5F6 --out trace.csv --seconds 30
 ```
 
-## `metadata recovery failed after 3 attempts`
+## No calibration received
+
+```text
+error: metadata recovery failed after 3 attempts; last: <cause>
+```
 
 The port opened but the PPK2 did not send its calibration. `ppk2` has
 already asked again, with a `RESET` in between, and reopened the port.
@@ -70,7 +90,11 @@ already asked again, with a `RESET` in between, and reopened the port.
   port for a second or two.
 - Another program that just used the PPK2 may still be closing it.
 
-## `no samples captured: check the PPK2 mode and the DUT's power`
+## No samples captured
+
+```text
+error: no samples captured: check the PPK2 mode and the DUT's power
+```
 
 The PPK2 answered but sent nothing during the capture. Check that the
 mode matches the wiring: `--source` when the PPK2 supplies the DUT,
@@ -97,9 +121,9 @@ length, and each lost sample is recorded as 0.2 µA, as in Nordic's app,
 which lowers sums and means in proportion. Try another USB port or
 cable, without a hub, and close what else loads the machine.
 
-## `Calibrated: false`
+## Calibrated: false
 
-Not a fault. See
+`ppk2 metadata` prints `Calibrated: false`. Not a fault. See
 [the `Calibrated` flag](../measure/principle.md#calibrated-flag).
 
 ## Checking a measurement
