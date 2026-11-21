@@ -13,7 +13,7 @@ from.
 | Date | 2026-11-21, between 19:31 and 19:40 |
 | PPK2 | One unit, firmware 1.2.4 (`db16a94`), the version the app installs. Its calibration text is in [`ppk2_metadata.txt`](ppk2_metadata.txt) |
 | App | Power Profiler 4.4.1, in nRF Connect for Desktop 5.4.1 |
-| This package | Commit `3525ef8`, with Python 3.13.13 and pyserial 3.5 |
+| This package | Commit `ace11d0`, with Python 3.13.13 and pyserial 3.5 |
 | Host | macOS 26.5.1 |
 | DUT | nRF54LM20 DK with the [bench firmware](../../../tests/hil/bench-dut/): D0 toggles at 5 Hz, D1 at 0.5 Hz, and the CPU is busy while D0 is high |
 | Captures | 30 s each at 100,000 samples per second, starting at power-on |

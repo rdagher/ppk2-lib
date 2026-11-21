@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.1.0
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## 0.1.0 (not yet released)
 
 First public release. Experimental: the API may change between 0.x
 versions.
@@ -31,6 +33,8 @@ versions.
   voltage limit and spike-filter settings.
 - Lost samples are reported and keep their place in the trace. The
   files record each as 0.2 µA, as Nordic's app does.
+- When bytes of the stream are lost, the parser finds the start of the
+  words again and goes on.
 - A session leaves the PPK2 quiet for the next program, and opens a
   PPK2 that another program left streaming.
 

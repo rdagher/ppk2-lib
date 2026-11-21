@@ -175,7 +175,7 @@ guide gives as 50 mA to 1 A.
 ## 5. Stream reassembly
 
 USB delivers bytes, not samples, and the PPK2 does not mark where a
-word begins. The parser does three things.
+word begins. The parser does four things.
 
 It keeps the alignment. A read can end in the middle of a word. The 1
 to 3 bytes left over are kept and put in front of the next read.
@@ -204,7 +204,8 @@ stateDiagram-v2
 | In step | The counter differs | Nothing. The sample is held |
 | Holding | The counter differs again, and fewer than 5 are held | Nothing. One more sample is held |
 | Holding | The counter is the one expected | The held samples, then this one. They were good samples behind a short glitch |
-| Holding | A sixth word is still out of step | One placeholder per lost sample, then the held samples, then this one |
+| Holding | A sixth word is still out of step, and the six follow one another | One placeholder per lost sample, then the held samples, then this one |
+| Holding | A sixth word is still out of step, and the six do not follow one another | Nothing. The parser has lost its place and searches for it, as below |
 
 While it holds samples, the parser still counts them: the expected
 counter goes up by one for each. So a single damaged counter costs
@@ -215,17 +216,36 @@ A placeholder is `Sample(current_micro_amps=nan, logic=0)`. With them
 the trace keeps its true length. The spike filter sees every word that
 passes the range check, held or not, in the order received.
 
+It finds its place again. When the computer loses bytes of the stream,
+the stream can resume in the middle of a word. Every later word is
+then read across two samples: the currents are garbage, and they stay
+garbage to the end of the capture. The parser notices this by the held
+samples. Samples that arrive after a gap follow one another; words read
+across two samples do not, or carry a range above 4. It then goes back
+to the first word in doubt and tries each byte offset in turn, until
+eight words in a row follow one another. The gap is filled with
+placeholders, the spike filter starts afresh, and parsing resumes
+there.
+
+On 2026-11-21 a capture frozen for 3 s on the bench lost its place in
+this way: without the search, 79 % of what followed was marked lost and
+the mean read 840 mA. With it, three such captures marked 18 to 34
+samples lost and went on normally.
+
 Two limits follow from the counter having 6 bits:
 
-- A loss of exactly 64 samples, or a multiple of 64, cannot be seen:
-  the counter has come back to the same value.
-- A longer loss is counted modulo 64.
+- A loss of exactly 64 samples, or a multiple of 64, cannot be seen
+  while the alignment holds: the counter has come back to the same
+  value.
+- A longer loss is counted modulo 64, so the trace comes out shorter
+  than the time it covers. The summary of a capture shows it as a
+  sample rate below 100,000 Hz.
 
 ### Differences from Nordic's app
 
 This logic follows the app's `handleRawDataSet` (`pc-nrfconnect-ppk`
 at `63ae4b7`, `src/device/serialDevice.ts:246-296`, unchanged through
-v4.4.1), written anew. It differs in four places. In the first three
+v4.4.1), written anew. It differs in five places. In the first three
 the app's code does not do what its own comments say.
 
 - A held sample is emitted once. The app emits every word on arrival
@@ -238,6 +258,8 @@ the app's code does not do what its own comments say.
 - A range above 4 drops the word. The app clamps it to 5
   (`:248-251`), which points one past the calibration arrays, and lets
   the word's counter drive the resynchronisation.
+- A lost alignment is searched for and found again. The app keeps
+  reading words at the old offset.
 
 ## 6. Calibration formula
 
