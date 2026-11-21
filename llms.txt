@@ -22,7 +22,7 @@ DUT and the digital inputs are named as in Nordic's app and user guide.
 Four parts: user guide, developer guide, measurements, validation against Nordic's app.
 
 - [README](README.md): install, a first capture, where everything is
-- [Introduction](docs/index.md): why it exists, terminal, script and CI snippets, the four parts, what it is good for and what it is not for
+- [Introduction](docs/index.md): why it exists, terminal, script and CI snippets, the four parts, uses and limits
 - [Getting started](docs/user/getting-started.md): install, the two wirings, the digital inputs, a first capture, reading the file
 - [The ppk2 command](docs/user/command.md): every command and option, exit codes, signals
 - [Recipes](docs/user/recipes.md): flashing a DUT powered by the PPK2, current of a marked region, long captures, comparing two builds

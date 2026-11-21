@@ -90,7 +90,7 @@ This documentation answers four questions.
 If this is your first time, start with
 [getting started](user/getting-started.md).
 
-## What it is good for
+## Uses
 
 - Sleep and idle currents. The lowest of the PPK2's five measurement
   ranges resolves 0.2 µA.
@@ -104,15 +104,15 @@ If this is your first time, start with
 
 The [recipes](user/recipes.md) show each of these.
 
-## What it is not for
+## Limits
 
-- Edges shorter than 10 µs. One sample lasts 10 µs.
-- Accuracy beyond the PPK2's own. Nordic gives it as better than
-  ±20 %, and ppk2-lib is checked against Nordic's app, not against a
+- Time: one sample lasts 10 µs, so a shorter edge is not resolved.
+- Accuracy: it is the PPK2's own, which Nordic gives as better than
+  ±20 %. ppk2-lib is checked against Nordic's app, not against a
   calibrated instrument.
-- Voltage. The PPK2 measures current only.
-- Looking around a trace by eye. The app's chart is the better tool:
-  save a `.ppk2` file and open it there.
+- No voltage: the PPK2 measures current only.
+- No chart: to look around a trace by eye, save a `.ppk2` file and open
+  it in the app.
 
 ## Names
 
