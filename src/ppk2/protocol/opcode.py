@@ -1,15 +1,8 @@
 """Wire opcodes.
 
-Each opcode is one byte sent over USB CDC to the PPK2 firmware.
-Cross-referenced against Nordic's ``pc-nrfconnect-ppk`` (``@ 63ae4b7``,
-``src/constants.ts``) and IRNAS's ``ppk2-api-python`` (``v0.9.2``).
-
-Two bytes are left out on purpose:
-
-- ``NO_OP (0x00)``: declared by IRNAS but never sent on its own; it
-  doubles as the OFF parameter byte.
-- ``TriggerStop (0x0a)``: dropped by Nordic before the SHA pinned
-  above; firmware-side status unknown.
+Each opcode is one byte sent to the PPK2. The values are those of
+Nordic's Power Profiler app (``pc-nrfconnect-ppk`` v4.4.1,
+``src/constants.ts``).
 """
 
 from enum import IntEnum
@@ -79,7 +72,7 @@ class Opcode(IntEnum):
     SET_POWER_MODE = 0x11
     """Measurement mode: payload ``0x01`` Ampere meter, ``0x02`` Source meter.
 
-    Nordic and IRNAS also name this byte ``TriggerExtToggle``, an
+    Nordic also names this byte ``TriggerExtToggle``, an
     external-trigger function that shares it; this library only uses it
     to set the mode.
     """

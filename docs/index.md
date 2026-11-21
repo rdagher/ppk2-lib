@@ -84,7 +84,7 @@ This documentation answers four questions.
 |---|---|---|
 | How do I capture from a terminal? | User guide | [Getting started](user/getting-started.md), [the `ppk2` command](user/command.md), [recipes](user/recipes.md), [troubleshooting](user/troubleshooting.md) |
 | How do I write Python against it? | Developer guide | [Architecture](develop/architecture.md), [API reference](develop/api.md) |
-| What exactly is measured, and how does one talk to a PPK2? | How it measures | [Measurement principle](measure/principle.md), [protocol](measure/protocol.md), [file formats](measure/formats.md) |
+| What exactly is measured, and how does one talk to a PPK2? | Measurements | [Principle](measure/principle.md), [protocol](measure/protocol.md), [file formats](measure/formats.md) |
 | Why believe the numbers? | Validation against Nordic's app | [Method](validation/method.md), [results](validation/results.md) |
 
 If this is your first time, start with
@@ -123,4 +123,4 @@ The [recipes](user/recipes.md) show each of these.
 | Command | `ppk2` |
 
 The distribution has its own name because `ppk2-api` on PyPI is
-another project, IRNAS's library.
+another project.

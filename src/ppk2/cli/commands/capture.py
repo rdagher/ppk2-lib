@@ -57,7 +57,6 @@ def capture(
     sys.stderr.write(f"capturing {seconds:.2f} s -> {out} (Ctrl-C to stop early)\n")
     sys.stderr.flush()
 
-    # Ensure the parent dir exists; users typically pass a bare filename.
     out.parent.mkdir(parents=True, exist_ok=True)
 
     stop_requested = _SigintFlag()
@@ -105,10 +104,8 @@ def capture(
                 nonlocal n_samples, n_dataloss, sum_ua, last_progress
                 if stop_requested.flag:
                     return False
-                # NaN is a lost sample: the file records it as 0.2 µA,
-                # as Nordic's app does, and it stays out of the mean
-                # printed here. Real values go through the 0.2 µA clamp
-                # first.
+                # NaN is a lost sample: 0.2 µA in the file, as in
+                # Nordic's app, and left out of the mean printed here.
                 ua = noise_floor(s.current_micro_amps)
                 trace.add(ua, s.logic)
                 if isnan(ua):
@@ -129,9 +126,8 @@ def capture(
 
                 return monotonic() < deadline
 
-            # One-shot: drop the bytes the OS reports as waiting. The
-            # trace starts about 10 ms before power-on (Known caveats
-            # in docs/measure/protocol.md).
+            # The trace starts about 10 ms before power-on (Known
+            # caveats in docs/measure/protocol.md).
             session.drop_pending_backlog()
             session.capture(emit, on_dataloss=on_dataloss)
             # Taken here: shutting the session down takes a tenth of a
@@ -146,9 +142,7 @@ def capture(
         # Complete the file before saying so, with the signal handlers
         # still in place: a second Ctrl-C must not cut the write short.
         trace.close()
-        # Placeholders occupy timeline slots, so the realized stream
-        # rate counts them; the dataloss warning below accounts for
-        # any gap between rows written and samples streamed.
+        # The stream rate counts lost samples too: they took their time.
         n_total = n_samples + n_dataloss
         rate = n_total / wall if wall > 0 else 0.0
         if stop_requested.flag:

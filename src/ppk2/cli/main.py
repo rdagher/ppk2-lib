@@ -238,8 +238,7 @@ def dispatch(argv: list[str] | None = None) -> int:
         # typer.Exit codes, and Ctrl-C inside a command (130).
         return _systemexit_code(exc)
     except KeyboardInterrupt:
-        # Belt and braces: an interrupt outside Typer's own guard
-        # (it maps in-command Ctrl-C to exit 130 itself).
+        # An interrupt outside a command: Typer handles those inside.
         sys.stderr.write("interrupted\n")
         return 130
     except (DiscoveryError, SessionError) as exc:

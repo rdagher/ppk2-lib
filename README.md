@@ -88,7 +88,7 @@ with `just docs`. It has four parts.
 |---|---|
 | User guide | [Getting started](docs/user/getting-started.md), [the `ppk2` command](docs/user/command.md), [recipes](docs/user/recipes.md), [troubleshooting](docs/user/troubleshooting.md) |
 | Developer guide | [Architecture](docs/develop/architecture.md), [API reference](docs/develop/api.md) |
-| How it measures | [Measurement principle](docs/measure/principle.md), [protocol](docs/measure/protocol.md), [file formats](docs/measure/formats.md) |
+| Measurements | [Principle](docs/measure/principle.md), [protocol](docs/measure/protocol.md), [file formats](docs/measure/formats.md) |
 | Validation against Nordic's app | [Method](docs/validation/method.md), [results](docs/validation/results.md) |
 
 The package has three layers, each usable alone: `ppk2.protocol` for
@@ -122,9 +122,6 @@ The protocol code was written from a reading of the source of Nordic's
 app ([pc-nrfconnect-ppk](https://github.com/nordicsemi/pc-nrfconnect-ppk))
 and from measurements on a bench. It contains none of that source,
 whose licence allows reading and running it but not redistributing it.
-The same goes for IRNAS's
-[ppk2-api-python](https://github.com/IRNAS/ppk2-api-python), which is
-GPL-2.0.
 
 Nordic also has a PPK2 script of its own, the `ppk2` skill of Nordic
 MCP: a local server that lets an AI assistant drive the kit and watch a

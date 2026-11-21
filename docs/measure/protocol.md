@@ -487,8 +487,6 @@ It has other USB IDs and another protocol. This package only accepts
 - Nordic's Power Profiler app,
   [`pc-nrfconnect-ppk`](https://github.com/nordicsemi/pc-nrfconnect-ppk),
   read at commit `63ae4b7` and checked again at v4.4.1.
-- IRNAS's [`ppk2-api-python`](https://github.com/IRNAS/ppk2-api-python)
-  0.9.2.
 - Nordic's PPK2 user guide, for the measurement ranges.
 
-No code from the two projects is in this package.
+No code from the app is in this package.

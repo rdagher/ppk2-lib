@@ -1,8 +1,8 @@
 """Opcode enum byte-mapping tests.
 
 Every opcode's enum value must match the literal wire byte the PPK2
-firmware emits. Numbers cross-checked against Nordic's
-`pc-nrfconnect-ppk` (`src/constants.ts`) and IRNAS's `ppk2-api-python`.
+firmware emits. The numbers are those of Nordic's `pc-nrfconnect-ppk`
+(`src/constants.ts`).
 """
 
 from ppk2 import Opcode
@@ -37,9 +37,7 @@ def test_opcode_bytes_match_protocol_reference() -> None:
 
 
 def test_intentionally_omitted_bytes_stay_omitted() -> None:
-    """0x00 NO_OP, 0x0a TriggerStop, 0x0b reserved, 0x10 (appears in
-    some third-party ports; not in Nordic's protocol).
-    """
+    """Bytes Nordic's app does not define: 0x00, 0x0a, 0x0b, 0x10."""
     all_opcodes = list(Opcode)
     omitted = {0x00, 0x0A, 0x0B, 0x10}
     for op in all_opcodes:

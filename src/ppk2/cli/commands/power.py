@@ -39,8 +39,7 @@ def power(
             session.power_on()
             if hold:
                 _hold_until_sigint()
-            # When `hold=False` the with-block's teardown runs power_off
-            # implicitly when we leave the scope.
+            # Without --hold the power goes off as the session closes.
         else:
             session.power_off()
 
@@ -59,7 +58,6 @@ def _hold_until_sigint() -> None:
         sys.stderr.flush()
         signal.pause()  # blocks until any signal; our handler unblocks SIGINT
         if not received:
-            # Unlikely (SIGINT is the only signal we registered) but defensive.
             sys.stderr.write("ppk2: woke from pause without SIGINT, exiting anyway\n")
     finally:
         signal.signal(signal.SIGINT, prev)

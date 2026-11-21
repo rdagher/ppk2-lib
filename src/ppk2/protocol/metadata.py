@@ -206,16 +206,14 @@ class _Partial:
         self.ia: int | None = None
 
     def assign(self, key: str, value: str) -> None:
-        # Per-range key?
         keyed = _split_keyed_index(key)
         if keyed is not None:
             prefix, idx = keyed
             if prefix not in _PER_RANGE_PREFIXES:
-                # Unknown per-range prefix: forward-compat, skip.
+                # An unknown array: ignored.
                 return
             if idx >= NUM_RANGES:
-                # Forward-compat: a future 6-range firmware would emit
-                # R5, etc.; we drop those silently rather than fail.
+                # A sixth range and beyond: ignored.
                 return
             slot = self._slot_for(prefix)
             try:
@@ -292,11 +290,8 @@ class _Partial:
             raise MissingField("HW")
         if self.ia is None:
             raise MissingField("IA")
-        # VDD and mode are runtime state, not calibration: some
-        # firmware revisions omit them. Default conservatively: 3300 mV
-        # (the nominal 3.3 V bench voltage) and mode 1 (Ampere meter, the
-        # passive mode). A present-but-garbage value still raises
-        # InvalidValue in assign().
+        # VDD and mode are state, not calibration, and may be absent:
+        # then 3300 mV and Ampere meter mode.
         return CalibrationCoefficients(
             calibrated=self.calibrated,
             r=_seal("R", self.r),

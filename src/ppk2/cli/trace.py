@@ -9,12 +9,9 @@ from ppk2.cli.ppk2file import Ppk2FileWriter
 
 SAMPLE_RATE_HZ = 100_000
 
-#: What a lost sample is recorded as, in µA, with its digital inputs low.
-#: Nordic's app does this (``value ?? 0.2`` in its ``onSample``), so a
-#: file written here and one saved by the app treat a loss alike. It is
-#: a made-up reading: it pulls sums and means towards 0.2 µA in
-#: proportion to the loss. The library itself reports a lost sample as
-#: NaN, and a capture counts them.
+#: What a lost sample is recorded as, in µA, with its digital inputs
+#: low: the value of Nordic's app (``value ?? 0.2`` in ``onSample``).
+#: A made-up reading, which pulls sums and means towards 0.2 µA.
 LOST_SAMPLE_UA = 0.2
 _SAMPLE_PERIOD_MS = 1000.0 / SAMPLE_RATE_HZ  # 0.01
 

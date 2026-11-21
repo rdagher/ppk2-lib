@@ -160,11 +160,8 @@ class Session:
     def _try_open_once(device: str) -> tuple[serial.Serial, CalibrationCoefficients]:
         """One open + handshake attempt."""
         try:
-            # exclusive=True (POSIX flock) makes contention visible both
-            # ways: this open fails if a lock-respecting process holds
-            # the port, and theirs fail while this session lives. When
-            # Nordic's app holds it, its TIOCEXCL rejects the open at
-            # the kernel.
+            # exclusive=True: the open fails while another program
+            # holds the port, and others fail while this session lives.
             port = serial.Serial(
                 device,
                 baudrate=_BAUD_RATE,
@@ -589,7 +586,7 @@ def _recover_and_negotiate(port: serial.Serial) -> CalibrationCoefficients:
     last_failure = "(no attempts made)"
 
     for attempt in range(_HANDSHAKE_ATTEMPTS):
-        # Flush any prior streaming.
+        # In case a stream was left running.
         try:
             port.write(bytes([Opcode.AVERAGE_STOP.byte()]))
         except serial.SerialException as exc:
@@ -597,8 +594,7 @@ def _recover_and_negotiate(port: serial.Serial) -> CalibrationCoefficients:
             continue
         sleep(0.1)
 
-        # RESET on retry attempts only: it costs a USB CDC re-enum on
-        # macOS, so we want a clean attempt first.
+        # RESET on retries only: it makes the PPK2 drop off USB.
         if attempt > 0:
             try:
                 port.write(bytes([Opcode.RESET.byte()]))
@@ -607,12 +603,10 @@ def _recover_and_negotiate(port: serial.Serial) -> CalibrationCoefficients:
                 continue
             sleep(0.3)
 
-        # Clear pyserial's input buffer + drain whatever the firmware
-        # was still emitting.
+        # Discard what was still arriving.
         flush_input(port)
         _empty_serial(port)
 
-        # Request metadata + accumulate until END.
         try:
             port.write(bytes([Opcode.GET_METADATA.byte()]))
         except serial.SerialException as exc:
