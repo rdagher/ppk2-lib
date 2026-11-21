@@ -281,7 +281,7 @@ involved, so rows are exactly 10 µs apart.
 
 The eight inputs of the logic port are read at the same instants as the
 current, and travel in the same sample word. That is what allows a
-[marked region](../use/recipes.md#energy-of-a-marked-region) of code to
+[marked region](../use/recipes.md#charge-of-a-marked-region) of code to
 be measured exactly.
 
 - In the library, `Sample.logic` is a number in which D0 is bit 0. In

@@ -28,7 +28,7 @@ If this is your first time, start with
   ranges resolves 0.2 µA.
 - Comparing two firmware builds: capture the same workload before and
   after a change and compare the files.
-- The energy of one piece of code: raise a GPIO around it and add up
+- The charge one piece of code draws: raise a GPIO around it and add up
   the current while the pin is high.
 - Powering a DUT from a script, for instance while it is flashed.
 - Captures in the app's own formats: `ppk2` writes the CSV the app

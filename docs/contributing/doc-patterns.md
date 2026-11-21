@@ -157,12 +157,33 @@ For a class with many methods, list the ones to show:
         - capture
 ```
 
+## Numbers and units
+
+- A space between a number and its unit, the percent sign included:
+  `13.5 %`, `0.2 µA`. This is the SI convention (NIST SP 811, 7.2 and
+  7.10.2). The exceptions are quotations, such as the app's `200nA`,
+  and `Current(uA)` in code font.
+- A range is written `0.8 to 5.0 V`.
+- Digits are grouped with a comma from four digits on: `301,056`
+  samples, `2,244.7 µC`. SP 811 advises a space instead; the comma is
+  the choice here, used everywhere.
+- A `±` says what it is the first time it appears on a page, for
+  instance "mean ± standard deviation over the 31 regions". Give the
+  spread to two significant digits and round the value to the same
+  place (GUM, JCGM 100:2008, 7.2).
+- A difference in percent says what is compared with what, and which
+  one is the reference.
+- Charge, not energy. A PPK2 measures current, so what a capture gives
+  is a charge in µC. An energy needs a voltage the capture does not
+  contain. Say so where a reader might expect joules.
+
 ## Watch for
 
 - The order of the digital inputs. In the CSV's `D0-D7` field, D0 is
   the leftmost character. In `Sample.logic`, D0 is bit 0. Say which one
   you mean.
-- Units: µA, mV, µJ, ms. The CSV column is `Current(uA)`.
+- Units: µA, mV, µC, ms. The CSV column is `Current(uA)`. See
+  [numbers and units](#numbers-and-units).
 - `Calibrated: false`. Link to its section of the measurement
   principle the first time it appears on a page. It is the line readers
   most often take for a fault.

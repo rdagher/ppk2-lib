@@ -137,7 +137,7 @@ def test_low_realized_rate_prints_dropped_samples_watchdog(
     captured = capsys.readouterr()
     assert code == 0
     assert "WARNING: stream rate" in captured.err
-    assert "integrals may be unreliable" in captured.err
+    assert "figures may be unreliable" in captured.err
 
 
 def test_clean_short_capture_exits_0_without_watchdog(

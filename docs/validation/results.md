@@ -6,8 +6,8 @@ What the three levels of the [method](method.md) found.
 |---|---|---|
 | The parser, 600 samples | Every current equal to three decimals, every digital byte identical | The current code |
 | Noise floor, 60 s | Same header, same distribution (KS 0.0002) | The build of 2026-07-17 |
-| Workload on an nRF52840 DK | Energy per marked region within 0.31 % | The build of 2026-08-19 |
-| Workload on an nRF54LM20 DK | Energy per marked region within 0.03 % | The build of 2026-08-19 |
+| Workload on an nRF52840 DK | Charge per marked region within 0.31 % | The build of 2026-08-19 |
+| Workload on an nRF54LM20 DK | Charge per marked region within 0.03 % | The build of 2026-08-19 |
 | Ten hardware tests | All pass | The current code, 2026-11-20 |
 
 ## The parser
@@ -43,10 +43,15 @@ ten workloads.
 
 | | App | `ppk2 capture` | Difference |
 |---|---|---|---|
-| D0 workloads | 31 × 6,734.06 ± 4.27 µJ, 596.96 ms | 31 × 6,715.35 ± 19.78 µJ, 596.69 ms | 0.28 % |
-| D1 sweeps | 3 × 70,264.10 ± 37.69 µJ, 7,470.81 ms | 3 × 70,046.36 ± 7.88 µJ, 7,468.04 ms | 0.31 % |
+| D0 workloads | 31 × 2,244.7 ± 1.4 µC, 596.96 ms | 31 × 2,238.5 ± 6.6 µC, 596.69 ms | 0.28 % |
+| D1 sweeps | 3 × 23,421 ± 13 µC, 7,470.81 ms | 3 × 23,348.8 ± 2.6 µC, 7,468.04 ms | 0.31 % |
 | Pulses at boot | 3 | 3 | |
 | Idle mean | 646.01 µA | 636.86 µA | 1.4 % |
+
+Each cell gives the number of regions, the mean charge of a region
+± the standard deviation over those regions, and the mean width. The
+difference is that of the mean charges, `ppk2 capture` against the app,
+as a share of the app's.
 
 After the first 2.5 s, the KS statistic inside the workload is 0.0253,
 with means of 3,760.6 and 3,752.5 µA. At idle it is 0.1460: the idle
@@ -63,8 +68,8 @@ region.
 
 | | App | `ppk2 capture` | Difference |
 |---|---|---|---|
-| D0 workloads | 30 × 2,860.85 ± 2.40 µJ, 599.71 ms | 31 × 2,861.75 ± 3.85 µJ, 599.97 ms | 0.03 % |
-| D1 sweeps | 3 × 28,693.75 ± 15.23 µJ, 7,497.86 ms | 3 × 28,688.56 ± 27.49 µJ, 7,500.58 ms | 0.02 % |
+| D0 workloads | 30 × 866.93 ± 0.73 µC, 599.71 ms | 31 × 867.2 ± 1.2 µC, 599.97 ms | 0.03 % |
+| D1 sweeps | 3 × 8,695.1 ± 4.6 µC, 7,497.86 ms | 3 × 8,693.5 ± 8.3 µC, 7,500.58 ms | 0.02 % |
 | Idle median | 4.25 µA | 4.29 µA | |
 
 After the first 2.5 s, the KS statistic is 0.0065 inside the workload
@@ -121,9 +126,9 @@ From a checkout:
 # the parser against the stored reference
 just test
 
-# energy per marked region of a stored capture
+# charge per marked region of a stored capture
 python validation/evidence/trace_demo/firmware/attribute.py \
-    validation/evidence/trace_demo/captures/nrf54lm20_ampere_cli.csv.gz --vdd 3.3
+    validation/evidence/trace_demo/captures/nrf54lm20_ampere_cli.csv.gz
 
 # the plots above, and the KS statistic and mean per region
 just plots

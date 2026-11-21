@@ -26,7 +26,7 @@ _DATALOSS_WARN_THRESHOLD = 500
 
 #: Post-capture watchdog: a realized stream rate below this fraction of
 #: 100 kSPS (on captures longer than 0.5 s) means the host lost
-#: samples, and energy or timing figures taken from the file are off.
+#: samples, and charge or timing figures taken from the file are off.
 _RATE_WATCHDOG_FRACTION = 0.95
 
 
@@ -169,7 +169,7 @@ def capture(
                 f"WARNING: stream rate {rate:.0f} Hz is "
                 f"{100.0 * rate / _SAMPLE_RATE_HZ:.1f}% of {_SAMPLE_RATE_HZ} Hz "
                 f"({n_total} samples in {wall:.2f} s): samples were dropped; "
-                "energy/latency integrals may be unreliable.\n"
+                "charge and timing figures may be unreliable.\n"
             )
         sys.stderr.flush()
 
