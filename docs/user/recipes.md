@@ -81,20 +81,22 @@ regions["charge_uC"] = regions["sum"] * SAMPLE_S  # µA × s = µC
 print(regions[["duration_ms", "mean", "max", "charge_uC"]].round(2))
 ```
 
-On the bench firmware of this repository, which keeps the CPU busy for
-100 ms while D0 is high, the first rows are:
+On `validation/evidence/bench_dut/captures/source_ppk2_1.csv.xz`, a
+capture of the bench firmware of this repository, which keeps the CPU
+busy for 100 ms while D0 is high, the first rows are:
 
 ```text
     duration_ms     mean      max  charge_uC
 D0
-1         99.99  1380.27  2251.65     138.01
-2         99.97  1381.59  2394.14     138.12
-3         99.97  1380.31  2412.01     137.99
-4        100.00  1381.19  2309.45     138.12
+1        100.00  1386.36  2101.04     138.64
+2        100.00  1385.54  2225.01     138.55
+3         99.97  1384.69  2420.94     138.43
+4        100.00  1385.79  2171.81     138.58
 ```
 
-Over the 22 regions of that 5 s capture the mean current stayed between
-1377.86 and 1381.59 µA.
+Over the 147 regions of that 30 s capture the mean current stayed
+between 1,382.40 and 1,387.90 µA. pandas reads the compressed file as
+it is.
 
 Three things to watch:
 
