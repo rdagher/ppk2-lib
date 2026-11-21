@@ -488,8 +488,9 @@ the PPK2 measured, on 2026-11-20 and 2026-11-21:
 
 `AVG_NUM_SET` is ignored: Nordic's app never sends it, and its
 sample-rate setting thins the data on the host. `SET_USER_GAINS` is
-accepted and ignored too: on 2026-07-11 a write changed neither the
-`UG` values nor the samples. Nordic's app does send it, and also
+accepted and ignored too. On 2026-11-21 a gain of 1.10 was written to
+all five ranges: the `UG` values the PPK2 reports stayed at 1.0, and
+the mean current moved by 0.18 % where 10 % was asked for. Nordic's app does send it, and also
 applies the gain itself to every sample, which is what takes effect.
 `Session.set_user_gain` applies the gain on the host and sends nothing.
 
