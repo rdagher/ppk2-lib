@@ -486,7 +486,14 @@ It has other USB IDs and another protocol. This package only accepts
 
 - Nordic's Power Profiler app,
   [`pc-nrfconnect-ppk`](https://github.com/nordicsemi/pc-nrfconnect-ppk),
-  read at commit `63ae4b7` and checked again at v4.4.1.
+  read at commit `63ae4b7` and checked again at v4.4.1. The files that
+  matter:
+  [`src/constants.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/constants.ts) for the commands,
+  [`src/device/serialDevice.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts) for
+  the calibration, the sample word, the stream and the spike filter,
+  and
+  [`src/actions/deviceActions.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/actions/deviceActions.ts)
+  for the order of a session.
 - Nordic's PPK2 user guide, for the measurement ranges.
 
 No code from the app is in this package.

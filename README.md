@@ -123,9 +123,19 @@ app ([pc-nrfconnect-ppk](https://github.com/nordicsemi/pc-nrfconnect-ppk))
 and from measurements on a bench. It contains none of that source,
 whose licence allows reading and running it but not redistributing it.
 
-Nordic also has a PPK2 script of its own, the `ppk2` skill of Nordic
-MCP: a local server that lets an AI assistant drive the kit and watch a
-live trace. It is a separate program with a different aim.
+## Related projects
+
+- Nordic's Power Profiler app,
+  [pc-nrfconnect-ppk](https://github.com/nordicsemi/pc-nrfconnect-ppk).
+  It is the reference for this package: the protocol was read in its
+  source at [v4.4.1](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts), and every result
+  is checked against it.
+- Nordic's `ppk2` skill of Nordic MCP: a local server that lets an AI
+  assistant drive the kit and watch a live trace. A separate program
+  with a different aim.
+- IRNAS's [ppk2-api-python](https://github.com/IRNAS/ppk2-api-python),
+  another Python library for the PPK2, under GPL-2.0. It is not a
+  reference here and no code is shared with it.
 
 ppk2-lib is not affiliated with or endorsed by Nordic Semiconductor.
 PPK2, Power Profiler Kit and nRF are Nordic's product names.
