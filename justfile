@@ -65,9 +65,10 @@ cross-validate binary_a binary_b seconds="60":
 build:
     uv build
 
-# Build the documentation site into ./site/.
+# Build the documentation site into ./site/. Fails on a broken internal
+# link or anchor.
 docs:
-    uv run --group docs zensical build --clean
+    uv run --group docs zensical build --clean --strict
 
 # Preview the documentation site on localhost:8000.
 docs-serve:

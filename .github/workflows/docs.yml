@@ -31,7 +31,7 @@ jobs:
           python-version: "3.12"
 
       - name: Build the site
-        run: uv run --group docs zensical build --clean
+        run: uv run --group docs zensical build --clean --strict
 
       - uses: actions/configure-pages@v5
 
