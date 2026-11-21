@@ -23,7 +23,7 @@ them does not belong.
 |---|---|---|
 | The user, at a terminal | How do I capture, from a terminal or in CI? | User guide |
 | The user, writing Python | How do I drive a PPK2 from my own code? | Developer guide |
-| The measurement protocol and principle | What exactly is measured, and how does one talk to a PPK2? | How it measures |
+| The measurement protocol and principle | What exactly is measured, and how does one talk to a PPK2? | Measurements |
 | Cross-validation against Nordic's app | Why believe the numbers? | Validation against Nordic's app |
 
 Keep the parts in proportion. The user part should be short enough to
@@ -61,7 +61,7 @@ When in doubt, choose the home closest to the code.
 | Architecture | The layers, the life of a session, the callback, the settings, threads, the choices |
 | API reference | A few lines per group, then the docstrings |
 | Troubleshooting | One heading per error line |
-| Measurement principle | The chain from the DUT's current to the number in the file |
+| Principle | The chain from the DUT's current to the number in the file |
 | Protocol | The bytes, and how the PPK2 behaves |
 | File formats | The CSV and the `.ppk2` session file |
 | Validation: method | What is compared, the bench procedure, the criteria |
@@ -75,7 +75,7 @@ A fact is written once. Other places link to it.
 |---|---|
 | Command bytes | `src/ppk2/protocol/opcode.py`, described on the protocol page |
 | Sample layout | `src/ppk2/protocol/sample.py`, drawn on the protocol page |
-| Calibration formula | `src/ppk2/protocol/calibration.py`, explained under Measurement principle |
+| Calibration formula | `src/ppk2/protocol/calibration.py`, explained on the Principle page |
 | Stream parsing | `src/ppk2/protocol/stream.py`, described on the protocol page |
 | Order of a session | `src/ppk2/client/session.py`, drawn under Architecture and Protocol |
 | CSV and `.ppk2` formats | `src/ppk2/cli/`, described under File formats |

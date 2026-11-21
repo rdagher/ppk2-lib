@@ -1,4 +1,4 @@
-# Measurement principle
+# Principle
 
 How a current at the DUT becomes a number in a file. This page follows
 one sample from the PPK2 to the CSV.

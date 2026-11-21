@@ -19,7 +19,7 @@ DUT and the digital inputs are named as in Nordic's app and user guide.
 
 ## Docs
 
-Four parts: user guide, developer guide, how it measures, validation against Nordic's app.
+Four parts: user guide, developer guide, measurements, validation against Nordic's app.
 
 - [README](README.md): install, a first capture, where everything is
 - [Introduction](docs/index.md): why it exists, terminal, script and CI snippets, the four parts, what it is good for and what it is not for
@@ -29,7 +29,7 @@ Four parts: user guide, developer guide, how it measures, validation against Nor
 - [Architecture](docs/develop/architecture.md): the three layers, the life of a session, the capture callback, settings, threads, design choices
 - [API reference](docs/develop/api.md): discovery, Session, stream parser, calibration, commands
 - [Troubleshooting](docs/user/troubleshooting.md): every error line and what to do
-- [Measurement principle](docs/measure/principle.md): modes, ranges, calibration formula, spike filter, the 0.2 µA floor, time, digital inputs, accuracy
+- [Principle](docs/measure/principle.md): modes, ranges, calibration formula, spike filter, the 0.2 µA floor, time, digital inputs, accuracy
 - [Protocol](docs/measure/protocol.md): the bytes and the behaviour of the PPK2, a session on the wire, known caveats
 - [File formats](docs/measure/formats.md): the CSV and the `.ppk2` session file
 - [Validation, method](docs/validation/method.md): the three levels of comparison with Nordic's app, the bench procedure

@@ -18,8 +18,8 @@ nav:
   - Developer guide:
       - Architecture: develop/architecture.md
       - API reference: develop/api.md
-  - How it measures:
-      - Measurement principle: measure/principle.md
+  - Measurements:
+      - Principle: measure/principle.md
       - Protocol: measure/protocol.md
       - File formats: measure/formats.md
   - Validation against Nordic's app:
