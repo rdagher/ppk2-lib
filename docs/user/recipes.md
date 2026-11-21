@@ -4,7 +4,7 @@ Four jobs people use a PPK2 for, done from a script.
 
 ## Flashing a DUT powered by the PPK2
 
-A DUT that gets its power from the PPK2 is off until a command
+A DUT (device under test) that gets its power from the PPK2 is off until a command
 switches it on, and its debug port does not answer. To flash it, power
 it for the time the programmer runs:
 

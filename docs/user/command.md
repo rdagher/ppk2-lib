@@ -1,7 +1,7 @@
 # Command reference
 
 `ppk2` does from a terminal what the Power Profiler app does with a
-PPK2: find it, switch power to the DUT, and record current and digital
+PPK2: find it, switch power to the DUT (device under test), and record current and digital
 inputs to a file. `python -m ppk2` is the same program, and every
 command has `--help`.
 
@@ -96,7 +96,7 @@ UG: [    1.000000e+00,     1.000000e+00,     1.000000e+00,     1.000000e+00,    
 The calibration the PPK2 reports, five values per line, one per
 measurement range. `VDD` and `mode` are the supply voltage and the mode
 the PPK2 was left in. The
-[measurement principle](../measure/principle.md#calibration)
+[Principle](../measure/principle.md#calibration) page
 says what each line is, and why `Calibrated: false` is not a fault.
 
 ## `ppk2 capture`

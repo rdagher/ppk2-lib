@@ -1,6 +1,6 @@
 # Principle
 
-How a current at the DUT becomes a number in a file. This page follows
+How a current at the DUT (device under test) becomes a number in a file. This page follows
 one sample from the PPK2 to the CSV.
 
 ```mermaid
@@ -105,7 +105,7 @@ And five single values:
 | `HW`, `IA` | Whole numbers, reported as they come. This package does not interpret them |
 
 The parser requires every one of these except `VDD` and `mode`. Without
-them it assumes 3300 mV and Ampere meter mode.
+them it assumes 3,300 mV and Ampere meter mode.
 
 A PPK2 can leave a slot of an array blank, which it prints as `-nan`.
 The parser then takes the value the app assumes: the nominal
@@ -144,7 +144,7 @@ user gain. This is the formula of the app. In Python it is
 
 The sample word `0x015c0097` decodes to a reading of 151 in range 0,
 with counter 23 and D0 high. With the range 0 values of the PPK2
-measured here, at 3300 mV:
+measured here, at 3,300 mV:
 
 ```text
 R[0]  = 1002.1185913085938

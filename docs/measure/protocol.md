@@ -57,7 +57,7 @@ A command is one byte, followed by its payload if it has one.
 | `0x06` | `AVERAGE_START` | none | Start the stream, 100,000 samples per second |
 | `0x07` | `AVERAGE_STOP` | none | Stop the stream |
 | `0x0C` | `DEVICE_RUNNING_SET` | 1 byte: `0` off, `1` on | Power to the device under test (DUT). The app's Enable power output |
-| `0x0D` | `REGULATOR_SET` | 2 bytes: millivolts, high byte first | Supply voltage in Source meter mode, 800 to 5000 mV |
+| `0x0D` | `REGULATOR_SET` | 2 bytes: millivolts, high byte first | Supply voltage in Source meter mode, 800 to 5,000 mV |
 | `0x11` | `SET_POWER_MODE` | 1 byte: `1` Ampere meter, `2` Source meter | Choose the mode |
 | `0x15` | `SPIKE_FILTERING_ON` | none | Not sent, by the app or by this package |
 | `0x16` | `SPIKE_FILTERING_OFF` | none | Not sent either |
@@ -66,7 +66,7 @@ A command is one byte, followed by its payload if it has one.
 | `0x25` | `SET_USER_GAINS` | 1 byte range, float32 LE | Ignored by current firmware. Not sent |
 | `0x02` | `AVG_NUM_SET` | 4 bytes | Ignored by the firmware. Not sent |
 
-For example, setting the supply voltage to 3300 mV (`0x0CE4`) takes
+For example, setting the supply voltage to 3,300 mV (`0x0CE4`) takes
 three bytes:
 
 ```mermaid
@@ -132,10 +132,10 @@ in several pieces. Then:
 
 `VDD` and `mode` are not calibration. They are the settings the PPK2
 was left with, and they survive a disconnect. A new session starts from
-them. Some firmware versions omit them; the parser then assumes 3300 mV
+them. Some firmware versions omit them; the parser then assumes 3,300 mV
 and Ampere meter mode.
 
-The [measurement principle](principle.md#calibration)
+The [Principle](principle.md#calibration) page
 says what each array is for.
 
 ## 4. Sample word
@@ -227,8 +227,7 @@ eight words in a row follow one another. The gap is filled with
 placeholders, the spike filter starts afresh, and parsing resumes
 there.
 
-On 2026-11-21 a capture frozen for 3 s on the bench lost its place in
-this way: without the search, 79 % of what followed was marked lost and
+A capture frozen for 3 s on the bench lost its place in this way: without the search, 79 % of what followed was marked lost and
 the mean read 840 mA. With it, three such captures marked 18 to 34
 samples lost and went on normally.
 
@@ -272,7 +271,7 @@ uA = UG[r] * (x * (GS[r] * x + GI[r]) + S[r] * vdd + I[r]) * 1e6
 
 It is the formula of the app's `getAdcResult`, and
 `ppk2.protocol.current_micro_amps` in this package. The
-[measurement principle](principle.md#calibration)
+[Principle](principle.md#calibration) page
 explains the terms and works an example.
 
 ## 7. Spike filter
@@ -292,7 +291,7 @@ replaces them:
 These are the rules and defaults of Nordic's app. The output matches
 the app's sample for sample on the fixture stream, which crosses all
 five ranges. The
-[measurement principle](principle.md#spike-filter)
+[Principle](principle.md#spike-filter) page
 has the settings and the numbers.
 
 ## 8. Modes

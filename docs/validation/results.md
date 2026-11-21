@@ -33,7 +33,7 @@ within minutes of each other and without being touched in between.
 | App | Power Profiler 4.4.1, in nRF Connect for Desktop 5.4.1 |
 | This package | Commit `ace11d0`, with Python 3.13.13 and pyserial 3.5 |
 | Host | macOS 26.5.1 |
-| DUT | nRF54LM20 DK with the bench firmware: D0 toggles at 5 Hz, D1 at 0.5 Hz, and the CPU is busy while D0 is high |
+| DUT (device under test) | nRF54LM20 DK with the bench firmware: D0 toggles at 5 Hz, D1 at 0.5 Hz, and the CPU is busy while D0 is high |
 | Captures | 30 s each at 100,000 samples per second. Those of `ppk2 capture` start at power-on, the app's about 0.7 s before it |
 
 The current of a region is its mean current, and its charge is that

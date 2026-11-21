@@ -18,7 +18,7 @@ from ppk2.cli.csv import (
 
 
 def test_noise_floor_matches_device_actions() -> None:
-    """deviceActions.ts:333-337: everything below 0.2 µA -> exactly 0."""
+    """As in Nordic's app: everything below 0.2 µA -> exactly 0."""
     assert noise_floor(-1.32) == 0.0
     assert noise_floor(0.0) == 0.0
     assert noise_floor(0.199) == 0.0

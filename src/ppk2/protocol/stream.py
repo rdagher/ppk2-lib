@@ -47,7 +47,7 @@ class Sample:
 
 
 #: Mismatched samples held before the gap is declared lost. Same as
-#: Nordic's app (``serialDevice.ts:268`` @ ``63ae4b7``).
+#: Nordic's app.
 MAX_BUFFERED_CORRUPTED = 5
 
 #: Default EMA coefficient for ranges 0-3 (the app's "Coefficient for

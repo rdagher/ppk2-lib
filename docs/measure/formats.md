@@ -125,8 +125,8 @@ source at v4.4.1. Unit tests check what `ppk2` writes against that
 layout: the three files, the bytes of a sample, the overview, the
 handling of lost samples.
 
-A session file written by `ppk2 convert` was opened in the app on
-2026-11-21: 30 s and 3,000,320 samples, with digital inputs. It loaded
+A session file written by `ppk2 convert` was opened in the app:
+30 s and 3,000,320 samples, with digital inputs. It loaded
 without an error. Over the last 10 s the app showed an average of
 699.32 µA, a maximum of 171.80 mA and a charge of 6.99 mC. These are
 the figures computed from the CSV of the same capture, and D0 and D1

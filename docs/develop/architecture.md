@@ -105,7 +105,7 @@ print(f"{len(currents)} samples, mean {sum(currents) / len(currents):.2f} µA")
 
 `capture` runs in the calling thread and calls your function for every
 sample. It stops when the function returns `False`. Leaving the `with`
-block stops the stream, switches the DUT off and closes the port, also
+block stops the stream, switches the DUT (device under test) off and closes the port, also
 when the function raises. If the process is killed instead, the PPK2
 cuts power by itself when the port closes.
 
@@ -187,7 +187,7 @@ not answer, `SerialIOError` when the port could not be opened.
 
 A new session inherits two things. The PPK2 keeps its supply voltage
 and its mode when a program disconnects, and `Session.open` reads both
-back with the calibration. A PPK2 left in Source meter mode at 1800 mV
+back with the calibration. A PPK2 left in Source meter mode at 1,800 mV
 starts the next session there, until `set_mode` or
 `set_source_voltage` says otherwise.
 
@@ -244,7 +244,7 @@ taken its settings. After `stop_measuring` they are accepted again.
 None of them outlives the session: a new one starts from the defaults,
 which are the app's.
 
-The [measurement principle](../measure/principle.md#spike-filter)
+The [Principle](../measure/principle.md#spike-filter) page
 says what the three numbers of the spike filter do.
 
 ### Gains
@@ -362,6 +362,6 @@ is the only thread that touches the session.
 ## See also
 
 - [API reference](api.md)
-- [Measurement principle](../measure/principle.md) and
+- [Principle](../measure/principle.md) and
   [protocol](../measure/protocol.md): what the numbers are, and how the
   PPK2 behaves.

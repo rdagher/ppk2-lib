@@ -49,7 +49,7 @@ list the differences.
 A round compares captures made by the app and by `ppk2 capture`, on a
 bench that is not touched in between. They are taken within minutes of
 each other, because a bench drifts: with the temperature, and with the
-DUT itself.
+DUT (device under test) itself.
 
 ### Procedure
 

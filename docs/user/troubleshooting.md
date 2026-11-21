@@ -97,7 +97,7 @@ error: no samples captured: check the PPK2 mode and the DUT's power
 ```
 
 The PPK2 answered but sent nothing during the capture. Check that the
-mode matches the wiring: `--source` when the PPK2 supplies the DUT,
+mode matches the wiring: `--source` when the PPK2 supplies the DUT (device under test),
 nothing when the DUT has its own supply.
 
 ## Current reads zero or far too low

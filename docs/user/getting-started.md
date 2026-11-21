@@ -53,7 +53,7 @@ use.
 
 ### Ampere meter mode
 
-The DUT has its own supply and the PPK2 sits in series with it. This is
+The DUT (device under test) has its own supply and the PPK2 sits in series with it. This is
 the default.
 
 ```text
@@ -65,7 +65,7 @@ the default.
 
 - `--vdd` sets nothing in this mode, but the calibration uses it. Give
   the voltage the DUT really runs at. The default is 3.3. The
-  [measurement principle](../measure/principle.md#supply-voltage-term)
+  [Principle](../measure/principle.md#supply-voltage-term) page
   says how much a wrong value costs.
 - Nothing else may feed the DUT. Current that reaches it by a second
   path does not pass through the PPK2 and is not measured.
@@ -242,5 +242,5 @@ handling in `ppk2 run` use POSIX calls that Windows does not have.
 - [Command reference](command.md): every command and option.
 - [Recipes](recipes.md): flashing, the current of a marked region, long
   captures, comparing two builds.
-- [Measurement principle](../measure/principle.md): what the numbers
+- [Principle](../measure/principle.md): what the numbers
   are.
