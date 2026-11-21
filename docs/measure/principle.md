@@ -252,6 +252,40 @@ Nordic's command list also has `SPIKE_FILTERING_ON` and
 `SPIKE_FILTERING_OFF`, for a filter inside the PPK2. The app does not
 send either, and neither does this package.
 
+### Limit: waking from sleep
+
+The filter does not remove everything. When a DUT wakes from a sleep of
+a few µA, the PPK2 jumps from its lowest range straight to its highest
+for 2 or 3 samples. It reports a few hundred mA there before it
+settles. The filter covers the first two of those samples. A third one
+gets through.
+
+Measured on 2026-11-21 on an nRF54LM20 DK that wakes five times a
+second, in the captures of the [validation](../validation/results.md):
+
+| Capture | Wake-ups | With a sample above 20 mA |
+|---|---:|---:|
+| Source meter, `ppk2 capture` | 140 | 50 |
+| Source meter, the app | 137 | 45 |
+| Ampere meter, `ppk2 capture` | 140 | 58 |
+| Ampere meter, the app | 137 | 56 |
+
+It is the same in both modes and in the app's own captures. Whether
+those 20 to 30 µs carry a real current, the PPK2 cannot tell: it is
+switching its measuring resistor at that moment.
+
+What it costs depends on what is measured:
+
+- A stretch that does not contain the wake-up, such as a region marked
+  with a digital input, is not affected.
+- The mean of a DUT that wakes often for short events is. A BLE
+  advertiser at a 100 ms interval gave three means. Counting only the
+  events without such a sample: about 41 µA. With the filter as it is:
+  53 µA. With no filter: 130 µA.
+
+Compare the median with the mean when the result matters: the leaked
+samples move the mean and not the median.
+
 ## Noise floor
 
 A value below 0.2 µA, negative noise included, becomes 0. The app does
