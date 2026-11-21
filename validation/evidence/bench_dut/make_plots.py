@@ -46,8 +46,8 @@ def wakeups(out_dir: Path) -> None:
     edges = edges[(edges > SKIP) & (edges < len(ua) - 100)]
     highest = np.array([ua[e - 100 : e + 100].max() for e in edges])
     picks = (
-        (edges[highest < 5_000][0], "a wake-up as it should read", "#2a78d6"),
-        (edges[highest > 20_000][0], "a wake-up with a reading the filter left in", "#eb6834"),
+        (edges[highest < 5_000][0], "wake-up read correctly", "#2a78d6"),
+        (edges[highest > 20_000][0], "wake-up with readings the spike filter left in", "#eb6834"),
     )
     fig, ax = plt.subplots(figsize=(9, 4.2))
     x = np.arange(-100, 100) * 0.01
@@ -65,7 +65,7 @@ def wakeups(out_dir: Path) -> None:
     ax.set_ylabel("current (µA, log)")
     ax.set_title("Two wake-ups of the same DUT in one capture, 10 µs per sample", loc="left")
     ax.grid(True, which="major", alpha=0.3)
-    ax.legend(loc="upper left", frameon=False)
+    ax.legend(loc="lower right", frameon=False)
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
     fig.tight_layout()
