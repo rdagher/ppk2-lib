@@ -190,10 +190,9 @@ def test_buffer_overflow_emits_nan_placeholders_and_resyncs() -> None:
     )
     emitted.clear()
 
-    # Send MAX_BUFFERED_CORRUPTED mismatched samples: all buffered.
-    # Counters chosen to be far from expected and from each other so
-    # they look like real noise rather than a stuck counter.
-    mismatch_counters = [10, 20, 30, 40, 50]  # exactly 5 = MAX_BUFFERED_CORRUPTED
+    # Samples 1 to 9 are lost. The next MAX_BUFFERED_CORRUPTED arrivals
+    # follow one another, as real samples do after a gap: all held.
+    mismatch_counters = [10, 11, 12, 13, 14]
     for c in mismatch_counters:
         parser.push_bytes(
             _make_word(adc=100, range_idx=0, counter=c, logic=0xFF).to_bytes(4, "little"),
@@ -202,29 +201,28 @@ def test_buffer_overflow_emits_nan_placeholders_and_resyncs() -> None:
     # Nothing emitted yet: buffer at threshold but not over.
     assert emitted == []
 
-    # 6th mismatch triggers data-loss path. Trigger with counter=10
-    # (any non-matching value). Expected at this point: 1 + 5 = 6.
-    # gap = (10 - 6) & 0x3F = 4 -> 4 NaN placeholders, the 5 held
+    # The 6th declares the loss. Expected at this point: 1 + 5 = 6.
+    # gap = (15 - 6) & 0x3F = 9 -> 9 NaN placeholders, the 5 held
     # samples, then the trigger sample.
     parser.push_bytes(
-        _make_word(adc=100, range_idx=0, counter=10, logic=0x55).to_bytes(4, "little"),
+        _make_word(adc=100, range_idx=0, counter=15, logic=0x55).to_bytes(4, "little"),
         emitted.append,
     )
-    assert len(emitted) == 10  # 4 NaN + 5 held + 1 trigger
-    for nan_sample in emitted[:4]:
+    assert len(emitted) == 15  # 9 NaN + 5 held + 1 trigger
+    for nan_sample in emitted[:9]:
         assert math.isnan(nan_sample.current_micro_amps)
         assert nan_sample.logic == 0  # placeholders carry no logic data
-    assert [s.logic for s in emitted[4:9]] == [0xFF] * 5
-    trigger = emitted[9]
+    assert [s.logic for s in emitted[9:14]] == [0xFF] * 5
+    trigger = emitted[14]
     assert not math.isnan(trigger.current_micro_amps)
     assert trigger.logic == 0x55
 
     # After the data-loss path expected is reset to
-    # (trigger.counter + 1) = 11. A subsequent in-sync sample emits
+    # (trigger.counter + 1) = 16. A subsequent in-sync sample emits
     # normally.
     emitted.clear()
     parser.push_bytes(
-        _make_word(adc=100, range_idx=0, counter=11, logic=0x42).to_bytes(4, "little"),
+        _make_word(adc=100, range_idx=0, counter=16, logic=0x42).to_bytes(4, "little"),
         emitted.append,
     )
     assert len(emitted) == 1
@@ -274,20 +272,20 @@ def test_dataloss_total_counts_nan_placeholders_only() -> None:
     )
     assert parser.dataloss_total == 0
 
-    # 5 mismatched samples to fill the buffer.
-    for c in (10, 20, 30, 40, 50):
+    # 5 samples from after a gap fill the buffer.
+    for c in (10, 11, 12, 13, 14):
         parser.push_bytes(
             _make_word(adc=100, range_idx=0, counter=c, logic=0).to_bytes(4, "little"),
             emitted.append,
         )
     assert parser.dataloss_total == 0  # nothing dropped yet, just buffered
 
-    # Trigger sample (counter=10, expected=6 after 5 mismatch advances).
-    # gap = (10 - 6) & 0x3F = 4 -> dataloss_total should grow by 4.
+    # Trigger sample (counter=15, expected=6 after 5 mismatch advances).
+    # gap = (15 - 6) & 0x3F = 9 -> dataloss_total should grow by 9.
     parser.push_bytes(
-        _make_word(adc=100, range_idx=0, counter=10, logic=0).to_bytes(4, "little"), emitted.append
+        _make_word(adc=100, range_idx=0, counter=15, logic=0).to_bytes(4, "little"), emitted.append
     )
-    assert parser.dataloss_total == 4
+    assert parser.dataloss_total == 9
 
 
 def test_genuine_loss_keeps_the_samples_that_arrived_after_the_gap() -> None:
@@ -363,8 +361,9 @@ def test_dataloss_gap_uses_true_mod64_arithmetic_across_counter_wrap() -> None:
     )
     assert len(emitted) == 1
 
-    # 5 mismatches fill the buffer; expected advances 61 -> 62 -> 63 -> 0 -> 1 -> 2.
-    for c in (0, 10, 20, 30, 40):
+    # 63 samples are lost, so the next one carries 60 again. 5 arrivals
+    # fill the buffer; expected advances 61 -> 62 -> 63 -> 0 -> 1 -> 2.
+    for c in (60, 61, 62, 63, 0):
         parser.push_bytes(
             _make_word(adc=100, range_idx=0, counter=c, logic=0xFF).to_bytes(4, "little"),
             emitted.append,
@@ -553,3 +552,54 @@ def _identity_coeffs() -> CalibrationCoefficients:
 def _make_word(adc: int, range_idx: int, counter: int, logic: int) -> int:
     """Pack the four fields into one 32-bit sample word."""
     return (adc & 0x3FFF) | ((range_idx & 0x07) << 14) | ((counter & 0x3F) << 18) | (logic << 24)
+
+
+# ─── alignment lost: bytes dropped inside a word ────────────────────────
+
+
+def _fixture_run() -> tuple[bytes, list[Sample]]:
+    """The recorded power-on stream and what it parses to, untouched."""
+    coeffs = parse_metadata(METADATA_RAW.read_bytes())
+    stream = STREAM_BIN.read_bytes()
+    reference: list[Sample] = []
+    StreamParser(coeffs, 3300).push_bytes(stream, reference.append)
+    return stream, reference
+
+
+@pytest.mark.parametrize("dropped", [1, 2, 3, 5, 6, 7, 401, 1023])
+@pytest.mark.parametrize("chunk", [4096, 7])
+def test_stream_resumes_after_bytes_are_lost_inside_a_word(dropped: int, chunk: int) -> None:
+    """Bytes lost on the way leave the stream out of step: the parser finds the words again."""
+    stream, reference = _fixture_run()
+    cut = 4 * 200
+    damaged = stream[:cut] + stream[cut + dropped :]
+    coeffs = parse_metadata(METADATA_RAW.read_bytes())
+    parser = StreamParser(coeffs, 3300)
+    got: list[Sample] = []
+    for at in range(0, len(damaged), chunk):
+        parser.push_bytes(damaged[at : at + chunk], got.append)
+
+    real = [s for s in got if not math.isnan(s.current_micro_amps)]
+    lost_words = -(-dropped // 4)  # every word the cut touched
+    # Before the cut, untouched. After it, every whole word is back.
+    assert real[:200] == reference[:200]
+    assert [s.logic for s in real[200:]] == [s.logic for s in reference[200 + lost_words :]]
+    # The filter starts afresh at the resume, so compare where it has settled.
+    assert real[-100:] == reference[-100:]
+    assert parser.dataloss_total == len(got) - len(real) > 0
+    # The gap is known modulo 64.
+    assert parser.dataloss_total % 64 == lost_words % 64
+
+
+def test_whole_words_lost_need_no_realignment() -> None:
+    """A loss on a word boundary is a plain gap: placeholders, nothing dropped after it."""
+    stream, reference = _fixture_run()
+    damaged = stream[: 4 * 200] + stream[4 * 230 :]
+    coeffs = parse_metadata(METADATA_RAW.read_bytes())
+    parser = StreamParser(coeffs, 3300)
+    got: list[Sample] = []
+    parser.push_bytes(damaged, got.append)
+
+    assert parser.dataloss_total == 30
+    assert len(got) == len(reference)
+    assert [s.logic for s in got[230:]] == [s.logic for s in reference[230:]]

@@ -13,6 +13,10 @@ per emitted sample. Each 4-byte word goes through two stages:
    0-3, a slower one for range 4) smooth the samples that follow a
    range change. Knobs: ``SpikeFilter``.
 
+When bytes are lost on the way, the stream can resume in the middle of
+a word. The parser then looks for the byte offset at which the counters
+run again, and resumes there (``_find_alignment``).
+
 The resync logic is an independent implementation of
 ``handleRawDataSet`` in Nordic's app, with a few deliberate differences
 listed in ``docs/measure/protocol.md`` (section 5).
@@ -21,7 +25,7 @@ listed in ``docs/measure/protocol.md`` (section 5).
 from collections.abc import Callable
 from dataclasses import dataclass
 from math import nan
-from struct import iter_unpack
+from struct import iter_unpack, pack, unpack_from
 
 from ppk2.protocol.calibration import current_micro_amps
 from ppk2.protocol.metadata import CalibrationCoefficients
@@ -94,6 +98,11 @@ class SpikeFilter:
 
 
 _COUNTER_MASK = 0x3F  # 6-bit counter, mod 64
+_RANGE_MAX = 4
+#: Words whose counters must follow one another for a byte offset to
+#: count as the start of a word.
+_ALIGN_WORDS = 8
+_ALIGN_FORMAT = f"<{_ALIGN_WORDS}I"
 _TOP_RANGE = 4  # 50 mA to 1 A: where the PPK2 jumps when the current rises fast
 
 
@@ -182,14 +191,20 @@ class StreamParser:
         """
         self._coeffs = coeffs
         self._vdd_mv = vdd_mv
-        self._smoother = _RangeChangeSmoother(
-            spike_filter if spike_filter is not None else SpikeFilter()
-        )
-        # Bytes short of a word, carried to the next call. Always 0-3.
+        self._spike_filter = spike_filter if spike_filter is not None else SpikeFilter()
+        self._smoother = _RangeChangeSmoother(self._spike_filter)
+        # Bytes carried to the next call: 0-3 short of a word, or more
+        # while an alignment is being searched.
         self._remainder = bytearray()
         # Counter-resync state.
         self._expected_counter: int | None = None
         self._corruption_buffer: list[Sample] = []
+        # Since the last sample in step: the counters of the held
+        # samples, the bytes of every word seen, the counter that was due.
+        self._held_counters: list[int] = []
+        self._suspect = bytearray()
+        self._due_counter = 0
+        self._realigning = False
         #: NaN placeholders emitted so far. Never decreases: compare
         #: before and after a ``push_bytes`` call to spot new losses.
         self.dataloss_total: int = 0
@@ -201,37 +216,91 @@ class StreamParser:
         held back for resync) or several samples per word (held samples
         released, or placeholders for a lost gap).
         """
-        # Fast path, nothing carried over: unpack whole words straight
-        # from the buffer (iter_unpack runs the loop in C).
-        if not self._remainder:
-            whole = len(buf) - (len(buf) % 4)
-            if whole > 0:
-                for (raw,) in iter_unpack("<I", buf[:whole]):
-                    self._consume_word(raw, emit)
-            if whole < len(buf):
-                self._remainder.extend(buf[whole:])
-            return
+        if self._remainder:
+            self._remainder.extend(buf)
+            data = bytes(self._remainder)
+            self._remainder.clear()
+        else:
+            data = buf
+        pos = 0
+        while True:
+            if self._realigning:
+                pos = self._find_alignment(data, pos)
+                if pos < 0:
+                    return
+                self._resume_at(data, pos, emit)
+            whole = (len(data) - pos) & ~3
+            # iter_unpack runs the loop in C.
+            words = iter_unpack("<I", memoryview(data)[pos : pos + whole])
+            for i, (raw,) in enumerate(words):
+                if not self._consume_word(raw, emit):
+                    # Alignment lost: search again from the first word
+                    # in doubt, one byte further on.
+                    data = bytes(self._suspect) + bytes(data[pos + 4 * (i + 1) :])
+                    self._suspect.clear()
+                    self._realigning = True
+                    pos = 1
+                    break
+            else:
+                if pos + whole < len(data):
+                    self._remainder.extend(data[pos + whole :])
+                return
 
-        # Slow path: prepend the leftover to this call's bytes.
-        self._remainder.extend(buf)
-        combined = bytes(self._remainder)
-        self._remainder.clear()
-        whole = len(combined) - (len(combined) % 4)
-        if whole > 0:
-            for (raw,) in iter_unpack("<I", combined[:whole]):
-                self._consume_word(raw, emit)
-        if whole < len(combined):
-            self._remainder.extend(combined[whole:])
+    def _find_alignment(self, data: bytes, start: int) -> int:
+        """Return the first offset from ``start`` where ``_ALIGN_WORDS`` words follow one another.
 
-    def _consume_word(self, raw: int, emit: Callable[[Sample], None]) -> None:
-        """Process one decoded 4-byte word; emit zero, one, or many samples."""
+        Returns -1 when ``data`` is too short to tell, after keeping the
+        bytes not yet ruled out for the next call.
+        """
+        last = len(data) - 4 * _ALIGN_WORDS
+        pos = start
+        while pos <= last:
+            words = unpack_from(_ALIGN_FORMAT, data, pos)
+            counter = (words[0] >> 18) & _COUNTER_MASK
+            for word in words:
+                if (word >> 14) & 0x7 > _RANGE_MAX or (word >> 18) & _COUNTER_MASK != counter:
+                    break
+                counter = (counter + 1) & _COUNTER_MASK
+            else:
+                return pos
+            pos += 1
+        self._remainder.extend(data[pos:])
+        return -1
+
+    def _resume_at(self, data: bytes, pos: int, emit: Callable[[Sample], None]) -> None:
+        """Fill the gap up to the word at ``pos`` and start afresh from it."""
+        (word,) = unpack_from("<I", data, pos)
+        # The counter gives the gap modulo 64 only. Bytes were lost, so
+        # a gap of 0 is 64 at least.
+        gap = (((word >> 18) & _COUNTER_MASK) - self._due_counter) & _COUNTER_MASK or 64
+        for _ in range(gap):
+            emit(_NAN_SAMPLE)
+        self.dataloss_total += gap
+        self._expected_counter = None
+        self._corruption_buffer.clear()
+        self._held_counters.clear()
+        # The words in doubt went through the filter: start it afresh.
+        self._smoother = _RangeChangeSmoother(self._spike_filter)
+        self._realigning = False
+
+    def _consume_word(self, raw: int, emit: Callable[[Sample], None]) -> bool:
+        """Process one 4-byte word; emit zero, one, or many samples.
+
+        Returns False when the word shows that the alignment is lost.
+        """
         raw_sample = decode_sample(raw)
 
-        # A range above 4 cannot index the calibration arrays: the parse
-        # is misaligned. Drop the word without touching the counter
-        # state (Nordic clamps the range and lets the word through).
+        # A range above 4 cannot index the calibration arrays. Alone,
+        # the word is dropped without touching the counter state (Nordic
+        # clamps the range and lets it through). After a mismatch, it
+        # means the alignment is lost.
         if not raw_sample.range_valid():
-            return
+            if self._expected_counter is None:
+                return True
+            if not self._suspect:
+                self._due_counter = self._expected_counter
+            self._suspect.extend(pack("<I", raw))
+            return not self._held_counters
         counter = raw_sample.counter
 
         # Calibrate and filter before routing on the counter: the filter
@@ -251,23 +320,33 @@ class StreamParser:
         if self._expected_counter is None:
             self._expected_counter = (counter + 1) & _COUNTER_MASK
             emit(sample)
-            return
+            return True
 
         # In sync: release any held samples first (they were real, just
         # behind a brief gap), then emit this one.
         if counter == self._expected_counter:
-            if self._corruption_buffer:
+            if self._suspect:
                 for buffered in self._corruption_buffer:
                     emit(buffered)
                 self._corruption_buffer.clear()
+                self._held_counters.clear()
+                self._suspect.clear()
             emit(sample)
             self._expected_counter = (counter + 1) & _COUNTER_MASK
-            return
+            return True
 
         # Buffer full and still out of sync: the gap is lost. Fill it
         # with placeholders, then release the held samples (they arrived
         # after the gap) and this one, and resync on this counter.
         if len(self._corruption_buffer) >= MAX_BUFFERED_CORRUPTED:
+            # Samples from after a gap follow one another. If the held
+            # ones do not, they are not samples: the alignment is lost.
+            follows = self._held_counters[0]
+            for held in (*self._held_counters, counter):
+                if held != follows:
+                    self._suspect.extend(pack("<I", raw))
+                    return False
+                follows = (follows + 1) & _COUNTER_MASK
             # The true mod-64 distance (Nordic's `+ 63` is one short).
             gap = (counter - self._expected_counter) & _COUNTER_MASK
             for _ in range(gap):
@@ -276,12 +355,19 @@ class StreamParser:
             for buffered in self._corruption_buffer:
                 emit(buffered)
             self._corruption_buffer.clear()
+            self._held_counters.clear()
+            self._suspect.clear()
             emit(sample)
             self._expected_counter = (counter + 1) & _COUNTER_MASK
-            return
+            return True
 
         # Out of sync with room left: hold the sample back until the
         # stream resyncs or the gap is declared lost. (Nordic also emits
         # it here, which duplicates it on a resync.)
+        if not self._suspect:
+            self._due_counter = self._expected_counter
         self._corruption_buffer.append(sample)
+        self._held_counters.append(counter)
+        self._suspect.extend(pack("<I", raw))
         self._expected_counter = (self._expected_counter + 1) & _COUNTER_MASK
+        return True
