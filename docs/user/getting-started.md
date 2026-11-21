@@ -2,7 +2,7 @@
 
 From nothing to a first capture: install, wire, check, capture, read.
 
-## Install
+## Installation
 
 ppk2-lib is not on PyPI yet. Install it from the repository:
 
@@ -45,7 +45,7 @@ What it has been tested on:
 So Linux and Windows are expected to work but have not measured
 anything yet.
 
-## Wire the PPK2
+## Wiring
 
 Wire it as you would for the Power Profiler app. The PPK2 has two
 modes, named here as in the app, and the wiring decides which one you
@@ -65,7 +65,7 @@ the default.
 
 - `--vdd` sets nothing in this mode, but the calibration uses it. Give
   the voltage the DUT really runs at. The default is 3.3. The
-  [measurement principle](../measure/principle.md#why-the-supply-voltage-matters)
+  [measurement principle](../measure/principle.md#supply-voltage-term)
   says how much a wrong value costs.
 - Nothing else may feed the DUT. Current that reaches it by a second
   path does not pass through the PPK2 and is not measured.
@@ -99,7 +99,7 @@ with the current. They are optional. To use them, connect:
 - the logic port's `VCC` to the DUT's VDD. The PPK2 uses it as the
   reference to tell high from low.
 
-## Check the PPK2
+## Connection check
 
 Only one program can hold a PPK2, so quit the app first.
 
@@ -133,9 +133,9 @@ Ampere meter mode and breathing red in Source meter mode.
 !!! note "`Calibrated: false` is normal"
 
     It does not mean the readings are wrong. See
-    [the `Calibrated` flag](../measure/principle.md#the-calibrated-flag).
+    [the `Calibrated` flag](../measure/principle.md#calibrated-flag).
 
-## Capture
+## First capture
 
 In Ampere meter mode, the default:
 
@@ -162,7 +162,7 @@ stops early and keeps what was recorded.
 A capture switches the DUT on as it starts and off as it ends, so the
 boot is in the file. The current rises about 10 ms into it.
 
-## Read the file
+## Reading the file
 
 The CSV has the 11 columns of the app's export, one row every 0.01 ms:
 
@@ -190,7 +190,7 @@ mean 745.61 µA, max 176490 µA
 
 [File formats](../measure/formats.md) has the columns in detail.
 
-## Open it in the app
+## Opening a capture in the app
 
 A name ending in `.ppk2` gives a session file in the format the app
 saves and loads, and `ppk2 convert` makes one from a CSV:
@@ -201,10 +201,10 @@ wrote first.ppk2: 500736 samples at 100000 S/s (5.01 s)
 ```
 
 Here the CSV is 20.1 MB and the session file 0.7 MB.
-[File formats](../measure/formats.md#how-far-this-is-checked) says how
+[File formats](../measure/formats.md#verification-status) says how
 far this format has been checked.
 
-## Notes per system
+## Platform notes
 
 ### macOS
 
@@ -227,7 +227,7 @@ group.
 The PPK2 shows up as two COM ports. `ppk2 power on --hold` and Ctrl-C
 handling in `ppk2 run` use POSIX calls that Windows does not have.
 
-## Notes on Nordic dev kits
+## Nordic development kits
 
 - nRF52840 DK: measure with switch SW6 on "nRF only". Otherwise the
   interface chip stays on the measured supply and adds about 85 mA.
@@ -237,9 +237,9 @@ handling in `ppk2 run` use POSIX calls that Windows does not have.
 - After flashing, an nRF chip stays in debug mode and draws about 1 mA
   more until it is power-cycled. A capture power-cycles it.
 
-## Next
+## Next steps
 
-- [The `ppk2` command](command.md): every command and option.
+- [Command reference](command.md): every command and option.
 - [Recipes](recipes.md): flashing, the current of a marked region, long
   captures, comparing two builds.
 - [Measurement principle](../measure/principle.md): what the numbers

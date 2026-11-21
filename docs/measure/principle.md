@@ -22,7 +22,7 @@ flowchart TB
 The PPK2 sends raw readings. Everything after the USB cable is done by
 this package, in the same way as Nordic's Power Profiler app does it.
 
-## What is measured
+## Measured quantities and modes
 
 The current that flows through the PPK2, 100,000 times per second, and
 with each sample the state of eight digital inputs. The PPK2 does not
@@ -33,7 +33,7 @@ measure voltage.
 | Ampere meter | In series between a supply and the DUT | Whatever the supply gives. The PPK2 must be told |
 | Source meter | It is the supply | Set by the PPK2, 0.8 to 5.0 V |
 
-## Five measurement ranges
+## Measurement ranges
 
 The PPK2 covers 200 nA to 1 A with five ranges and switches between
 them by itself as the current moves. From the PPK2 user guide:
@@ -75,13 +75,13 @@ print(f"{len(ranges)} samples, {changes} range changes, ranges {sorted(set(range
 That file is 6 ms of a dev kit being powered on: the current climbs
 through all five ranges.
 
-## From a reading to a current
+## Calibration
 
 Every PPK2 carries its own calibration and sends it as text when asked.
 `ppk2 metadata` prints it; in Python it is what `Session.coefficients()`
 returns.
 
-### What the PPK2 reports
+### Calibration data
 
 Seven arrays of five values, one value per range:
 
@@ -112,7 +112,7 @@ The parser then takes the value the app assumes: the nominal
 resistance for `R` (1031.64, 101.65, 10.15, 0.94 and 0.043 Ω), 1 for
 the gains and 0 for the rest.
 
-### The `Calibrated` flag
+### `Calibrated` flag
 
 ```text
 Calibrated: false
@@ -126,7 +126,7 @@ app's source reads this value, and this package only stores it.
 To check a PPK2, compare it with the app on the same DUT, as the
 [validation](../validation/method.md) does.
 
-### The formula
+### Formula
 
 For a reading `adc` taken in range `r`, at a supply voltage `vdd` in
 volts:
@@ -160,7 +160,7 @@ x  = (604 - 122.94572448730469) * ((1.8 / 163840) / 1002.1185913085938)
 uA = 5.302145379685201
 ```
 
-### Why the supply voltage matters
+### Supply voltage term
 
 The formula has a term in `vdd`. In Source meter mode the PPK2 knows
 the voltage, since it supplies it. In Ampere meter mode it does not:
@@ -187,7 +187,7 @@ does: give the voltage the DUT really runs at.
 here. [`Session.set_user_gain`](../develop/architecture.md#gains) and
 `--user-gain` change it for one session, on the computer only.
 
-## After a range change: the spike filter
+## Spike filter
 
 The first readings after a range change can be far too high. The spike
 filter replaces them. It is the app's filter, with the app's defaults.
@@ -220,7 +220,7 @@ same thing as the app.
 | Coefficient for range 5 | `alpha5` | 0.06 | 0 to 1 |
 
 A smaller coefficient is a heavier average.
-[`Session.set_spike_filter`](../develop/architecture.md#settings-of-a-session)
+[`Session.set_spike_filter`](../develop/architecture.md#session-settings)
 changes the three numbers. The command line has no option for this, on
 purpose: a file written by `ppk2 capture` always uses the app's
 defaults.
@@ -252,14 +252,14 @@ Nordic's command list also has `SPIKE_FILTERING_ON` and
 `SPIKE_FILTERING_OFF`, for a filter inside the PPK2. The app does not
 send either, and neither does this package.
 
-## The floor
+## Noise floor
 
 A value below 0.2 µA, negative noise included, becomes 0. The app does
 the same when it receives a sample, with the comment "PPK 2 can only
 read till 200nA". `ppk2 capture` applies it before it writes the file
 and before it computes the mean it prints, so the two agree.
 
-## Time
+## Timing
 
 The sample count is the clock. One sample lasts 10 µs, and the
 timestamp of a row is its number times 0.01 ms. No computer clock is
@@ -268,7 +268,7 @@ involved, so rows are exactly 10 µs apart.
 - A lost sample keeps its place. Each sample carries a counter; when
   the counter jumps, the parser puts a placeholder where each missing
   sample was. The trace keeps its true length, and the
-  [protocol page](protocol.md#5-putting-the-stream-back-together) says
+  [protocol page](protocol.md#5-stream-reassembly) says
   how.
 - The rate is fixed. The PPK2 has no command that makes it send fewer
   samples: its firmware ignores `AVG_NUM_SET`. When the app shows fewer

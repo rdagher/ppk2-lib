@@ -1,4 +1,4 @@
-# Validation: results
+# Results
 
 What the three levels of the [method](method.md) found.
 
@@ -10,7 +10,7 @@ What the three levels of the [method](method.md) found.
 | Workload on an nRF54LM20 DK | Current per marked region within 0.05 %, charge within 0.03 % | The build of 2026-08-19 |
 | Ten hardware tests | All pass | The current code, 2026-11-20 |
 
-## The parser
+## Parser
 
 On the 600 recorded samples, this package and the app's parser give
 the same current to three decimals for every sample, and the same
@@ -94,7 +94,7 @@ in Source meter mode at 3.3 V on an nRF54LM20 DK. The run in Ampere
 meter mode of the same day predates the last changes to how a session
 closes.
 
-## Where this package differs from the app
+## Differences from the app
 
 On purpose, and outside what the comparisons above exercise:
 
@@ -102,7 +102,7 @@ On purpose, and outside what the comparisons above exercise:
   gap one short, and places the samples received after a gap before
   it. This package emits each sample once, counts the full gap, and
   keeps the order. The
-  [protocol page](../measure/protocol.md#5-putting-the-stream-back-together)
+  [protocol page](../measure/protocol.md#5-stream-reassembly)
   has the four points with their line references. Both record a lost
   sample as 0.2 µA.
 - Where a capture starts. In the app you start the capture and enable
@@ -112,7 +112,7 @@ On purpose, and outside what the comparisons above exercise:
 And one comparison that has not been made: a `.ppk2` file written by
 this package has not yet been opened in the app.
 
-## Limits
+## Limitations
 
 - One PPK2, under macOS.
 - The reference is the app. Agreement with it says nothing about the
@@ -123,7 +123,7 @@ this package has not yet been opened in the app.
   hardware tests run on the current code. A fresh round with the
   current build is still to be done.
 
-## Do it again
+## Reproducing the results
 
 The captures, the firmware and the scripts of the rounds are in
 [`validation/evidence/`](https://github.com/rdagher/ppk2-lib/tree/main/validation/evidence),

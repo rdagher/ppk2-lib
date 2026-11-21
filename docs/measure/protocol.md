@@ -12,10 +12,10 @@ covers two things:
 | Encoding | Behaviour |
 |---|---|
 | [2. Commands](#2-commands) | [1. The device](#1-the-device) |
-| [3. Calibration text](#3-calibration-text) | [5. Putting the stream back together](#5-putting-the-stream-back-together) |
+| [3. Calibration text](#3-calibration-text) | [5. Stream reassembly](#5-stream-reassembly) |
 | [4. Sample word](#4-sample-word) | [7. Spike filter](#7-spike-filter) |
 | [6. Calibration formula](#6-calibration-formula) | [8. Modes](#8-modes) |
-| | [9. A session on the wire](#9-a-session-on-the-wire) |
+| | [9. Session sequence](#9-session-sequence) |
 | | [10. Known caveats](#10-known-caveats) |
 
 The code is in `src/ppk2/protocol/` for the bytes and in
@@ -135,7 +135,7 @@ was left with, and they survive a disconnect. A new session starts from
 them. Some firmware versions omit them; the parser then assumes 3300 mV
 and Ampere meter mode.
 
-The [measurement principle](principle.md#from-a-reading-to-a-current)
+The [measurement principle](principle.md#calibration)
 says what each array is for.
 
 ## 4. Sample word
@@ -172,7 +172,7 @@ guide gives as 50 mA to 1 A.
 
 `ppk2.protocol.decode_sample` extracts the fields.
 
-## 5. Putting the stream back together
+## 5. Stream reassembly
 
 USB delivers bytes, not samples, and the PPK2 does not mark where a
 word begins. The parser does three things.
@@ -251,7 +251,7 @@ uA = UG[r] * (x * (GS[r] * x + GI[r]) + S[r] * vdd + I[r]) * 1e6
 
 It is the formula of the app's `getAdcResult`, and
 `ppk2.protocol.current_micro_amps` in this package. The
-[measurement principle](principle.md#from-a-reading-to-a-current)
+[measurement principle](principle.md#calibration)
 explains the terms and works an example.
 
 ## 7. Spike filter
@@ -271,7 +271,7 @@ replaces them:
 These are the rules and defaults of Nordic's app. The output matches
 the app's sample for sample on the fixture stream, which crosses all
 five ranges. The
-[measurement principle](principle.md#after-a-range-change-the-spike-filter)
+[measurement principle](principle.md#spike-filter)
 has the settings and the numbers.
 
 ## 8. Modes
@@ -289,7 +289,7 @@ app does not let the mode change while it samples. Earlier notes said
 that the firmware ignores a mode change during a stream. On the PPK2
 measured here it did not: the change was applied.
 
-## 9. A session on the wire
+## 9. Session sequence
 
 What goes between the computer and the PPK2 during one session of the
 library, from `Session.open` to the end of the `with` block, with the
@@ -349,10 +349,10 @@ The waits, and which of them the PPK2 really needs:
 | Reading until 50 ms without a byte, for 0.5 s at most, at the end | Otherwise the end of the stream goes to the next program | Yes |
 | 0.5 s, then 1 s, between attempts to open | A port left stuck by a capture that ended badly | When that happens |
 
-The [architecture page](../develop/architecture.md#life-of-a-session)
+The [architecture page](../develop/architecture.md#session-lifecycle)
 shows the same sequence from the side of the Python calls.
 
-### Where a session differs from Nordic's app
+### Session differences from Nordic's app
 
 Read in the app's source at v4.4.1 (`src/actions/deviceActions.ts`
 unless another file is named):
@@ -368,7 +368,7 @@ unless another file is named):
 
 ## 10. Known caveats
 
-### The end of a stream must be read
+### End of a stream
 
 Measured on 2026-11-20 on one PPK2 under macOS:
 
@@ -390,7 +390,7 @@ and the calibration parser starts at the first key. Before that, the
 data port could look like the silent one after a session, which read
 as a firmware that had stopped answering.
 
-### The host starts behind the stream
+### Host backlog at stream start
 
 Measured on 2026-11-20 on one PPK2 under macOS:
 
@@ -424,7 +424,7 @@ capture held 301,056 samples.
 Timestamps come from the sample count, not from the clock, so the trace
 itself is exact either way.
 
-### Power follows the serial port
+### Power and the serial port
 
 The PPK2 cuts power to the DUT when the host drops DTR, which the
 operating system does when the port closes. Power therefore cannot
@@ -439,7 +439,7 @@ package sends it in two places, and waits for the device to come back
 both times: on a second handshake attempt, and in discovery's
 last-resort probe (`probe_port_recover`).
 
-### A stuck port on macOS
+### Stuck port on macOS
 
 After a capture that ended badly, the next open can time out on the
 calibration. `Session.open` tries three times, 0.5 s and then 1 s
@@ -447,7 +447,7 @@ apart. If that fails, unplug the PPK2 and plug it back. Right after a
 killed process, the driver can also refuse to open the port for a
 second or two.
 
-### Rules this package no longer follows
+### Abandoned precautions
 
 Earlier versions waited 200 ms after `AVERAGE_START` before switching
 power, switched power only while a stream ran, and kept reading for a
@@ -462,7 +462,7 @@ the PPK2 measured, on 2026-11-20 and 2026-11-21:
   0.31 s, as described above. That delay is probably what the old
   notes saw.
 
-### Two commands that do nothing
+### Ignored commands
 
 `AVG_NUM_SET` is ignored: Nordic's app never sends it, and its
 sample-rate setting thins the data on the host. `SET_USER_GAINS` is
@@ -471,18 +471,18 @@ accepted and ignored too: on 2026-07-11 a write changed neither the
 applies the gain itself to every sample, which is what takes effect.
 `Session.set_user_gain` applies the gain on the host and sends nothing.
 
-### The counter has 6 bits
+### Counter width
 
-Nordic's app masks it with 6 bits, and so does this package. A parser
+Nordic's app masks the counter with 6 bits, and so does this package. A parser
 that ignores the counter cannot tell when it has lost its place in the
 stream.
 
-### The first PPK is another device
+### First-generation PPK
 
 It has other USB IDs and another protocol. This package only accepts
 `1915:c00a`.
 
-## 11. Sources
+## 11. References
 
 - Nordic's Power Profiler app,
   [`pc-nrfconnect-ppk`](https://github.com/nordicsemi/pc-nrfconnect-ppk),

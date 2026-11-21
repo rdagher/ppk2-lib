@@ -50,7 +50,7 @@ one exported from the app can be compared directly, which is what the
 [validation](../validation/method.md) does, and whatever reads the
 app's export reads this.
 
-### Reading it
+### Reading a CSV
 
 The current only, with numpy:
 
@@ -118,7 +118,7 @@ reads it. `metadata.json` of a capture at the full rate:
 The sample rate is a power of ten from 1 to 100,000. `ppk2 convert`
 reads it from the timestamps of the CSV.
 
-### How far this is checked
+### Verification status
 
 The layout comes from the README of the app's repository and from its
 source at v4.4.1. Unit tests check what `ppk2` writes against that
@@ -130,7 +130,7 @@ that is done, treat the format as written to the description and not as
 proven to load. Nordic gives no guarantee that the format stays the
 same between versions of the app.
 
-### Size, and how it is written
+### Size and write procedure
 
 A capture of 5 s on the bench of this repository took 0.7 MB as a
 session file and 20.1 MB as a CSV. The file is compressed, so a noisier
@@ -160,4 +160,4 @@ lost samples out.
 
 In the library a lost sample is not disguised. It arrives as a `Sample`
 whose current is NaN, as the
-[architecture page](../develop/architecture.md#the-capture-callback) shows.
+[architecture page](../develop/architecture.md#capture-callback) shows.

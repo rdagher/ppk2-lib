@@ -34,7 +34,7 @@ versions.
 - A session leaves the PPK2 quiet for the next program, and opens a
   PPK2 that another program left streaming.
 
-### Checked against Nordic's app
+### Validation
 
 - The parser gives the same samples as the app's on a recorded stream
   that crosses all five measurement ranges.
@@ -44,7 +44,7 @@ versions.
 - Hardware tests and their bench firmware are in
   [`tests/hil/`](tests/hil/README.md).
 
-### Limits
+### Limitations
 
 - Synchronous only.
 - Windows runs the unit tests but has not been tried on a bench, and

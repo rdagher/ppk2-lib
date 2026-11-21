@@ -1,4 +1,4 @@
-# Validation: method
+# Method
 
 The claim this package makes is narrow: on the same PPK2 and the same
 bench, it gives the numbers that Nordic's Power Profiler app gives. The
@@ -13,7 +13,7 @@ It is tested at three levels, from one sample to a whole bench:
 | Whole captures | Two captures of one bench, taken back to back | The app's CSV export | `validation/` |
 | A bench | What the tool reads from a signal known in advance | The bench firmware | `tests/hil/` |
 
-## The parser, sample by sample
+## Parser comparison
 
 The recording is `stream_poweron.bin`: 600 samples, 6 ms, taken while a
 PPK2 powered an nRF54LM20 DK on in Source meter mode at 3.3 V. The
@@ -41,15 +41,15 @@ This covers the extraction of the fields, the calibration of each
 range, and the spike filter across range changes. It does not cover
 lost samples: the recording has none. Those cases are tested on streams
 built for the purpose, and there this package differs from the app on
-purpose. The [results](results.md#where-this-package-differs-from-the-app)
+purpose. The [results](results.md#differences-from-the-app)
 list the differences.
 
-## Whole captures, back to back
+## Capture comparison
 
 A round compares one capture made by the app with one made by
 `ppk2 capture`, on a bench that is not touched in between.
 
-### The procedure
+### Procedure
 
 1. Set up the bench once: the DUT, its firmware, the wiring, the mode
    and the supply voltage. Note the position of every switch.
@@ -62,7 +62,7 @@ A round compares one capture made by the app with one made by
 
 Both captures begin at power-on, so the DUT boots in both.
 
-### What is compared
+### Compared quantities
 
 `validation/compare_cli.py` reads the two files and reports:
 
@@ -80,7 +80,7 @@ For a firmware that marks its work with D0 and D1, a second script,
 width of the
 marked regions in each file.
 
-### Why per region
+### Per-region comparison
 
 The two captures are not the same seconds of the DUT's life, and three
 things make whole-trace numbers differ for reasons that are not the
@@ -100,7 +100,7 @@ up over the region's duration. The distribution of the current inside
 the workload and inside the idle is compared as well. There is no
 energy in the comparison, because a PPK2 measures current only.
 
-## A bench with a known signal
+## Hardware tests
 
 The hardware tests do not compare with the app. They check the tool
 against a signal that is known in advance, from the firmware in
@@ -124,7 +124,7 @@ just test-hw                          # Ampere meter mode
 PPK2_HIL_SOURCE_MV=3300 just test-hw  # Source meter mode at 3.3 V
 ```
 
-## What this method cannot show
+## Limitations
 
 - Absolute accuracy. The reference is the app, not a calibrated
   instrument. Agreement with the app says the arithmetic is the same;

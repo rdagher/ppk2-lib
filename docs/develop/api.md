@@ -5,7 +5,7 @@ each one comes from its docstring. The
 [architecture page](architecture.md) says how the pieces fit and how a
 session goes.
 
-## Finding the PPK2
+## Discovery
 
 `find_ppk2()` returns the data port of the one PPK2 attached. To get
 there it:
@@ -40,7 +40,7 @@ there.
 
 ::: ppk2.client.discovery.DataPortNotFound
 
-## A session
+## Session
 
 ::: ppk2.client.session.Mode
 
@@ -78,7 +78,7 @@ there.
 
 ::: ppk2.client.session.USER_GAIN_MAX
 
-## Samples and the stream parser
+## Samples and stream parser
 
 `StreamParser` is what a capture runs on. Give it the bytes of each
 read, and it calls your function once per sample. It keeps the
@@ -120,7 +120,7 @@ print(f"{len(currents)} samples, mean {sum(currents) / len(currents):.2f} µA")
 
 ::: ppk2.protocol.stream.StreamParser
 
-## One sample, undecoded
+## Raw samples
 
 ::: ppk2.protocol.sample.RawSample
 

@@ -2,7 +2,7 @@
 
 Four jobs people use a PPK2 for, done from a script.
 
-## Flash a DUT powered by the PPK2
+## Flashing a DUT powered by the PPK2
 
 A DUT that gets its power from the PPK2 is off until a command
 switches it on, and its debug port does not answer. To flash it, power
@@ -188,7 +188,7 @@ What to expect:
   blocks of samples afterwards: `ppk2 convert` accepts a CSV reduced to
   a power of ten, such as 1,000 samples per second.
 
-## Compare two firmware builds
+## Comparing two firmware builds
 
 You changed something and want to know whether the current went down.
 Capture the same workload before and after, and compare the files.

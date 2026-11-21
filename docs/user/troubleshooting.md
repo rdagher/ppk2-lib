@@ -1,6 +1,6 @@
 # Troubleshooting
 
-## Start with `ppk2 list`
+## First check: `ppk2 list`
 
 ```console
 $ ppk2 list
@@ -44,7 +44,7 @@ the Power Profiler app. `ppk2 list` then shows a port as
 Quit the app, or disconnect the PPK2 inside it. If you know the path of
 the data port, `--port` skips the search.
 
-## A message ending in `close the nRF Connect Power Profiler, or whatever else holds the port`
+## Port busy: `close the nRF Connect Power Profiler, or whatever else holds the port`
 
 The same cause, met while opening the port: the system reported it as
 busy.
@@ -76,7 +76,7 @@ The PPK2 answered but sent nothing during the capture. Check that the
 mode matches the wiring: `--source` when the PPK2 supplies the DUT,
 nothing when the DUT has its own supply.
 
-## The current reads zero, or far too low
+## Current reads zero or far too low
 
 - In Ampere meter mode, the current must pass through the PPK2: supply
   to `VIN`, `VOUT` to the DUT. A second path to the DUT is not
@@ -86,11 +86,11 @@ nothing when the DUT has its own supply.
 - Values below 0.2 µA are written as 0. That is the floor of the PPK2,
   not a fault.
 
-## The digital inputs read high while the DUT is off
+## Digital inputs high while the DUT is off
 
 They can. Without power on the DUT, the inputs are not driven.
 
-## Warnings about lost samples or the stream rate
+## Lost samples and stream-rate warnings
 
 The computer did not keep up with the PPK2. The trace keeps its
 length, and each lost sample is recorded as 0.2 µA, as in Nordic's app,
@@ -100,9 +100,9 @@ cable, without a hub, and close what else loads the machine.
 ## `Calibrated: false`
 
 Not a fault. See
-[the `Calibrated` flag](../measure/principle.md#the-calibrated-flag).
+[the `Calibrated` flag](../measure/principle.md#calibrated-flag).
 
-## Is it measuring right?
+## Checking a measurement
 
 Capture the same DUT with the app and with `ppk2 capture`, export the
 app's capture as CSV, and compare the two files. The repository's

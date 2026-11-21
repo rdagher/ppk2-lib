@@ -8,7 +8,7 @@ without the Power Profiler app.
 This is an experimental release (0.1.0). It works and is checked on
 hardware, but the API may still change between 0.x versions.
 
-## Install
+## Installation
 
 ```sh
 pip install "git+https://github.com/rdagher/ppk2-lib"
@@ -28,7 +28,7 @@ macOS 26, so Windows and Linux are untested on a bench. On Windows,
 `ppk2 power on --hold` and Ctrl-C handling in `ppk2 run` use POSIX
 calls that Windows does not have.
 
-## A first capture
+## Quick start
 
 Wire the PPK2 as you would for the app, quit the app, and run:
 
@@ -86,7 +86,7 @@ with `just docs`. It has four parts.
 
 | Part | Pages |
 |---|---|
-| User guide | [Getting started](docs/user/getting-started.md), [the `ppk2` command](docs/user/command.md), [recipes](docs/user/recipes.md), [troubleshooting](docs/user/troubleshooting.md) |
+| User guide | [Getting started](docs/user/getting-started.md), [command reference](docs/user/command.md), [recipes](docs/user/recipes.md), [troubleshooting](docs/user/troubleshooting.md) |
 | Developer guide | [Architecture](docs/develop/architecture.md), [API reference](docs/develop/api.md) |
 | Measurements | [Principle](docs/measure/principle.md), [protocol](docs/measure/protocol.md), [file formats](docs/measure/formats.md) |
 | Validation against Nordic's app | [Method](docs/validation/method.md), [results](docs/validation/results.md) |
@@ -95,7 +95,7 @@ The package has three layers, each usable alone: `ppk2.protocol` for
 the bytes, `ppk2.client` for the device, `ppk2.cli` for the command.
 The [changelog](CHANGELOG.md) lists what 0.1.0 contains and its limits.
 
-## How the numbers are checked, in short
+## Validation
 
 The parser gives the same samples as the parser of Nordic's app on a
 recorded stream that crosses all five measurement ranges. Captures of

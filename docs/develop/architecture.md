@@ -33,7 +33,7 @@ Two things follow from this split:
 - The command line is one user of the client layer among others. What
   the command does, your script can do.
 
-## Where the code is
+## Package layout
 
 ```text
 src/ppk2/
@@ -59,7 +59,7 @@ src/ppk2/
 The public interface of the command line is the command itself. Its
 Python modules are internal and may change.
 
-## The names you import
+## Public names
 
 Everything meant for use is re-exported from `ppk2`:
 
@@ -72,7 +72,7 @@ from ppk2 import decode_sample, current_micro_amps, SpikeFilter
 Importing from `ppk2.protocol` or `ppk2.client` gives the same
 objects.
 
-## A capture
+## Minimal example
 
 Five seconds, with the samples kept in a list:
 
@@ -109,7 +109,7 @@ block stops the stream, switches the DUT off and closes the port, also
 when the function raises. If the process is killed instead, the PPK2
 cuts power by itself when the port closes.
 
-## Life of a session
+## Session lifecycle
 
 What your code calls, and what the session sends for it:
 
@@ -191,7 +191,7 @@ back with the calibration. A PPK2 left in Source meter mode at 1800 mV
 starts the next session there, until `set_mode` or
 `set_source_voltage` says otherwise.
 
-## The capture callback
+## Capture callback
 
 ```python
 def on_sample(sample: Sample) -> bool:
@@ -224,7 +224,7 @@ def on_dataloss(total: int) -> None:
 session.capture(on_sample, on_dataloss=on_dataloss)
 ```
 
-## Settings of a session
+## Session settings
 
 The app has an advanced configuration panel with three groups of
 settings. A session has the same ones, so a script can do what the
@@ -244,7 +244,7 @@ taken its settings. After `stop_measuring` they are accepted again.
 None of them outlives the session: a new one starts from the defaults,
 which are the app's.
 
-The [measurement principle](../measure/principle.md#after-a-range-change-the-spike-filter)
+The [measurement principle](../measure/principle.md#spike-filter)
 says what the three numbers of the spike filter do.
 
 ### Gains
@@ -289,7 +289,7 @@ The limit itself is kept between 800 and 5,000 mV, the range of the
 PPK2. Lowering it does not lower a supply voltage that is already
 higher: call `set_source_voltage` again for that.
 
-## Threads
+## Threading
 
 Use one `Session` from one thread. The serial port underneath is not
 safe to share, and the session adds no lock: two threads reading it
@@ -341,7 +341,7 @@ print(len(got), "samples in the consumer")
 A `Sample` cannot be modified, so consumers can share it. The producer
 is the only thread that touches the session.
 
-## Choices behind the design
+## Design decisions
 
 - Synchronous. A session owns one serial port and one stream. An
   asynchronous interface would add ceremony and buy nothing here.
@@ -359,7 +359,7 @@ is the only thread that touches the session.
   over one made there. The [validation](../validation/results.md) shows
   how far that holds.
 
-## Read on
+## See also
 
 - [API reference](api.md)
 - [Measurement principle](../measure/principle.md) and

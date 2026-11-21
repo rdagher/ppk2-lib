@@ -13,7 +13,7 @@ says how it is wired.
 The rest of this page is the rule book of the documentation, for
 anyone who edits it, person or model.
 
-## Three purposes
+## Purposes
 
 The documentation exists for three things. The first has two parts,
 one per reader, and the others one each. A page that serves none of
@@ -30,7 +30,7 @@ Keep the parts in proportion. The user part should be short enough to
 read at a bench. The validation part is what the package's claim rests
 on: it gets the method and the results in full, with the numbers.
 
-## Where each kind of text lives
+## Kinds of documentation
 
 Each piece of documentation has one natural home. In the wrong one it
 drifts away from the code, or sits where readers do not look.
@@ -51,12 +51,12 @@ To decide:
 
 When in doubt, choose the home closest to the code.
 
-## What goes on which page
+## Page contents
 
 | Page | Content |
 |---|---|
 | Getting started | For someone with a PPK2 who has never run `ppk2 capture`: install, wire, capture, read |
-| The `ppk2` command | Every command, option and exit code |
+| Command reference | Every command, option and exit code |
 | Recipes | One job per section, concrete, with commands that run |
 | Architecture | The layers, the life of a session, the callback, the settings, threads, the choices |
 | API reference | A few lines per group, then the docstrings |
@@ -67,7 +67,7 @@ When in doubt, choose the home closest to the code.
 | Validation: method | What is compared, the bench procedure, the criteria |
 | Validation: results | The tables and plots, the differences from the app, the limits |
 
-## One home per fact
+## Single source per fact
 
 A fact is written once. Other places link to it.
 
@@ -84,7 +84,7 @@ A fact is written once. Other places link to it.
 
 If the code changes and a page disagrees, the page is wrong.
 
-## Words
+## Terminology
 
 Use Nordic's words for what Nordic already names. A reader comes from
 the Power Profiler app and its user guide.
@@ -113,7 +113,15 @@ something done.
 - State limits plainly. "Not tried on Windows" is more useful than
   silence.
 - Prefer "is", "has" and "use" to longer words. Keep sentences short.
-- One name per thing, sentence-case headings, plain punctuation.
+- One name per thing and plain punctuation.
+- A heading names what the section contains, as a noun phrase:
+  "Installation", "Session lifecycle", "Common options", "Limitations".
+  Not a clause or a question ("Where the code is", "What it is not
+  for", "Do it again"). A task may take the -ing form ("Reading a
+  CSV"). Under troubleshooting a heading may be the error line itself
+  or the symptom. Use the conventional names where one exists: Quick
+  start, Installation, Limitations, See also, Next steps, References.
+  Sentence case.
 - Use a list for parallel items and a table for things with the same
   attributes. Use sentences for everything else.
 
@@ -193,7 +201,7 @@ For a class with many methods, list the ones to show:
   with no assumption. An energy needs a voltage the capture does not
   contain. Say so where a reader might expect joules.
 
-## Watch for
+## Common pitfalls
 
 - The order of the digital inputs. In the CSV's `D0-D7` field, D0 is
   the leftmost character. In `Sample.logic`, D0 is bit 0. Say which one
@@ -211,7 +219,7 @@ For a class with many methods, list the ones to show:
 - Numbers of the validation. Quote only what a script in the
   repository prints from the stored evidence, and say which script.
 
-## Checked against the code
+## Automated checks
 
 `tests/test_docs.py` runs with the unit tests and fails when a page and
 the code disagree on:

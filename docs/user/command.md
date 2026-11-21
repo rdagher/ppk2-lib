@@ -1,4 +1,4 @@
-# The `ppk2` command
+# Command reference
 
 `ppk2` does from a terminal what the Power Profiler app does with a
 PPK2: find it, switch power to the DUT, and record current and digital
@@ -18,7 +18,7 @@ Only one program can hold a PPK2. Quit the app before you start.
 | [`ppk2 run`](#ppk2-run) | Runs a command with the DUT powered |
 | `ppk2 version` | Prints the version |
 
-## Options shared by several commands
+## Common options
 
 | Option | Default | Accepted by | Meaning |
 |---|---|---|---|
@@ -96,7 +96,7 @@ UG: [    1.000000e+00,     1.000000e+00,     1.000000e+00,     1.000000e+00,    
 The calibration the PPK2 reports, five values per line, one per
 measurement range. `VDD` and `mode` are the supply voltage and the mode
 the PPK2 was left in. The
-[measurement principle](../measure/principle.md#from-a-reading-to-a-current)
+[measurement principle](../measure/principle.md#calibration)
 says what each line is, and why `Calibrated: false` is not a fault.
 
 ## `ppk2 capture`
@@ -180,7 +180,7 @@ code. With `--out` it records while the command runs, to a CSV or a
 with or without `--out`, since the PPK2 cannot be told to pause.
 
 Ctrl-C is passed on to the command. However the command ends, the DUT
-is unpowered afterwards. [Flashing](recipes.md#flash-a-dut-powered-by-the-ppk2) is
+is unpowered afterwards. [Flashing](recipes.md#flashing-a-dut-powered-by-the-ppk2) is
 the usual reason to use it.
 
 ## Signals

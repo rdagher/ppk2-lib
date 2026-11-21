@@ -9,7 +9,7 @@ without the Power Profiler app.
 This is an experimental release (0.1.0). It works and is checked on
 hardware, but the API may still change between 0.x versions.
 
-## Why it exists
+## Motivation
 
 The Power Profiler app is made for looking at a trace by hand. A
 measurement worth making once is usually worth repeating: after every
@@ -17,7 +17,7 @@ change, on every board, in CI. That takes a command and a library, the
 same ones at the desk and on the test bench, so that a number seen
 during development is the number the pipeline checks.
 
-## In a terminal
+## Command line
 
 ```console
 $ ppk2 capture --out boot.csv --seconds 3 --source --vdd 3.3
@@ -38,7 +38,7 @@ ppk2 power on --hold --source --vdd 3.3      # keep the DUT powered until Ctrl-C
 ppk2 run --source --vdd 3.3 -- west flash    # power the DUT while it is flashed
 ```
 
-## In a script
+## Python
 
 ```python
 from ppk2 import Mode, Session, find_ppk2
@@ -54,7 +54,7 @@ with Session.open(find_ppk2().device) as session:
 second, and stops when it returns `False`. Here it stops at the first
 sample of 1 mA or more.
 
-## In CI
+## Continuous integration
 
 `ppk2 run` powers the DUT, records while a command runs, and exits
 with that command's exit code. A test job can therefore record the
@@ -76,13 +76,13 @@ assert ua.mean() < 2000, f"mean current {ua.mean():.0f} µA is over the budget"
 The [recipes](user/recipes.md) go further: the current of one marked
 piece of code, and comparing two builds.
 
-## Four parts
+## Contents
 
 This documentation answers four questions.
 
 | Question | Part | Pages |
 |---|---|---|
-| How do I capture from a terminal? | User guide | [Getting started](user/getting-started.md), [the `ppk2` command](user/command.md), [recipes](user/recipes.md), [troubleshooting](user/troubleshooting.md) |
+| How do I capture from a terminal? | User guide | [Getting started](user/getting-started.md), [command reference](user/command.md), [recipes](user/recipes.md), [troubleshooting](user/troubleshooting.md) |
 | How do I write Python against it? | Developer guide | [Architecture](develop/architecture.md), [API reference](develop/api.md) |
 | What exactly is measured, and how does one talk to a PPK2? | Measurements | [Principle](measure/principle.md), [protocol](measure/protocol.md), [file formats](measure/formats.md) |
 | Why believe the numbers? | Validation against Nordic's app | [Method](validation/method.md), [results](validation/results.md) |
@@ -90,7 +90,7 @@ This documentation answers four questions.
 If this is your first time, start with
 [getting started](user/getting-started.md).
 
-## Uses
+## Use cases
 
 - Sleep and idle currents. The lowest of the PPK2's five measurement
   ranges resolves 0.2 µA.
@@ -104,7 +104,7 @@ If this is your first time, start with
 
 The [recipes](user/recipes.md) show each of these.
 
-## Limits
+## Limitations
 
 - Time: one sample lasts 10 µs, so a shorter edge is not resolved.
 - Accuracy: it is the PPK2's own, which Nordic gives as better than
@@ -114,7 +114,7 @@ The [recipes](user/recipes.md) show each of these.
 - No chart: to look around a trace by eye, save a `.ppk2` file and open
   it in the app.
 
-## Names
+## Package names
 
 | What | Name |
 |---|---|

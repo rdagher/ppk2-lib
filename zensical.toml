@@ -13,7 +13,7 @@ nav = [
   { "Introduction" = "index.md" },
   { "User guide" = [
     { "Getting started" = "user/getting-started.md" },
-    { "The ppk2 command" = "user/command.md" },
+    { "Command reference" = "user/command.md" },
     { "Recipes" = "user/recipes.md" },
     { "Troubleshooting" = "user/troubleshooting.md" },
   ] },
