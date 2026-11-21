@@ -35,7 +35,9 @@ _BAUD_RATE = 115_200
 _READ_TIMEOUT_S = 0.1
 _OPEN_SETTLE_S = 0.05
 _START_MEASURING_SETTLE_S = 0.2  # see Session.start_measuring for what this guards against
-_POWER_ON_PRE_DRAIN_S = 0.3  # clear the backlog so the power switch lands on a live stream
+_STREAM_BYTES_PER_S = 400_000  # 100,000 samples of 4 bytes
+_CAUGHT_UP_BYTES = 4_000  # within 10 ms of the stream: caught up
+_CATCH_UP_CAP_S = 1.5  # how long to try, at most
 _METADATA_READ_TIMEOUT_S = 2.5
 _QUIET_S = 0.05  # no byte for this long: the stream has ended
 _QUIET_CAP_S = 0.5  # how long to wait for that, at most
@@ -112,6 +114,8 @@ class Session:
         self._voltage_limit_mv = VOLTAGE_LIMIT_HARDWARE_MAX_MV
         self._closed = False
         self._measuring = False
+        self._stream_started_at = 0.0
+        self._stream_bytes = 0  # read since start_measuring
 
     # ── Construction ───────────────────────────────────────────────────
 
@@ -285,6 +289,8 @@ class Session:
         not on the unit tested (the protocol page, Known caveats).
         """
         self._write(bytes([Opcode.AVERAGE_START.byte()]))
+        self._stream_started_at = monotonic()
+        self._stream_bytes = 0
         sleep(_START_MEASURING_SETTLE_S)
         self._measuring = True
 
@@ -304,12 +310,12 @@ class Session:
     def power_on(self, latch_s: float = 1.0) -> None:
         """Switch power to the DUT on, as the app's "Enable power output" does.
 
-        Call ``start_measuring`` first. The command is sent on a running
-        stream, with the backlog read for ~0.3 s before it and the
-        stream for ``latch_s`` after it. These are precautions: a
-        command sent without a stream, or with the host not reading,
-        has been seen ignored, though not on the unit tested (the
-        protocol page, Known caveats).
+        Call ``start_measuring`` first. Before the command is sent, the
+        stream is read until the host has caught up with it, which
+        takes up to a second after ``start_measuring``: the samples
+        read after this call are then from after the switch, to within
+        about 10 ms. The stream is read for ``latch_s`` after the
+        command, a precaution (the protocol page, Known caveats).
 
         Args:
             latch_s: How long to keep reading after the command, in
@@ -318,7 +324,7 @@ class Session:
                 lets its own reads cover that time, so the boot inrush
                 is in the trace.
         """
-        self._drain_stream(_POWER_ON_PRE_DRAIN_S)
+        self._catch_up()
         self._write(bytes([Opcode.DEVICE_RUNNING_SET.byte(), 0x01]))
         self._drain_stream(latch_s)
 
@@ -340,7 +346,7 @@ class Session:
         try:
             waiting = self._port.in_waiting
             if waiting:
-                self._port.read(waiting)
+                self._stream_bytes += len(self._port.read(waiting))
         except serial.SerialException as exc:
             raise SerialIOError(f"serial read: {exc}") from exc
         return waiting
@@ -461,6 +467,25 @@ class Session:
         while monotonic() < deadline:
             self._read_into(scratch)
 
+    def _catch_up(self) -> None:
+        """Read and discard until the reads have caught up with the stream.
+
+        For its first second a stream arrives slower than the PPK2
+        produces it, and the host runs up to 0.18 s behind (measured on
+        macOS). Caught up means: as many bytes read as the PPK2 has
+        produced since ``start_measuring``, to within 10 ms. Gives up
+        after ``_CATCH_UP_CAP_S``.
+        """
+        if not self._measuring:
+            return
+        deadline = monotonic() + _CATCH_UP_CAP_S
+        scratch = bytearray(4096)
+        while (now := monotonic()) < deadline:
+            produced = (now - self._stream_started_at) * _STREAM_BYTES_PER_S
+            if self._stream_bytes >= produced - _CAUGHT_UP_BYTES:
+                return
+            self._read_into(scratch)
+
     def _wait_for_quiet(self) -> None:
         """Read and discard until no byte arrives for ``_QUIET_S``.
 
@@ -492,6 +517,7 @@ class Session:
         n = len(chunk)
         if n:
             buf[:n] = chunk
+            self._stream_bytes += n
         return n
 
 

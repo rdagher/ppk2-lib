@@ -336,11 +336,12 @@ class _StreamingPort:
     assert drains happen on the right side of the power-on write.
     """
 
-    def __init__(self, backlog: bytes = b"") -> None:
-        """Start with an optional pending input backlog."""
+    def __init__(self, backlog: bytes = b"", *, flowing: bool = False) -> None:
+        """Start with a pending backlog, or ``flowing``: every read is full."""
         self.events: list[str] = []
         self.written = bytearray()
         self._backlog = backlog
+        self._flowing = flowing
 
     def write(self, data: bytes) -> int:
         self.events.append(f"write:{data.hex()}")
@@ -349,6 +350,8 @@ class _StreamingPort:
 
     def read(self, n: int) -> bytes:
         self.events.append("read")
+        if self._flowing:
+            return b"\x00" * n
         chunk = self._backlog[:n]
         self._backlog = self._backlog[len(chunk) :]
         return chunk
@@ -358,35 +361,57 @@ class _StreamingPort:
         return len(self._backlog)
 
 
-def test_power_on_pre_drains_then_toggles_then_latches() -> None:
-    """Drain ~0.3 s BEFORE the power-on command, send it, then drain latch_s after."""
-    port = _StreamingPort()
+_TOGGLE = f"write:{bytes([0x0C, 0x01]).hex()}"
+
+
+def _measuring_session(port: _StreamingPort) -> Session:
+    """A session 0.2 s into its stream: 80 kB produced, none read yet."""
     session = Session(cast("serial.Serial", port), _identity_coeffs())
+    session.start_measuring()
+    return session
+
+
+def test_power_on_catches_up_then_toggles_then_latches() -> None:
+    """Read until level with the stream, send the command, read for latch_s after."""
+    port = _StreamingPort(flowing=True)
+    session = _measuring_session(port)
 
     session.power_on(latch_s=0.05)
 
-    toggle = f"write:{bytes([0x0C, 0x01]).hex()}"
-    assert toggle in port.events
-    toggle_at = port.events.index(toggle)
-    # Reads on both sides of the toggle: the pre-drain and the latch drain.
-    assert "read" in port.events[:toggle_at], "no pre-toggle drain"
-    assert "read" in port.events[toggle_at + 1 :], "no post-toggle latch drain"
-    assert port.written == bytes([0x0C, 0x01])
+    toggle_at = port.events.index(_TOGGLE)
+    assert port.events[:toggle_at].count("read") >= 15, "did not catch up before the command"
+    assert "read" in port.events[toggle_at + 1 :], "no read after the command"
 
 
-def test_power_on_latch_zero_skips_the_post_toggle_drain() -> None:
-    """latch_s=0 hands the latch to the capture loop: no reads after the toggle."""
+def test_power_on_latch_zero_reads_nothing_after_the_command() -> None:
+    """latch_s=0 leaves the reads after the command to the capture loop."""
+    port = _StreamingPort(flowing=True)
+    session = _measuring_session(port)
+
+    session.power_on(latch_s=0.0)
+
+    assert "read" in port.events[: port.events.index(_TOGGLE)]
+    assert port.events[-1] == _TOGGLE
+
+
+def test_power_on_gives_up_catching_up_on_a_silent_port(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No byte arrives: the command is still sent, after the cap."""
+    monkeypatch.setattr("ppk2.client.session._CATCH_UP_CAP_S", 0.02)
+    port = _StreamingPort()
+    session = _measuring_session(port)
+
+    session.power_on(latch_s=0.0)
+
+    assert port.events[-1] == _TOGGLE
+
+
+def test_power_on_without_a_stream_sends_the_command_at_once() -> None:
     port = _StreamingPort()
     session = Session(cast("serial.Serial", port), _identity_coeffs())
 
     session.power_on(latch_s=0.0)
 
-    toggle = f"write:{bytes([0x0C, 0x01]).hex()}"
-    toggle_at = port.events.index(toggle)
-    assert "read" in port.events[:toggle_at]  # pre-drain still runs
-    assert "read" not in port.events[toggle_at + 1 :]
-    # The toggle is the last event: the capture loop takes over from here.
-    assert port.events[-1] == toggle
+    assert port.events == [_TOGGLE]
 
 
 def test_drop_pending_backlog_is_a_single_bounded_read() -> None:

@@ -92,7 +92,7 @@ On purpose, and outside what the comparisons above exercise:
   has the four points with their line references.
 - Where a capture starts. In the app you start the capture and enable
   power by hand. `ppk2 capture` does both, and its file begins about
-  0.1 s before the power comes up.
+  10 ms before the power comes up.
 
 And one comparison that has not been made: a `.ppk2` file written by
 this package has not yet been opened in the app.

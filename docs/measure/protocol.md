@@ -310,7 +310,7 @@ sequenceDiagram
     Host->>PPK2: REGULATOR_SET
     Host->>PPK2: AVERAGE_START
     PPK2-->>Host: sample words, 100,000 per second
-    Note over Host: wait 0.2 s, then read for 0.3 s
+    Note over Host: wait 0.2 s, then read until caught up
     Host->>PPK2: DEVICE_RUNNING_SET on
     Note over PPK2: the DUT is powered
 
@@ -345,7 +345,7 @@ The waits, and which of them the PPK2 really needs:
 |---|---|---|
 | 0.1 s after the first `AVERAGE_STOP` | Lets a stream that was left running end before the calibration is asked | Not measured without it |
 | 0.2 s after `AVERAGE_START` | `DEVICE_RUNNING_SET` sent sooner was once seen ignored | Not on the PPK2 measured |
-| Reading for 0.3 s before the power switch | The same, with the host not reading | Not on the PPK2 measured |
+| Reading until caught up with the stream, for 1.5 s at most, before the power switch | Otherwise a capture starts up to 0.1 s before power-on | Yes, on macOS |
 | Reading until 50 ms without a byte, for 0.5 s at most, at the end | Otherwise the end of the stream goes to the next program | Yes |
 | 0.5 s, then 1 s, between attempts to open | A port left stuck by a capture that ended badly | When that happens |
 
@@ -388,14 +388,21 @@ Measured on 2026-11-20 on one PPK2 under macOS:
 - `in_waiting` does not show this backlog: it reported 1 kB when 37 kB
   came back at once.
 
-`ppk2 capture` switches power 0.5 s after `AVERAGE_START`, while the
-host is still behind. In three 3 s captures the current rose 104 to
-109 ms into the file, and each file held 310,272 samples. The summary
-divides them by the 3 s, so it showed 103,200 to 103,400 Hz. Over 30 s
-the same excess would be 0.3 %.
+Reading from the instant `AVERAGE_START` is sent changes nothing: the
+samples arrive slowly at first, at about 170 kB/s for 0.3 s. Once level,
+the host stays about 6.5 ms behind, and the current rises about 1 ms
+after `DEVICE_RUNNING_SET` in the stream's own time.
+
+A power switch sent while the host is behind lands that far into the
+samples still to be read. Sent at 0.5 s, it put the rise of the current
+104 to 109 ms into a capture. `power_on` therefore reads first until
+the host has caught up: until it has read as many bytes as the PPK2
+has produced since `AVERAGE_START`, to within 10 ms. That takes until
+about 0.9 s after the start. In four captures made this way the current
+rose 9 to 11 ms into the file, and a 3 s capture held 301,056 samples.
 
 Timestamps come from the sample count, not from the clock, so the trace
-itself is exact. Only its start is early.
+itself is exact either way.
 
 ### Power follows the serial port
 

@@ -132,8 +132,8 @@ def capture(
                 return monotonic() < deadline
 
             # One-shot: drop the bytes the OS reports as waiting. The
-            # trace still starts about 0.1 s before power-on (Known
-            # caveats in docs/measure/protocol.md).
+            # trace starts about 10 ms before power-on (Known caveats
+            # in docs/measure/protocol.md).
             session.drop_pending_backlog()
             session.capture(emit, on_dataloss=on_dataloss)
             # Taken here: shutting the session down takes a tenth of a

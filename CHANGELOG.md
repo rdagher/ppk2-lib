@@ -49,8 +49,7 @@ versions.
 - Windows runs the unit tests but has not been tried on a bench, and
   `power on --hold` and Ctrl-C handling in `run` use POSIX calls.
 - Only the sampling mode of the PPK2 is covered, not its trigger mode.
-- A capture starts about 0.1 s before the DUT's power comes up, and
-  the rate in its summary reads high on short captures. The
+- A capture starts about 10 ms before the DUT's power comes up. The
   [protocol page](docs/measure/protocol.md#10-known-caveats) has
   the measurements.
 - `.ppk2` files follow the layout the app documents. Loading one in the

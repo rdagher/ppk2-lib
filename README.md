@@ -33,9 +33,10 @@ PPK2  serial=A1B2C3D4E5F6
 $ ppk2 capture --out boot.csv --seconds 3 --source --vdd 3.3
 opening session (Source meter mode, vdd=3300 mV)
 capturing 3.00 s -> boot.csv (Ctrl-C to stop early)
-  [  1.0s]      109569 samples  mean  867.30 µA
-  [  2.0s]      209921 samples  mean  786.57 µA
-captured 310272 samples over 3.01 s (103208 Hz)
+  [  1.0s]      100191 samples  mean  947.46 µA
+  [  2.0s]      199681 samples  mean  823.90 µA
+  [  3.0s]      300033 samples  mean  781.88 µA
+captured 301056 samples over 3.01 s (100099 Hz)
 ```
 
 This is Source meter mode: the PPK2 powers the device under test (DUT)
@@ -43,10 +44,8 @@ at 3.3 V. `boot.csv` has the same 11 columns as the app's export, and
 the DUT's boot is at the start of it. Without `--source` the PPK2 is in
 Ampere meter mode and measures a DUT that has its own supply.
 
-The file starts about 0.1 s before the power comes up, which is why the
-summary shows more than 100,000 samples per second. The
-[protocol page](docs/measure/protocol.md#10-known-caveats) has the
-measurements.
+The DUT is switched on as the capture starts: the current rises about
+10 ms into the file.
 
 A few more commands:
 

@@ -36,7 +36,7 @@ ppk2 convert trace.csv trace.ppk2                               # the same, from
 ```
 
 A capture switches the DUT on as it starts, so the boot is at the start
-of the file, about 0.1 s in. The CSV has the 11 columns of the app's
+of the file, about 10 ms in. The CSV has the 11 columns of the app's
 export,
 `Timestamp(ms),Current(uA),D0-D7,D0..D7`, with D0 the leftmost
 character of `D0-D7`, at 100,000 samples per second. In Ampere meter

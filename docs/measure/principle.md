@@ -274,7 +274,7 @@ involved, so rows are exactly 10 µs apart.
   samples: its firmware ignores `AVG_NUM_SET`. When the app shows fewer
   samples per second, it has averaged blocks of samples on the
   computer. `ppk2 capture` always writes the full rate.
-- A capture starts about 0.1 s before the DUT is powered. The
+- A capture starts about 10 ms before the DUT is powered. The
   [known caveats](protocol.md#10-known-caveats) explain why.
 
 ## Digital inputs

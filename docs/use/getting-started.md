@@ -139,22 +139,18 @@ In Source meter mode, with the PPK2 powering the DUT at 3.3 V:
 $ ppk2 capture --out first.csv --seconds 5 --source --vdd 3.3
 opening session (Source meter mode, vdd=3300 mV)
 capturing 5.00 s -> first.csv (Ctrl-C to stop early)
-  [  1.0s]      109569 samples  mean  868.11 µA
-  [  2.0s]      209921 samples  mean  786.69 µA
-  [  3.0s]      310273 samples  mean  758.06 µA
-  [  4.0s]      410625 samples  mean  743.30 µA
-captured 509952 samples over 5.00 s (101954 Hz)
+  [  1.0s]       99504 samples  mean  946.81 µA
+  [  2.0s]      199681 samples  mean  821.63 µA
+  [  3.0s]      300033 samples  mean  778.87 µA
+  [  4.0s]      400385 samples  mean  757.42 µA
+captured 500736 samples over 5.01 s (100035 Hz)
 ```
 
 Progress goes to the terminal and the samples go to the file. Ctrl-C
 stops early and keeps what was recorded.
 
 A capture switches the DUT on as it starts and off as it ends, so the
-boot is in the file. The file begins about 0.1 s before the power comes
-up, which is why this one holds 5.1 s of samples and the summary shows
-more than 100,000 Hz. The
-[known caveats](../measure/protocol.md#10-known-caveats) have the
-measurements.
+boot is in the file. The current rises about 10 ms into it.
 
 ## Read the file
 
@@ -164,7 +160,7 @@ The CSV has the 11 columns of the app's export, one row every 0.01 ms:
 Timestamp(ms),Current(uA),D0-D7,D0,D1,D2,D3,D4,D5,D6,D7
 0,0.000,00000000,0,0,0,0,0,0,0,0
 0.01,0.000,00000000,0,0,0,0,0,0,0,0
-0.02,0.000,00000000,0,0,0,0,0,0,0,0
+0.02,0.215,00000000,0,0,0,0,0,0,0,0
 ```
 
 A quick look with numpy:
@@ -178,8 +174,8 @@ print(f"mean {ua.mean():.2f} µA, max {ua.max():.0f} µA")
 ```
 
 ```text
-509952 samples over 5.10 s
-mean 735.02 µA, max 142873 µA
+500736 samples over 5.01 s
+mean 745.61 µA, max 176490 µA
 ```
 
 [File formats](../measure/formats.md) has the columns in detail.
@@ -191,10 +187,10 @@ saves and loads, and `ppk2 convert` makes one from a CSV:
 
 ```console
 $ ppk2 convert first.csv first.ppk2
-wrote first.ppk2: 509952 samples at 100000 S/s (5.10 s)
+wrote first.ppk2: 500736 samples at 100000 S/s (5.01 s)
 ```
 
-Here the CSV is 20.5 MB and the session file 0.7 MB.
+Here the CSV is 20.1 MB and the session file 0.7 MB.
 [File formats](../measure/formats.md#how-far-this-is-checked) says how
 far this format has been checked.
 

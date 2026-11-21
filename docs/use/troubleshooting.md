@@ -97,13 +97,6 @@ and the lost samples are marked, but they are missing from sums and
 means. Try another USB port or cable, without a hub, and close what
 else loads the machine.
 
-## A capture is a little longer than asked
-
-A capture of 3 s holds about 3.1 s of samples, and its summary shows
-more than 100,000 Hz. The file begins about 0.1 s before the DUT is
-powered. This is known, and explained under the
-[known caveats](../measure/protocol.md#10-known-caveats).
-
 ## `Calibrated: false`
 
 Not a fault. See

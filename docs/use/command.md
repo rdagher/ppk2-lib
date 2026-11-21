@@ -105,11 +105,11 @@ says what each line is, and why `Calibrated: false` is not a fault.
 $ ppk2 capture --out first.csv --seconds 5 --source --vdd 3.3
 opening session (Source meter mode, vdd=3300 mV)
 capturing 5.00 s -> first.csv (Ctrl-C to stop early)
-  [  1.0s]      109569 samples  mean  868.11 µA
-  [  2.0s]      209921 samples  mean  786.69 µA
-  [  3.0s]      310273 samples  mean  758.06 µA
-  [  4.0s]      410625 samples  mean  743.30 µA
-captured 509952 samples over 5.00 s (101954 Hz)
+  [  1.0s]       99504 samples  mean  946.81 µA
+  [  2.0s]      199681 samples  mean  821.63 µA
+  [  3.0s]      300033 samples  mean  778.87 µA
+  [  4.0s]      400385 samples  mean  757.42 µA
+captured 500736 samples over 5.01 s (100035 Hz)
 ```
 
 | Option | Default | Meaning |
@@ -121,9 +121,8 @@ captured 509952 samples over 5.00 s (101954 Hz)
 What to know about a capture:
 
 - It switches the DUT on as it starts and off as it ends, in both
-  modes, so the boot is in the file. The file begins about 0.1 s before
-  the power comes up; the
-  [known caveats](../measure/protocol.md#10-known-caveats) say why.
+  modes, so the boot is in the file. The current rises about 10 ms
+  into it.
 - Progress goes to the terminal once per second, the samples go to the
   file only.
 - Currents below 0.2 µA are written as 0, as the app does.
@@ -137,7 +136,7 @@ What to know about a capture:
 
 ```console
 $ ppk2 convert first.csv first.ppk2
-wrote first.ppk2: 509952 samples at 100000 S/s (5.10 s)
+wrote first.ppk2: 500736 samples at 100000 S/s (5.01 s)
 ```
 
 Turns a CSV capture, plain or gzipped, into a `.ppk2` session file. It

@@ -130,8 +130,8 @@ same between versions of the app.
 
 ### Size, and how it is written
 
-A capture of 5.1 s on the bench of this repository took 0.7 MB as a
-session file and 20.5 MB as a CSV. The file is compressed, so a noisier
+A capture of 5 s on the bench of this repository took 0.7 MB as a
+session file and 20.1 MB as a CSV. The file is compressed, so a noisier
 signal takes more.
 
 While a capture runs, the samples go to a file next to the output,

@@ -40,11 +40,11 @@ def test_cli_capture_emits_byte_format_identical_csv(tmp_path: Path) -> None:
         "CSV header drifted from the app's export format"
     )
 
-    # 100 kSPS for 2 s is 200 000 rows, plus the 0.1 s or so by which
-    # the host runs behind the stream when the capture starts
+    # 100 kSPS for 2 s is 200 000 rows. power_on catches up with the
+    # stream first, so the count is within 2 %
     # (docs/measure/protocol.md, Known caveats).
     n_rows = len(lines) - 1
-    assert 180_000 <= n_rows <= 220_000, f"unexpected row count: {n_rows}"
+    assert 196_000 <= n_rows <= 204_000, f"unexpected row count: {n_rows}"
 
     # Spot-check a non-header row: 11 comma-separated columns, D0-D7 string
     # is 8 chars wide, last 8 columns are 0 or 1.

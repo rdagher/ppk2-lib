@@ -13,7 +13,7 @@ The command and the import name are `ppk2`; the distribution is
 `ppk2-lib`. Three layers: `ppk2.protocol` (standard library only),
 `ppk2.client` (pyserial) and `ppk2.cli` (typer). Only one program can
 hold the PPK2: close Nordic's app before capturing. A capture switches
-the DUT on as it starts; the boot is about 0.1 s into the file. Power
+the DUT on as it starts; the boot is about 10 ms into the file. Power
 ends with the command; `ppk2 power on --hold` keeps it. The modes, the
 DUT and the digital inputs are named as in Nordic's app and user guide.
 

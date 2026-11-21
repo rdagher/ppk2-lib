@@ -127,7 +127,7 @@ sequenceDiagram
     Session->>PPK2: AVERAGE_START
     Note over Session: wait 200 ms
     Code->>Session: power_on()
-    Note over Session: read for 0.3 s
+    Note over Session: read until caught up with the stream
     Session->>PPK2: DEVICE_RUNNING_SET on
     Note over Session: read for latch_s, 1 s by default
 
