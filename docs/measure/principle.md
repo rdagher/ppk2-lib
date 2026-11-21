@@ -291,8 +291,8 @@ What it costs depends on what is measured:
   events without such a sample: about 41 µA. With the filter as it is:
   53 µA. With no filter: 130 µA.
 
-Compare the median with the mean when the result matters: the leaked
-samples move the mean and not the median.
+For events that repeat, trust the median of their charge and not the
+mean: the leaked samples move the mean and not the median.
 
 ## Noise floor
 
