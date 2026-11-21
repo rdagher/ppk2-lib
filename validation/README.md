@@ -60,7 +60,7 @@ starts in the cycle. Compare it level by level, as the
 - [`noise_floor_gui/`](evidence/noise_floor_gui/): open leads, no
   DUT. Checks the 0.2 µA floor.
 - [`trace_demo/`](evidence/trace_demo/README.md): a workload firmware
-  on two dev kits, with charge per marked region. Its captures and
+  on two dev kits, with current and charge per marked region. Its captures and
   its firmware are stored with it.
 
 For a new round, the [bench firmware](../tests/hil/bench-dut/) of the

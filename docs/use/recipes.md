@@ -43,7 +43,7 @@ An nRF chip stays in debug mode after it is flashed and draws about
 1 mA more until it is power-cycled. Measure with a fresh `ppk2 capture`,
 which power-cycles it, not inside the session that flashed.
 
-## Charge of a marked region
+## Current of a marked region
 
 You want to know what one piece of firmware costs, a sensor read or a
 radio transmission, and not the average over a whole capture. The PPK2
@@ -61,8 +61,10 @@ connected as in [getting started](getting-started.md#digital-inputs),
 and capture as usual. The `D0` column of the file is 1 exactly while
 the code ran.
 
-One sample lasts 10 µs, and its charge is its current times 10 µs. The
-charge of a region is the sum over its samples, in microcoulombs:
+The current of a region is the mean of its samples. One sample lasts
+10 µs, so the charge of a region is the sum of its samples times 10 µs,
+in microcoulombs. These are the figures the app shows for a selection:
+average, max, time and charge.
 
 ```python
 import pandas as pd
@@ -71,71 +73,71 @@ SAMPLE_S = 10e-6  # one sample lasts 10 µs
 
 df = pd.read_csv("trace.csv", dtype={"D0-D7": str})
 high = df["D0"] == 1
-pulse = (high & ~high.shift(fill_value=False)).cumsum()  # counts the rising edges
+region = (high & ~high.shift(fill_value=False)).cumsum()  # counts the rising edges
 
-pulses = df[high].groupby(pulse[high])["Current(uA)"].agg(["size", "mean", "sum"])
-pulses["duration_ms"] = pulses["size"] * SAMPLE_S * 1e3
-pulses["charge_uC"] = pulses["sum"] * SAMPLE_S  # µA × s = µC
-print(pulses[["duration_ms", "mean", "charge_uC"]].round(2))
+regions = df[high].groupby(region[high])["Current(uA)"].agg(["size", "mean", "max", "sum"])
+regions["duration_ms"] = regions["size"] * SAMPLE_S * 1e3
+regions["charge_uC"] = regions["sum"] * SAMPLE_S  # µA × s = µC
+print(regions[["duration_ms", "mean", "max", "charge_uC"]].round(2))
 ```
 
 On the bench firmware of this repository, which keeps the CPU busy for
 100 ms while D0 is high, the first rows are:
 
 ```text
-    duration_ms     mean  charge_uC
+    duration_ms     mean      max  charge_uC
 D0
-1         99.99  1380.27     138.01
-2         99.97  1381.59     138.12
-3         99.97  1380.31     137.99
-4        100.00  1381.19     138.12
+1         99.99  1380.27  2251.65     138.01
+2         99.97  1381.59  2394.14     138.12
+3         99.97  1380.31  2412.01     137.99
+4        100.00  1381.19  2309.45     138.12
 ```
 
-Over the 22 regions of that 5 s capture the charge stayed between
-137.76 and 138.12 µC.
+Over the 22 regions of that 5 s capture the mean current stayed between
+1377.86 and 1381.59 µA.
 
 Three things to watch:
 
 - A capture can start or end in the middle of a region. Drop the first
   and the last row if they are cut.
 - A lost sample is a row of 0.2 µA in the CSV, as in Nordic's app, so
-  it lowers the sum. The summary at the end of a capture says whether
-  any were lost.
-- This is a charge, not an energy. The PPK2 measures current only. An
-  energy is the charge times the voltage at the DUT, which you have to
-  know from elsewhere: the voltage you set in Source meter mode, or one
-  you measured in Ampere meter mode.
+  it lowers the mean and the sum. The summary at the end of a capture
+  says whether any were lost.
+- There is no energy here. The PPK2 measures current only. An energy
+  is the charge times the voltage at the DUT, which you have to know
+  from elsewhere: the voltage you set in Source meter mode, or one you
+  measured in Ampere meter mode.
 
 To get the numbers without a file, add up inside the capture callback:
 
 ```python
 from ppk2 import Mode, Session, find_ppk2
 
-SAMPLE_S = 10e-6  # one sample lasts 10 µs
 
-
-class RegionCharge:
-    """Adds up the charge of each D0-high region; stops after ``wanted`` regions."""
+class RegionCurrent:
+    """Averages the current of each D0-high region; stops after ``wanted`` regions."""
 
     def __init__(self, wanted: int) -> None:
         self.wanted = wanted
-        self.charges_uc: list[float] = []
+        self.means_ua: list[float] = []
         self._inside = False
         self._sum_ua = 0.0
+        self._count = 0
 
     def __call__(self, sample) -> bool:
         d0 = bool(sample.logic & 1)
         if d0 and not self._inside:
-            self._inside, self._sum_ua = True, 0.0
+            self._inside, self._sum_ua, self._count = True, 0.0, 0
         if self._inside and d0:
             self._sum_ua += sample.current_micro_amps
+            self._count += 1
         if self._inside and not d0:
             self._inside = False
-            self.charges_uc.append(self._sum_ua * SAMPLE_S)
-        return len(self.charges_uc) < self.wanted
+            self.means_ua.append(self._sum_ua / self._count)
+        return len(self.means_ua) < self.wanted
 
 
-regions = RegionCharge(wanted=10)
+regions = RegionCurrent(wanted=10)
 with Session.open(find_ppk2().device) as session:
     session.set_mode(Mode.AMPERE)
     session.set_source_voltage(3300)
@@ -143,12 +145,12 @@ with Session.open(find_ppk2().device) as session:
     session.power_on()
     session.capture(regions)
 
-mean = sum(regions.charges_uc) / len(regions.charges_uc)
-print(f"{len(regions.charges_uc)} regions, mean {mean:.2f} µC")
+mean = sum(regions.means_ua) / len(regions.means_ua)
+print(f"{len(regions.means_ua)} regions, mean current {mean:.2f} µA")
 ```
 
 ```text
-10 regions, mean 137.91 µC
+10 regions, mean current 1381.83 µA
 ```
 
 ## Long captures
@@ -223,4 +225,4 @@ Two more cautions:
   from one power cycle to the next. `--skip-initial-s` leaves it out.
 - The mean says how much, not how. For a workload made of bursts,
   mark them with a GPIO and compare
-  [region by region](#charge-of-a-marked-region).
+  [region by region](#current-of-a-marked-region).

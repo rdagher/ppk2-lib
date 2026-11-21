@@ -76,7 +76,8 @@ It passes when the headers are identical, the means are within 1 % and
 the KS statistic is below 0.05.
 
 For a firmware that marks its work with D0 and D1, a second script,
-`attribute.py`, computes the charge, the number and the width of the
+`attribute.py`, computes the current, the charge, the number and the
+width of the
 marked regions in each file.
 
 ### Why per region
@@ -93,11 +94,11 @@ instrument:
 - An idle current drifts over minutes. Two identical runs of one tool
   on an idle DUT at a few tens of µA differed by 2 to 3 %.
 
-So a round is judged region by region. Two things are compared: the
-charge of each marked region, which is its current added up over its
-duration, and the distribution of the current inside the workload and
-inside the idle. The comparison stays in charge and not in energy,
-because a PPK2 measures current only.
+So a round is judged region by region. For each marked region the
+mean current is compared, and the charge, which is that current added
+up over the region's duration. The distribution of the current inside
+the workload and inside the idle is compared as well. There is no
+energy in the comparison, because a PPK2 measures current only.
 
 ## A bench with a known signal
 

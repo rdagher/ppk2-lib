@@ -6,8 +6,8 @@ What the three levels of the [method](method.md) found.
 |---|---|---|
 | The parser, 600 samples | Every current equal to three decimals, every digital byte identical | The current code |
 | Noise floor, 60 s | Same header, same distribution (KS 0.0002) | The build of 2026-07-17 |
-| Workload on an nRF52840 DK | Charge per marked region within 0.31 % | The build of 2026-08-19 |
-| Workload on an nRF54LM20 DK | Charge per marked region within 0.03 % | The build of 2026-08-19 |
+| Workload on an nRF52840 DK | Current per marked region within 0.27 %, charge within 0.31 % | The build of 2026-08-19 |
+| Workload on an nRF54LM20 DK | Current per marked region within 0.05 %, charge within 0.03 % | The build of 2026-08-19 |
 | Ten hardware tests | All pass | The current code, 2026-11-20 |
 
 ## The parser
@@ -43,15 +43,20 @@ ten workloads.
 
 | | App | `ppk2 capture` | Difference |
 |---|---|---|---|
-| D0 workloads | 31 × 2,244.7 ± 1.4 µC, 596.96 ms | 31 × 2,238.5 ± 6.6 µC, 596.69 ms | 0.28 % |
-| D1 sweeps | 3 × 23,421 ± 13 µC, 7,470.81 ms | 3 × 23,348.8 ± 2.6 µC, 7,468.04 ms | 0.31 % |
+| D0 workloads | 31, 596.96 ms wide | 31, 596.69 ms wide | |
+| Current of a D0 workload | 3,760.2 ± 2.5 µA | 3,751 ± 11 µA | 0.23 % |
+| Charge of a D0 workload | 2,244.7 ± 1.4 µC | 2,238.5 ± 6.6 µC | 0.28 % |
+| D1 sweeps | 3, 7,470.81 ms wide | 3, 7,468.04 ms wide | |
+| Current of a D1 sweep | 3,135.1 ± 1.6 µA | 3,126.50 ± 0.70 µA | 0.27 % |
+| Charge of a D1 sweep | 23,421 ± 13 µC | 23,348.8 ± 2.6 µC | 0.31 % |
 | Pulses at boot | 3 | 3 | |
 | Idle mean | 646.01 µA | 636.86 µA | 1.4 % |
 
-Each cell gives the number of regions, the mean charge of a region
-± the standard deviation over those regions, and the mean width. The
-difference is that of the mean charges, `ppk2 capture` against the app,
-as a share of the app's.
+The current of a region is its mean current, and its charge is that
+current added up over its width. Each is given as the mean ± the
+standard deviation over the regions. The difference is that of the
+means, `ppk2 capture` against the app, as a share of the app's,
+computed before rounding.
 
 After the first 2.5 s, the KS statistic inside the workload is 0.0253,
 with means of 3,760.6 and 3,752.5 µA. At idle it is 0.1460: the idle
@@ -68,8 +73,12 @@ region.
 
 | | App | `ppk2 capture` | Difference |
 |---|---|---|---|
-| D0 workloads | 30 × 866.93 ± 0.73 µC, 599.71 ms | 31 × 867.2 ± 1.2 µC, 599.97 ms | 0.03 % |
-| D1 sweeps | 3 × 8,695.1 ± 4.6 µC, 7,497.86 ms | 3 × 8,693.5 ± 8.3 µC, 7,500.58 ms | 0.02 % |
+| D0 workloads | 30, 599.71 ms wide | 31, 599.97 ms wide | |
+| Current of a D0 workload | 1,445.6 ± 1.3 µA | 1,445.4 ± 1.9 µA | 0.01 % |
+| Charge of a D0 workload | 866.93 ± 0.73 µC | 867.2 ± 1.2 µC | 0.03 % |
+| D1 sweeps | 3, 7,497.86 ms wide | 3, 7,500.58 ms wide | |
+| Current of a D1 sweep | 1,159.67 ± 0.63 µA | 1,159.0 ± 1.1 µA | 0.05 % |
+| Charge of a D1 sweep | 8,695.1 ± 4.6 µC | 8,693.5 ± 8.3 µC | 0.02 % |
 | Idle median | 4.25 µA | 4.29 µA | |
 
 After the first 2.5 s, the KS statistic is 0.0065 inside the workload
@@ -126,7 +135,7 @@ From a checkout:
 # the parser against the stored reference
 just test
 
-# charge per marked region of a stored capture
+# current and charge per marked region of a stored capture
 python validation/evidence/trace_demo/firmware/attribute.py \
     validation/evidence/trace_demo/captures/nrf54lm20_ampere_cli.csv.gz
 

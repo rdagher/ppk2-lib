@@ -173,8 +173,10 @@ For a class with many methods, list the ones to show:
   place (GUM, JCGM 100:2008, 7.2).
 - A difference in percent says what is compared with what, and which
   one is the reference.
-- Charge, not energy. A PPK2 measures current, so what a capture gives
-  is a charge in µC. An energy needs a voltage the capture does not
+- Current first, then charge, and no energy. A PPK2 measures current,
+  which is also the word of Nordic's documentation, and the app shows
+  average, max, time and charge. Charge in µC follows from the current
+  with no assumption. An energy needs a voltage the capture does not
   contain. Say so where a reader might expect joules.
 
 ## Watch for

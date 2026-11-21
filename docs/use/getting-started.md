@@ -230,7 +230,7 @@ handling in `ppk2 run` use POSIX calls that Windows does not have.
 ## Next
 
 - [The `ppk2` command](command.md): every command and option.
-- [Recipes](recipes.md): flashing, the charge of a marked region, long
+- [Recipes](recipes.md): flashing, the current of a marked region, long
   captures, comparing two builds.
 - [Measurement principle](../measure/principle.md): what the numbers
   are.

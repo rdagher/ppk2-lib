@@ -25,7 +25,7 @@ Three parts: using it, how it measures, validation against Nordic's app.
 - [Introduction](docs/index.md): the three parts, what it is good for and what it is not for
 - [Getting started](docs/use/getting-started.md): install, the two wirings, the digital inputs, a first capture, reading the file
 - [The ppk2 command](docs/use/command.md): every command and option, exit codes, signals
-- [Recipes](docs/use/recipes.md): flashing a DUT powered by the PPK2, charge of a marked region, long captures, comparing two builds
+- [Recipes](docs/use/recipes.md): flashing a DUT powered by the PPK2, current of a marked region, long captures, comparing two builds
 - [Architecture](docs/use/architecture.md): the three layers, the life of a session, the capture callback, settings, threads, design choices
 - [API reference](docs/use/api.md): discovery, Session, stream parser, calibration, commands
 - [Troubleshooting](docs/use/troubleshooting.md): every error line and what to do
@@ -45,7 +45,7 @@ Three parts: using it, how it measures, validation against Nordic's app.
 ## Validation
 
 - [Comparison scripts](validation/README.md): statistics of two captures, and when the limits fit
-- [Workload round](validation/evidence/trace_demo/README.md): the app against `ppk2 capture` on two dev kits, charge per region
+- [Workload round](validation/evidence/trace_demo/README.md): the app against `ppk2 capture` on two dev kits, current and charge per region
 - [Noise-floor round](validation/evidence/noise_floor_gui/README.md): the 0.2 µA floor against the app
 
 ## Optional
