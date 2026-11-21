@@ -1,5 +1,5 @@
 /*
- * nRF54LM20 PPK2 bench-DUT.
+ * PPK2 bench DUT.
  *
  * Toggles two GPIOs at fixed rates so the PPK2's digital inputs see
  * a deterministic reference signal during HIL captures:

@@ -42,8 +42,8 @@ site/
 # Test fixtures (tiny, committed for reproducibility)
 !tests/fixtures/*.csv
 !tests/fixtures/*.bin
-# Committed reference captures (gzipped, lossless) for validation rounds
-!validation/evidence/*/captures/*.csv.gz
+# Committed captures of the validation round (compressed, lossless)
+!validation/evidence/*/captures/*.csv.xz
 
 # Firmware hex artefacts: built locally (`just hex`) or by the CI
 # firmware matrix. Never committed.

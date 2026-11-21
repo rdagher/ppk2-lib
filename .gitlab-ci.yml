@@ -80,7 +80,7 @@ prepare-ncs:
         rm -rf .ncs/downloads .ncs/tmp
       fi
 
-# One job per board, both apps; the hexes feed the HIL jobs.
+# One job per board; the hexes feed the HIL jobs.
 # pull-only cache: the env was frozen by prepare-ncs; nothing is
 # installed or re-uploaded here.
 firmware:
