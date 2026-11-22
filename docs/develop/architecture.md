@@ -1,7 +1,8 @@
 # Architecture
 
 This guide is for writing Python against the library. The rules for
-changing the library itself are in [`CONTRIBUTING.md`](https://github.com/rdagher/ppk2-lib/blob/main/CONTRIBUTING.md) at the root of the
+changing the library itself are in
+[`CONTRIBUTING.md`](https://github.com/rdagher/ppk2-lib/blob/main/CONTRIBUTING.md), at the root of the
 repository.
 
 The `ppk2` package has three layers. Each one uses only the layer below
@@ -77,37 +78,38 @@ objects.
 Five seconds, with the samples kept in a list:
 
 ```python
-from time import monotonic
-
 from ppk2 import Mode, Session, find_ppk2
 
 currents: list[float] = []
+
+
+def on_sample(sample) -> bool:
+    currents.append(sample.current_micro_amps)
+    return len(currents) < 500_000  # five seconds of samples
+
 
 with Session.open(find_ppk2().device) as session:
     session.set_mode(Mode.SOURCE)
     session.set_source_voltage(3300)  # the PPK2 supplies the DUT at 3.3 V
     session.start_measuring()
     session.power_on()
-    deadline = monotonic() + 5.0
-
-    def on_sample(sample) -> bool:
-        currents.append(sample.current_micro_amps)
-        return monotonic() < deadline
-
     session.capture(on_sample)
 
 print(f"{len(currents)} samples, mean {sum(currents) / len(currents):.2f} µA")
 ```
 
 ```text
-499713 samples, mean 752.08 µA
+500000 samples, mean 749.78 µA
 ```
 
 `capture` runs in the calling thread and calls your function for every
 sample. It stops when the function returns `False`. Leaving the `with`
-block stops the stream, switches the DUT (device under test) off and closes the port, also
-when the function raises. If the process is killed instead, the PPK2
-cuts power by itself when the port closes.
+block stops the stream, switches the device under test (DUT) off and
+closes the port, also when the function raises. If the process is
+killed instead, the PPK2 cuts power by itself when the port closes.
+
+The sample count is the clock here: 100,000 samples are one second,
+whatever the computer was doing meanwhile.
 
 ## Session lifecycle
 
@@ -157,16 +159,17 @@ stateDiagram-v2
     Streaming --> Closed: close
     Closed --> [*]
 
-    note left of Open
-        settings are accepted here:
-        mode, supply voltage, voltage limit,
-        user gain, spike filter
+        note left of Open
+        voltage limit, user gain and
+        spike filter are set here only
     end note
     note right of Streaming
-        power_on, power_off and capture
-        belong here
+        capture reads the stream
     end note
 ```
+
+The mode, the supply voltage and the power switch can be set in either
+state.
 
 Three details of this sequence are choices, not requirements of the
 PPK2:
@@ -200,7 +203,7 @@ def on_sample(sample: Sample) -> bool:
 
 `capture` calls your function for every sample and returns once it has
 answered `False`. A function that always answers `True` never comes
-back, so give it a way to stop: a deadline, or a number of samples.
+back, so give it a way to stop: a number of samples, or a deadline.
 
 Your function is not called again once it has answered `False`. The
 samples already read after that one are dropped.
@@ -220,8 +223,8 @@ block still closes the session.
 A lost sample arrives as a `Sample` whose current is NaN and whose
 `logic` is 0. It keeps its place, so the count of samples still gives
 the time. The files `ppk2` writes record it as 0.2 µA instead, as
-Nordic's app does. To be told as it happens, pass `on_dataloss`. It is called
-with the total so far, at most once per read:
+Nordic's app does. To be told as it happens, pass `on_dataloss`. It is
+called with the total so far, at most once per read:
 
 ```python
 def on_dataloss(total: int) -> None:
@@ -323,13 +326,19 @@ samples: queue.Queue = queue.Queue(maxsize=10_000)
 stop = threading.Event()
 
 
+def on_sample(sample) -> bool:
+    samples.put(sample)
+    return not stop.is_set()
+
+
 def producer() -> None:
     with Session.open(find_ppk2().device) as session:
-        session.set_mode(Mode.AMPERE)
+        session.set_mode(Mode.SOURCE)
         session.set_source_voltage(3300)
         session.start_measuring()
         session.power_on()
-        session.capture(lambda sample: (samples.put(sample), not stop.is_set())[-1])
+        session.capture(on_sample)
+
 
 
 thread = threading.Thread(target=producer)
