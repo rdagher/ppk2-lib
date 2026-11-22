@@ -10,7 +10,7 @@ code of this release.
 | Captures in Source meter mode | Current and charge per marked region within 0.04 % of the app's | 2026-11-21 |
 | The 0.2 µA floor | No value between 0 and 0.2 µA, in either tool | 2026-11-21 |
 | A `.ppk2` file opened in the app | Loads; average, maximum and charge of a 10 s window equal to those of the CSV | 2026-11-21 |
-| Ten hardware tests | All pass, in both modes | 2026-11-21 |
+| Ten hardware tests | All pass, in both modes | 2026-11-21, and in Source meter mode on 2026-11-22 |
 
 ## Parser
 
@@ -117,8 +117,12 @@ what `ppk2` writes. The two files are not in the repository: the CSV is
 
 ## Hardware tests
 
-All ten pass in both modes, at 3.3 V on an nRF54LM20 DK. They were
-last run on 2026-11-21, on the code of the captures above.
+All ten pass in both modes, at 3.3 V on an nRF54LM20 DK. They were run
+in both modes on 2026-11-21, on the code of the captures above. The
+capture loop and the error handling changed after that, at commit
+`ffde0b6`; the ten were run again on it on 2026-11-22, in Source meter
+mode. The parser and the calibration, which the captures above check,
+did not change.
 
 One more check was made by hand: a running capture was frozen for 3 s,
 which makes the computer lose samples. Three such captures recovered,
