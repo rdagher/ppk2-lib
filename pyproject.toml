@@ -33,6 +33,7 @@ ppk2 = "ppk2.cli.main:main"
 
 [project.urls]
 Homepage = "https://github.com/rdagher/ppk2-lib"
+Documentation = "https://rdagher.github.io/ppk2-lib/"
 Repository = "https://github.com/rdagher/ppk2-lib"
 Issues = "https://github.com/rdagher/ppk2-lib/issues"
 

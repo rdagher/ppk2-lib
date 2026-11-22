@@ -86,8 +86,10 @@ returns `False`.
 
 ## Documentation
 
-The documentation is in [`docs/`](docs/index.md) and builds into a site
-with `just docs`. It has four parts.
+The documentation is published at
+<https://rdagher.github.io/ppk2-lib/>. Its source is in
+[`docs/`](docs/index.md), and `just docs` builds the site locally. It
+has four parts.
 
 | Part | Pages |
 |---|---|
