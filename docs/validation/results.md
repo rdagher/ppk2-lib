@@ -63,10 +63,10 @@ The app's capture was taken between two of `ppk2 capture`.
 | Difference from the app, D1 current and charge | | 0.09 % | 0.11 % |
 | KS statistic against the app | | 0.0037 | 0.0032 |
 
-A D1 region lasts one second, so its charge in µC has the figures of
-its current in µA. The two captures of `ppk2 capture` differ from each
-other by 0.05 % on the D0 current. So the difference from the app is of the size of the
-bench's own drift over four minutes.
+A D1 region lasts one second, so its charge in µC is, to rounding, its
+current in µA. The two captures of `ppk2 capture` differ from each
+other by 0.05 % on the D0 current. So the difference from the app is
+of the size of the bench's own drift over four minutes.
 
 ![Both captures in Ampere meter mode, overlaid from power-on, and the distribution of the current](../img/parity_ampere.png)
 
@@ -150,7 +150,7 @@ On purpose, and outside what the comparisons above exercise:
   sample as 0.2 µA.
 - Where a capture starts. In the app you start the capture and enable
   power by hand. `ppk2 capture` does both, and its file begins about
-    10 ms before the power comes up.
+  10 ms before the power comes up.
 
 ## Limitations
 
