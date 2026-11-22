@@ -1,8 +1,9 @@
 # File formats
 
-`ppk2` writes the two formats of the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html): the CSV the
-app exports, and the `.ppk2` session file it saves and loads. A name
-ending in `.ppk2` gives a session file, any other name a CSV.
+`ppk2` writes the two formats of the
+[Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html): the CSV the app exports, and the `.ppk2`
+session file it saves and loads. A name ending in `.ppk2` gives a
+session file, any other name a CSV.
 
 ## CSV
 
@@ -10,16 +11,19 @@ ending in `.ppk2` gives a session file, any other name a CSV.
 sample rate, to the character: the same 11 columns, the same way of
 writing timestamps, the same digital columns.
 
+The header and three rows of a capture of the
+[validation](../validation/results.md), where D0 rises:
+
 ```csv
 Timestamp(ms),Current(uA),D0-D7,D0,D1,D2,D3,D4,D5,D6,D7
-0,3.451,00000000,0,0,0,0,0,0,0,0
-0.01,3.221,00000000,0,0,0,0,0,0,0,0
-0.02,3.598,10000000,1,0,0,0,0,0,0,0
+1057.78,64.940,00000000,0,0,0,0,0,0,0,0
+1057.79,78.143,00000000,0,0,0,0,0,0,0,0
+1057.8,81.985,10000000,1,0,0,0,0,0,0,0
 ```
 
 | Column | Content |
 |---|---|
-| `Timestamp(ms)` | Milliseconds from the first sample. Trailing zeros are removed: `0`, `0.01`, `0.1`, `10`, `1000` |
+| `Timestamp(ms)` | Milliseconds from the first sample. Trailing zeros are removed: `0`, `0.01`, `0.1`, `1057.8`, `1000` |
 | `Current(uA)` | Microamperes, three decimals, after the spike filter |
 | `D0-D7` | The eight digital inputs as eight characters, D0 first: `10000000` is D0 high and the others low |
 | `D0` to `D7` | The same inputs, one column each, `0` or `1` |
@@ -134,8 +138,8 @@ the figures computed from the CSV of the same capture, and D0 and D1
 toggled as in the CSV. The
 [results](../validation/results.md#session-file) have the table.
 
-This is one file on one version of the app. Nordic gives no guarantee
-that the format stays the same between versions.
+This is one file on one version of the app. A later version of the app
+may change the format.
 
 ### Size and write procedure
 
@@ -148,8 +152,8 @@ named after it with `.frames` added, 6 bytes per sample. At the end the
 session file is built from it and put in place in one step. If that
 fails, the `.frames` file stays, and an earlier session file of the
 same name is left untouched. A later run to the same name refuses to
-start while that `.frames` file is there, so that it is not lost. A capture without a single sample writes
-no file.
+start while that `.frames` file is there, so that it is not lost. A
+capture without a single sample writes no file.
 
 ## Lost samples
 
@@ -159,13 +163,13 @@ with its digital inputs low, to keep the time axis right. `ppk2`
 writes the same in both formats, so a file made here and one saved by
 the app treat a loss alike.
 
-That value is made up. Each lost sample pulls a sum or a mean towards
-0.2 µA: losing 1 % of the samples of a 1 mA trace lowers its mean by
+That value is a stand-in, not a reading. Each lost sample pulls a sum
+or a mean towards 0.2 µA: losing 1 % of the samples of a 1 mA trace lowers its mean by
 about 1 %. Nothing in the file tells such a row from a real reading of
 0.2 µA. What tells you is the capture itself: it warns once 500 samples
 are lost and gives the total at the end. The mean it prints leaves the
 lost samples out.
 
-In the library a lost sample is not disguised. It arrives as a `Sample`
+In the library a lost sample stays distinct. It arrives as a `Sample`
 whose current is NaN, as the
 [architecture page](../develop/architecture.md#capture-callback) shows.

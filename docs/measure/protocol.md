@@ -18,20 +18,22 @@ covers two things:
 | | [9. Session sequence](#9-session-sequence) |
 | | [10. Known caveats](#10-known-caveats) |
 
-The code is in [`src/ppk2/protocol/`](https://github.com/rdagher/ppk2-lib/tree/main/src/ppk2/protocol) for the bytes and in
-[`src/ppk2/client/session.py`](https://github.com/rdagher/ppk2-lib/blob/main/src/ppk2/client/session.py) for the order of things. The file formats
-`ppk2` writes are not part of the protocol; they are under
-[file formats](formats.md).
+The code is in
+[`src/ppk2/protocol/`](https://github.com/rdagher/ppk2-lib/tree/main/src/ppk2/protocol)
+for the bytes and in
+[`src/ppk2/client/session.py`](https://github.com/rdagher/ppk2-lib/blob/main/src/ppk2/client/session.py)
+for the order of things. The file formats `ppk2` writes are not part of
+the protocol; they are under [file formats](formats.md).
 
 ## 1. The device
 
 A PPK2 shows up as two USB serial ports with the same USB serial
-number, VID:PID `1915:c00a`. Only one of them, the data port, carries
+number, VID:PID `1915:C00A`. Only one of them, the data port, carries
 the samples and answers commands. The other opens and stays silent.
 Their order is not fixed, so discovery finds the data port by asking
 each one for its calibration.
 
-- The baud rate does not matter over USB. This package sets 115200
+- The baud rate does not matter over USB. This package sets `115200`
   because [pyserial](https://pyserial.readthedocs.io/) wants a number.
 - After plugging in, both ports can take 1 to 3 seconds to appear.
   Discovery polls for up to 3 s.
@@ -46,7 +48,8 @@ What the PPK2 does, in short:
   `AVERAGE_STOP`, whether or not anyone reads them.
 - It keeps its supply voltage and its mode when the computer
   disconnects.
-- It cuts power to the DUT when the serial port closes.
+- It cuts power to the device under test (DUT) when the serial port
+  closes.
 
 ## 2. Commands
 
@@ -56,7 +59,7 @@ A command is one byte, followed by its payload if it has one.
 |---|---|---|---|
 | `0x06` | `AVERAGE_START` | none | Start the stream, 100,000 samples per second |
 | `0x07` | `AVERAGE_STOP` | none | Stop the stream |
-| `0x0C` | `DEVICE_RUNNING_SET` | 1 byte: `0` off, `1` on | Power to the device under test (DUT). The app's Enable power output |
+| `0x0C` | `DEVICE_RUNNING_SET` | 1 byte: `0` off, `1` on | Power to the DUT. The app's Enable power output |
 | `0x0D` | `REGULATOR_SET` | 2 bytes: millivolts, high byte first | Supply voltage in Source meter mode, 800 to 5,000 mV |
 | `0x11` | `SET_POWER_MODE` | 1 byte: `1` Ampere meter, `2` Source meter | Choose the mode |
 | `0x15` | `SPIKE_FILTERING_ON` | none | Not sent, by the app or by this package |
@@ -86,15 +89,16 @@ Only `GET_METADATA` has an answer. The other commands are not
 acknowledged: the way to know that one took effect is to look at what
 follows, the stream or the next calibration text.
 
-Nordic's source also lists commands for a trigger mode (`TRIGGER_*`,
-`SWITCH_POINT_*`, `LCD_SET`, `RANGE_SET`). This package does not use
+Nordic's source lists more commands, among them `TRIGGER_*`,
+`SWITCH_POINT_*`, `LCD_SET` and `RANGE_SET`. This package does not use
 them.
 
 ## 3. Calibration text
 
 `GET_METADATA` returns about 1 kB of `key: value` lines that end with
 the word `END`. Each range has its own key for each coefficient. From
-[`tests/fixtures/metadata.raw`](https://github.com/rdagher/ppk2-lib/blob/main/tests/fixtures/metadata.raw), shortened:
+[`tests/fixtures/metadata.raw`](https://github.com/rdagher/ppk2-lib/blob/main/tests/fixtures/metadata.raw),
+shortened:
 
 ```text
 Calibrated: 0
@@ -125,9 +129,9 @@ in several pieces. Then:
 5. A missing calibration key is an error (`MissingField`), and so is a
    value that is not a number or is infinite (`InvalidValue`). A blank
    slot, which the firmware prints as `-nan`, takes the value Nordic's
-   app assumes for it. That is the nominal resistance for `R` (1031.64,
-   101.65, 10.15, 0.94, 0.043 Ω), 1 for the gains and 0 for the
-   offsets. A literal 0 is kept as it is, where the app would use its
+   app assumes for it. That is the nominal resistance for `R`
+   (1,031.64, 101.65, 10.15, 0.94 and 0.043 Ω), 1 for the gains and 0
+   for the offsets. A literal 0 is kept as it is, where the app would use its
    default. Unknown keys are ignored.
 
 `VDD` and `mode` are not calibration. They are the settings the PPK2
@@ -166,9 +170,9 @@ Bit 0 is the least significant bit of the first byte received.
 | `COUNTER` | 18 to 23 | Goes up by one per sample, modulo 64 |
 | `LOGIC` | 24 to 31 | The eight digital inputs. Bit 0 is D0 |
 
-The stream numbers the ranges 0 to 4. The app and the [PPK2 user guide](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html)
-number them 1 to 5: range 4 here is their range 5, which the user
-guide gives as 50 mA to 1 A.
+The stream numbers the ranges 0 to 4. The app and the
+[PPK2 user guide](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html) number them 1 to 5: range 4 here is their
+range 5, which the user guide gives as 50 mA to 1 A.
 
 `ppk2.protocol.decode_sample` extracts the fields.
 
@@ -227,18 +231,20 @@ eight words in a row follow one another. The gap is filled with
 placeholders, the spike filter starts afresh, and parsing resumes
 there.
 
-A capture frozen for 3 s on the bench lost its place in this way: without the search, 79 % of what followed was marked lost and
-the mean read 840 mA. With it, three such captures marked 18 to 34
-samples lost and went on normally.
+A capture frozen for 3 s on the bench lost its place in this way.
+Without the search, 79 % of what followed was marked lost and the mean
+read 840 mA. With it, three such captures marked 18 to 34 samples lost
+and went on normally.
 
-Two limits follow from the counter having 6 bits:
+The counter has 6 bits, in this package as in Nordic's app. Two limits
+follow from that:
 
 - A loss of exactly 64 samples, or a multiple of 64, cannot be seen
   while the alignment holds: the counter has come back to the same
   value.
 - A longer loss is counted modulo 64, so the trace comes out shorter
-  than the time it covers. The summary of a capture shows it as a
-  sample rate below 100,000 Hz.
+  than the time it covers. A capture then takes longer than its
+  samples account for, and warns that its stream rate is low.
 
 ### Differences from Nordic's app
 
@@ -305,9 +311,9 @@ The PPK2 keeps its mode and its supply voltage when the computer
 disconnects, and reports both in the next calibration text.
 
 This package sends the mode before it starts the stream, and Nordic's
-app does not let the mode change while it samples. Earlier notes said
-that the firmware ignores a mode change during a stream. On the PPK2
-measured here it did not: the change was applied.
+app does not let the mode change while it samples. On the PPK2 measured
+here, a mode change sent during a stream was applied all the same.
+Nothing in this package relies on that.
 
 ## 9. Session sequence
 
@@ -438,8 +444,7 @@ samples still to be read. Sent at 0.5 s, it put the rise of the current
 the host has caught up: until 0.35 s have passed and it has read as
 many bytes as the PPK2 has produced since `AVERAGE_START`, to within
 10 ms. That takes until about 0.9 s after the start. In seven captures
-made this way the current rose 9 to 11 ms into the file, and a 3 s
-capture held 301,056 samples.
+made this way the current rose 9 to 11 ms into the file.
 
 Timestamps come from the sample count, not from the clock, so the trace
 itself is exact either way.
@@ -459,28 +464,28 @@ package sends it in two places, and waits for the device to come back
 both times: on a second handshake attempt, and in discovery's
 last-resort probe (`probe_port_recover`).
 
-### Stuck port on macOS
+### Stuck port
 
 After a capture that ended badly, the next open can time out on the
-calibration. `Session.open` tries three times, 0.5 s and then 1 s
-apart. If that fails, unplug the PPK2 and plug it back. Right after a
-killed process, the driver can also refuse to open the port for a
-second or two.
+calibration. This was seen on macOS, the only system tried.
+`Session.open` tries three times, 0.5 s and then 1 s apart. If that
+fails, unplug the PPK2 and plug it back. Right after a killed process,
+the driver can also refuse to open the port for a second or two.
 
-### Abandoned precautions
+### Precautions that are not needed
 
-Earlier versions waited 200 ms after `AVERAGE_START` before switching
-power, switched power only while a stream ran, and kept reading for a
-second after the switch. The rules came from notes that a command had
-been ignored. Nordic's app follows none of them, and none is needed on
-the PPK2 measured, on 2026-11-20 and 2026-11-21:
+Three precautions can be met in code that drives a PPK2: waiting 200 ms
+after `AVERAGE_START` before switching power, switching power only
+while a stream runs, and reading on for a second after the switch.
+Nordic's app follows none of them, and none was needed on the PPK2
+measured, on 2026-11-20 and 2026-11-21:
 
-- The power switch is applied with no stream at all. `ppk2 power` no
-  longer starts one.
+- The power switch is applied with no stream at all. `ppk2 power`
+  starts none.
 - It is applied with the host not reading.
 - Sent right after `AVERAGE_START` it is not ignored but held for
-  0.31 s, as described above. That delay is probably what the old
-  notes saw.
+  0.31 s, as described above. That delay can be taken for a command
+  that was ignored.
 
 ### Ignored commands
 
@@ -488,33 +493,31 @@ the PPK2 measured, on 2026-11-20 and 2026-11-21:
 sample-rate setting thins the data on the host. `SET_USER_GAINS` is
 accepted and ignored too. On 2026-11-21 a gain of 1.10 was written to
 all five ranges: the `UG` values the PPK2 reports stayed at 1.0, and
-the mean current moved by 0.18 % where 10 % was asked for. Nordic's app does send it, and also
-applies the gain itself to every sample, which is what takes effect.
+the mean current moved by 0.18 % where 10 % was asked for. Nordic's app
+does send it, and also applies the gain itself to every sample, which
+is what takes effect.
 `Session.set_user_gain` applies the gain on the host and sends nothing.
 
-### Counter width
 
-Nordic's app masks the counter with 6 bits, and so does this package. A parser
-that ignores the counter cannot tell when it has lost its place in the
-stream.
 
 ### First-generation PPK
 
 It has other USB IDs and another protocol. This package only accepts
-`1915:c00a`.
+`1915:C00A`.
 
 ## 11. References
 
-- Nordic's [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html),
+- The source of Nordic's [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html),
   [`pc-nrfconnect-ppk`](https://github.com/nordicsemi/pc-nrfconnect-ppk),
   read at commit `63ae4b7` and checked again at v4.4.1. The files that
   matter:
-  [`src/constants.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/constants.ts) for the commands,
-  [`src/device/serialDevice.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts) for
-  the calibration, the sample word, the stream and the spike filter,
-  and
+  [`src/constants.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/constants.ts)
+  for the commands,
+  [`src/device/serialDevice.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts)
+  for the calibration, the sample word, the stream and the spike
+  filter, and
   [`src/actions/deviceActions.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/actions/deviceActions.ts)
   for the order of a session.
-- Nordic's PPK2 user guide, for the measurement ranges.
+- Nordic's [PPK2 user guide](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html), for the measurement ranges.
 
 No code from the app is in this package.
