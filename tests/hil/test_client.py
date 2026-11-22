@@ -186,7 +186,7 @@ def test_dut_is_unpowered_after_the_session_ends() -> None:
 
     The witness is a second session that starts the stream without
     switching power: a DUT that kept its power would still draw
-    current (the bench firmware idles above 10 µA).
+    current (the bench firmware draws about 700 µA on average).
     """
     port = find_ppk2()
     with Session.open(port.device) as session:
