@@ -51,6 +51,7 @@ def measure(name: str) -> dict[str, object]:
         "q0": [p.charge_uc for p in d0],
         "n1": len(d1),
         "i1": [p.charge_uc / p.duration_s for p in d1],
+        "q1": [p.charge_uc for p in d1],
         "idle": statistics.median(idle),
         "zeros": float(np.mean(currents == 0.0) * 100),
         "below_floor": int(np.sum((currents > 0.0) & (currents < 0.2))),
@@ -85,6 +86,7 @@ def main() -> None:
             ("charge of a D0 region, µC", lambda m: mean_sd(m["q0"])),
             ("D1 regions", lambda m: str(m["n1"])),
             ("current of a D1 region, µA", lambda m: mean_sd(m["i1"])),
+            ("charge of a D1 region, µC", lambda m: mean_sd(m["q1"])),
             ("idle median, µA", lambda m: f"{m['idle']:.2f}"),
             ("samples at zero, %", lambda m: f"{m['zeros']:.3f}"),
             ("between 0 and 0.2 µA", lambda m: str(m["below_floor"])),
@@ -93,7 +95,12 @@ def main() -> None:
         )
         for label, cell in rows:
             print(f"{label:28}{cell(app):>20}{cell(first):>20}{cell(second):>20}")
-        for label, key in (("D0 current", "i0"), ("D0 charge", "q0"), ("D1 current", "i1")):
+        for label, key in (
+            ("D0 current", "i0"),
+            ("D0 charge", "q0"),
+            ("D1 current", "i1"),
+            ("D1 charge", "q1"),
+        ):
             print(
                 f"difference from the app, {label}: capture 1 {percent(first[key], app[key])}, "
                 f"capture 2 {percent(second[key], app[key])}; "
