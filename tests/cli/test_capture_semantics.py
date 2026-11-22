@@ -258,3 +258,16 @@ def test_a_duration_that_is_not_one_is_refused_before_anything_is_opened(
     out.write_text("earlier capture\n", encoding="utf-8")
     assert dispatch(["capture", "-o", str(out), f"--seconds={seconds}"]) == 2
     assert out.read_text(encoding="utf-8") == "earlier capture\n"
+
+
+@pytest.mark.parametrize("vdd", ["nan", "inf"])
+def test_a_vdd_that_is_not_a_number_is_refused_before_the_ppk2_is_looked_for(
+    vdd: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    def no_device(_serial: str | None, _port: str | None) -> str:
+        raise AssertionError("the device must not be looked for")
+
+    monkeypatch.setattr(capture_module, "resolve_device", no_device)
+    assert dispatch(["capture", "-o", str(tmp_path / "x.csv"), f"--vdd={vdd}"]) == 2

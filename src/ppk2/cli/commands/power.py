@@ -26,8 +26,8 @@ def power(
     source: bool,
 ) -> None:
     """Open a session, switch the power, optionally block until SIGINT, then close."""
-    device = resolve_device(serial, port)
     mv = vdd_to_mv(vdd)
+    device = resolve_device(serial, port)
     mode = Mode.SOURCE if source else Mode.AMPERE
 
     # SIGTERM/SIGHUP -> SystemExit so a kill still cuts the power and

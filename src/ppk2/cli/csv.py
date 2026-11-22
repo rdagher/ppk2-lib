@@ -10,7 +10,10 @@
 - The ``D0``..``D7`` columns repeat each bit as 0 or 1.
 """
 
+from math import isfinite
 from typing import TextIO
+
+import typer
 
 from ppk2.client.session import VOLTAGE_LIMIT_HARDWARE_MAX_MV, VOLTAGE_LIMIT_HARDWARE_MIN_MV
 
@@ -54,5 +57,11 @@ def write_csv_row(out: TextIO, t_ms: float, current_ua: float, logic: int) -> No
 
 
 def vdd_to_mv(vdd: float) -> int:
-    """Convert ``--vdd`` volts to millivolts, kept within the regulator's 800 to 5,000 mV."""
+    """Convert ``--vdd`` volts to millivolts, kept within the regulator's 800 to 5,000 mV.
+
+    Raises:
+        typer.BadParameter: If ``vdd`` is not a finite number.
+    """
+    if not isfinite(vdd):
+        raise typer.BadParameter(f"{vdd} is not a voltage", param_hint="--vdd")
     return max(VOLTAGE_LIMIT_HARDWARE_MIN_MV, min(VOLTAGE_LIMIT_HARDWARE_MAX_MV, round(vdd * 1000)))

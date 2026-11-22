@@ -36,8 +36,8 @@ def run(
         typer.echo("ppk2: run requires a command after `--`", err=True)
         return 2
 
-    device = resolve_device(serial, port)
     mv = vdd_to_mv(vdd)
+    device = resolve_device(serial, port)
     mode = Mode.SOURCE if source else Mode.AMPERE
 
     sys.stderr.write(f"opening session ({MODE_LABELS[mode]} mode, vdd={mv} mV)\n")

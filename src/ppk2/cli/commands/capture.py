@@ -54,8 +54,8 @@ def capture(
             f"{seconds} is not a duration: give at least one sample, 0.00001 s",
             param_hint="--seconds",
         )
-    device = resolve_device(serial, port)
     mv = vdd_to_mv(vdd)
+    device = resolve_device(serial, port)
     mode = Mode.SOURCE if source else Mode.AMPERE
 
     sys.stderr.write(f"opening session ({MODE_LABELS[mode]} mode, vdd={mv} mV)\n")
