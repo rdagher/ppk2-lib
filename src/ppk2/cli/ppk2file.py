@@ -13,6 +13,7 @@ format", and its source at v4.4.1):
 Nordic gives no guarantee that the format stays the same.
 """
 
+import errno
 import json
 import struct
 import sys
@@ -116,6 +117,14 @@ class Ppk2FileWriter:
         self._rate = samples_per_second
         # Frames go to a scratch file first, so the zip knows its size up front.
         self._frames_path = path.with_name(path.name + ".frames")
+        if self._frames_path.exists():
+            # What a run that failed left behind is all that is left of
+            # it: not overwritten.
+            raise FileExistsError(
+                errno.EEXIST,
+                "left by a run that did not finish: move or delete it",
+                str(self._frames_path),
+            )
         self._raw = self._frames_path.open("wb")
         self._minimap = _Minimap()
         self._closed = False

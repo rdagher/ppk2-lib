@@ -160,3 +160,13 @@ def test_discard_writes_nothing(tmp_path: Path) -> None:
     writer.discard()
 
     assert list(tmp_path.iterdir()) == []
+
+
+def test_frames_left_by_a_failed_run_are_not_overwritten(tmp_path: Path) -> None:
+    """The scratch file of a run that did not finish is all that is left of it."""
+    out = tmp_path / "t.ppk2"
+    left = tmp_path / "t.ppk2.frames"
+    left.write_bytes(b"frames of an earlier run")
+    with pytest.raises(FileExistsError, match="did not finish"):
+        Ppk2FileWriter(out)
+    assert left.read_bytes() == b"frames of an earlier run"
