@@ -49,6 +49,10 @@ ci-hil: ci test-hw
 plots:
     uv run --group validation python validation/evidence/bench_dut/make_plots.py
 
+# Record the README's terminal recording again (needs vhs and the bench).
+demo:
+    vhs tests/hil/quickstart.tape
+
 # Compare two CSV captures and write a Markdown report (no hardware).
 compare-cli a b:
     uv run --group validation python -m validation.compare_cli {{a}} {{b}}

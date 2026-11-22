@@ -133,6 +133,9 @@ something done.
   `Mode.AMPERE`, that one line was changed for the run.
 - Output shown under a command is real output. If you describe the
   form of a message instead, use placeholders such as `<count>`.
+- The recording at the top of the README is made by `just demo` on
+  the bench. No test can check it: record it again when the output of
+  `ppk2 capture` or `ppk2 convert` changes.
 - Use fenced blocks with a language: `sh`, `console` for a command with
   its output, `python`, `text`, `csv`.
 

@@ -8,6 +8,8 @@ without the Power Profiler app.
 This is an experimental release (0.1.0). It works and is checked on
 hardware, but the API may still change between 0.x versions.
 
+![A capture from a terminal: three seconds recorded to a CSV file, then converted to a file for the app](docs/img/quickstart.gif)
+
 ## Installation
 
 ```sh
