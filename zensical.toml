@@ -9,6 +9,7 @@ site_description = "A Python library and command-line tool for Nordic's Power Pr
 site_url = "https://rdagher.github.io/ppk2-lib/"
 repo_url = "https://github.com/rdagher/ppk2-lib"
 repo_name = "rdagher/ppk2-lib"
+extra_css = ["stylesheets/extra.css"]
 nav = [
   { "Introduction" = "index.md" },
   { "User guide" = [

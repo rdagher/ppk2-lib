@@ -1,0 +1,7 @@
+/* The plots are drawn on white. In the dark scheme they are shown
+   inverted, with the hues turned back, so that they sit on the page
+   instead of glaring. Recordings of a terminal are left as they are. */
+[data-md-color-scheme="slate"] .md-typeset img[src$=".png"] {
+  filter: invert(0.88) hue-rotate(180deg);
+  border-radius: 4px;
+}
