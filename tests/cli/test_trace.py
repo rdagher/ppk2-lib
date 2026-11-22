@@ -15,7 +15,7 @@ def test_csv_rows_are_stamped_from_the_sample_index(tmp_path: Path) -> None:
         trace.add(nan, 0b11)  # a lost sample: 0.2 µA and inputs low, as in the app
         trace.add(2.0, 0b10)
 
-    assert out.read_text().splitlines() == [
+    assert out.read_text(encoding="utf-8").splitlines() == [
         CSV_HEADER,
         "0,1.000,10000000,1,0,0,0,0,0,0,0",
         "0.01,0.200,00000000,0,0,0,0,0,0,0,0",

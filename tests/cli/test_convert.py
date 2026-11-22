@@ -138,7 +138,7 @@ def test_a_failed_conversion_keeps_an_earlier_file(tmp_path: Path) -> None:
     write_csv(src, [(0.0, 1.0, 0), (0.01, 2.0, 0)])
     convert(src, dst)
     earlier = dst.read_bytes()
-    src.write_text(f"{CSV_HEADER}\n0,1.0,0\n0.01,not-a-number,0\n")
+    src.write_text(f"{CSV_HEADER}\n0,1.0,0\n0.01,not-a-number,0\n", encoding="utf-8")
 
     with pytest.raises(typer.Exit):
         convert(src, dst)

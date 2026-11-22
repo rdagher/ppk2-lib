@@ -84,6 +84,9 @@ addopts = [
     "--strict-markers",
     "--strict-config",
 ]
+# A text file opened without an encoding reads differently on Windows.
+# CI sets PYTHONWARNDEFAULTENCODING, which makes Python warn about it.
+filterwarnings = ["error::EncodingWarning"]
 
 [tool.pyright]
 include = ["src", "tests"]

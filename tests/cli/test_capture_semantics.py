@@ -132,7 +132,7 @@ def test_zero_samples_exits_1_with_mode_power_diagnostic(
     captured = capsys.readouterr()
     assert code == 1
     assert "error: no samples captured: check the PPK2 mode and the DUT's power" in captured.err
-    assert out.read_text().splitlines() == [CSV_HEADER]
+    assert out.read_text(encoding="utf-8").splitlines() == [CSV_HEADER]
 
 
 def test_a_silent_ppk2_ends_at_the_deadline_with_the_diagnostic(
@@ -157,7 +157,7 @@ def test_a_capture_ends_on_the_samples_that_seconds_asks_for(
     _install(monkeypatch, _FakeSession(samples=[_REAL] * 50))
     out = tmp_path / "ten.csv"
     assert dispatch(["capture", "-o", str(out), "-s", "0.0001"]) == 0
-    assert len(out.read_text().splitlines()) == 1 + 10
+    assert len(out.read_text(encoding="utf-8").splitlines()) == 1 + 10
 
 
 def test_low_realized_rate_prints_dropped_samples_watchdog(
@@ -185,7 +185,7 @@ def test_clean_short_capture_exits_0_without_watchdog(
     captured = capsys.readouterr()
     assert code == 0
     assert "WARNING: stream rate" not in captured.err  # wall < 0.5 s -> no watchdog
-    assert len(out.read_text().splitlines()) == 1 + 10  # header + rows
+    assert len(out.read_text(encoding="utf-8").splitlines()) == 1 + 10  # header + rows
 
 
 def test_lost_samples_are_rows_of_0_2_ua_and_are_counted(
@@ -198,7 +198,7 @@ def test_lost_samples_are_rows_of_0_2_ua_and_are_counted(
     code = dispatch(["capture", "-o", str(out), "-s", "30"])
     captured = capsys.readouterr()
     assert code == 0
-    rows = out.read_text().splitlines()[1:]
+    rows = out.read_text(encoding="utf-8").splitlines()[1:]
     assert len(rows) == 5
     assert [r.split(",")[1] for r in rows].count("0.200") == 3
     assert "3 data-loss placeholder samples" in captured.err
@@ -216,7 +216,7 @@ def test_ctrl_c_flushes_csv_prints_interrupted_and_exits_130(
     assert code == 130
     assert "interrupted: CSV flushed" in captured.err
     # The partial CSV is valid: header + the one pre-interrupt row.
-    assert len(out.read_text().splitlines()) == 1 + 1
+    assert len(out.read_text(encoding="utf-8").splitlines()) == 1 + 1
 
 
 def test_ppk2_output_records_a_lost_sample_as_0_2_ua(

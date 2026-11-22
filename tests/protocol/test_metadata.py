@@ -20,7 +20,7 @@ _HAS_FIXTURE = METADATA_RAW.exists() and METADATA_PARSED_JSON.exists()
 def _load_fixture() -> tuple[bytes, CalibrationCoefficients]:
     """The raw calibration text, and what Nordic's parser read from it."""
     raw = METADATA_RAW.read_bytes()
-    ref = json.loads(METADATA_PARSED_JSON.read_text())
+    ref = json.loads(METADATA_PARSED_JSON.read_text(encoding="utf-8"))
     coeffs = CalibrationCoefficients(
         calibrated=bool(ref["calibrated"]),
         r=tuple(ref["R"]),

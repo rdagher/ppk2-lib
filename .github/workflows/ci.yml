@@ -29,6 +29,7 @@ concurrency:
 # key, install, and build paths all derive from it, so a bump can't
 # leave a stale key pointing at an old SDK.
 env:
+  PYTHONWARNDEFAULTENCODING: "1"   # with pytest's filter: no text file opened without an encoding
   UV_LOCKED: "1"
   NCS_VERSION: v3.3.1
 

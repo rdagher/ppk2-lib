@@ -35,7 +35,7 @@ def test_cli_capture_emits_byte_format_identical_csv(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, f"ppk2 capture failed: {result.returncode}"
 
-    lines = out.read_text().splitlines()
+    lines = out.read_text(encoding="utf-8").splitlines()
     assert lines[0] == ("Timestamp(ms),Current(uA),D0-D7,D0,D1,D2,D3,D4,D5,D6,D7"), (
         "CSV header drifted from the app's export format"
     )
@@ -59,7 +59,7 @@ def test_cli_capture_logic_bits_track_d0_d7_string(tmp_path: Path) -> None:
     """The 8-char D0-D7 string must match the per-pin columns row by row."""
     out = tmp_path / "cap.csv"
     subprocess.run([*_PPK2, "capture", *_MODE, "--out", str(out), "--seconds", "1"], check=True)
-    lines = out.read_text().splitlines()[1:]
+    lines = out.read_text(encoding="utf-8").splitlines()[1:]
     for raw in lines[:5000]:  # sample the first 5 000 rows; 1 s @ 100 kSPS = 100 000 rows total
         cols = raw.split(",")
         bits_from_string = list(cols[2])

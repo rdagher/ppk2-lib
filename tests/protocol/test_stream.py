@@ -33,7 +33,7 @@ def test_stream_parser_matches_nordic_on_a_captured_stream() -> None:
     The stream is a DUT power-on: all five measurement ranges, nine range changes,
     so the calibration of each range and the spike filter are compared.
     """
-    rows = [line.split(",") for line in PARSED_CSV.read_text().splitlines()[1:]]
+    rows = [line.split(",") for line in PARSED_CSV.read_text(encoding="utf-8").splitlines()[1:]]
     expected_ua = [float(row[1]) for row in rows]
     expected_logic = [int(row[2]) for row in rows]
 

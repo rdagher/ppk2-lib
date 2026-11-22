@@ -106,7 +106,7 @@ def main() -> int:
         skip_initial_s=args.skip_initial_s,
         mean_tolerance_pct=args.mean_tolerance_pct,
     )
-    report_path.write_text(report)
+    report_path.write_text(report, encoding="utf-8")
     sys.stderr.write(f"\ncross_validate: wrote report to {report_path}\n")
 
     verdict = verdict_from_report(report)

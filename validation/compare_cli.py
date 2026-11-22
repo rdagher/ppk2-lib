@@ -240,7 +240,7 @@ def main() -> int:
     )
 
     if args.out:
-        args.out.write_text(report)
+        args.out.write_text(report, encoding="utf-8")
         sys.stderr.write(f"compare_cli: wrote report to {args.out}\n")
     else:
         sys.stdout.write(report)

@@ -93,7 +93,7 @@ def _default(help_text: str, option: str) -> str:
 
 @pytest.mark.parametrize("page", PAGES, ids=_name)
 def test_python_names_on_the_page_exist(page: Path) -> None:
-    text = page.read_text()
+    text = page.read_text(encoding="utf-8")
     for dotted in sorted(set(_DOTTED.findall(text))):
         obj: object = ppk2
         parts = dotted.split(".")
@@ -111,7 +111,7 @@ def test_python_names_on_the_page_exist(page: Path) -> None:
 
 @pytest.mark.parametrize("page", PAGES, ids=_name)
 def test_options_used_on_the_page_exist(page: Path, helps: dict[str, str]) -> None:
-    for command, rest in _INVOCATION.findall(page.read_text()):
+    for command, rest in _INVOCATION.findall(page.read_text(encoding="utf-8")):
         # Stop at the child command of `ppk2 run -- ...` and at a comment.
         used = rest.split(" -- ")[0].split("#")[0]
         unknown = set(_OPTION.findall(used)) - _options(helps[command]) - {"--help"}
@@ -119,7 +119,7 @@ def test_options_used_on_the_page_exist(page: Path, helps: dict[str, str]) -> No
 
 
 def test_shared_options_table_names_the_right_commands(helps: dict[str, str]) -> None:
-    text = (DOCS / "user/command.md").read_text()
+    text = (DOCS / "user/command.md").read_text(encoding="utf-8")
     rows = re.findall(r"(?m)^\| `(--[a-z-]+)[^`]*` \| [^|]+ \| ((?:`\w+`(?:, )?)+) \|", text)
     assert [option for option, _ in rows] == ["--serial", "--port", "--vdd", "--source"]
     for option, accepted in rows:
@@ -129,7 +129,7 @@ def test_shared_options_table_names_the_right_commands(helps: dict[str, str]) ->
 
 
 def test_option_defaults_in_the_tables_are_the_real_ones(helps: dict[str, str]) -> None:
-    text = (DOCS / "user/command.md").read_text()
+    text = (DOCS / "user/command.md").read_text(encoding="utf-8")
     rows = re.findall(r"(?m)^\| `(--[a-z-]+)[^|]*\| ([^|]+?) \|", text)
     assert len(rows) >= 7
     for option, cell in rows:
@@ -145,7 +145,7 @@ def test_option_defaults_in_the_tables_are_the_real_ones(helps: dict[str, str]) 
 
 
 def test_command_table_matches_opcode() -> None:
-    text = (DOCS / "measure/protocol.md").read_text()
+    text = (DOCS / "measure/protocol.md").read_text(encoding="utf-8")
     rows = re.findall(r"(?m)^\| `(0x[0-9A-Fa-f]{2})` \| `([A-Z_]+)` \|", text)
     assert len(rows) >= 11
     for byte, name in rows:
@@ -156,7 +156,7 @@ def test_command_table_matches_opcode() -> None:
 
 
 def test_spike_filter_defaults_on_the_page() -> None:
-    text = (DOCS / "measure/principle.md").read_text()
+    text = (DOCS / "measure/principle.md").read_text(encoding="utf-8")
     for name, value in (
         ("samples", DEFAULT_SPIKE_FILTER_SAMPLES),
         ("alpha", DEFAULT_SPIKE_FILTER_ALPHA),
@@ -167,7 +167,7 @@ def test_spike_filter_defaults_on_the_page() -> None:
 
 def test_worked_calibration_example_is_what_the_formula_gives() -> None:
     coeffs = parse_metadata((ROOT / "tests/fixtures/metadata.raw").read_bytes())
-    text = (DOCS / "measure/principle.md").read_text()
+    text = (DOCS / "measure/principle.md").read_text(encoding="utf-8")
     assert f"uA = {current_micro_amps(151, 0, 3300, coeffs)!r}" in text
 
 
@@ -185,13 +185,13 @@ def test_plots_on_the_site_are_the_ones_the_script_wrote() -> None:
 
 
 def test_error_lines_quoted_for_troubleshooting_are_the_real_ones() -> None:
-    page = (DOCS / "user/troubleshooting.md").read_text()
+    page = (DOCS / "user/troubleshooting.md").read_text(encoding="utf-8")
     assert str(NotFound()) in page
     assert str(DataPortNotFound(("a",))).split(":")[0] in page
     assert str(Ambiguous(2)) in page
     assert str(HandshakeFailed(3, "x")).split(";")[0] in page
 
-    cli = "".join(p.read_text() for p in (ROOT / "src/ppk2/cli").rglob("*.py"))
+    cli = "".join(p.read_text(encoding="utf-8") for p in (ROOT / "src/ppk2/cli").rglob("*.py"))
     for literal in (
         "no samples captured: check the PPK2 mode and the DUT's power",
         "close the nRF Connect Power Profiler, or whatever else holds the port",
@@ -208,7 +208,7 @@ def _fixture_examples() -> list[tuple[str, str, str]]:
     """Python examples that read only ``tests/fixtures``, each with the output shown under it."""
     found: list[tuple[str, str, str]] = []
     for page in PAGES:
-        blocks: list[tuple[str, str]] = _FENCE.findall(page.read_text())
+        blocks: list[tuple[str, str]] = _FENCE.findall(page.read_text(encoding="utf-8"))
         for (lang, code), (next_lang, shown) in pairwise(blocks):
             if lang == "python" and "tests/fixtures" in code and next_lang == "text":
                 found.append((_name(page), code, shown))
