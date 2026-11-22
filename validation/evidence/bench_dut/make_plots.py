@@ -30,11 +30,30 @@ MODES = (
 LABELS = (("app", "Power Profiler app"), ("ppk2_1", "ppk2 capture"))
 
 
-def ecdf(ax: plt.Axes, samples: np.ndarray, label: str) -> None:
-    """Plot the empirical CDF of ``samples``, thinned to 20,000 points."""
+def ecdf(ax: plt.Axes, samples: np.ndarray, label: str, *, as_markers: bool) -> None:
+    """Plot the empirical CDF of ``samples``, thinned to 20,000 points.
+
+    The two captures lie on each other, so one is a line and the other
+    25 open markers, evenly spaced along the distribution.
+    """
     xs = np.sort(samples)
     xs = xs[:: max(1, len(xs) // 20_000)]
-    ax.plot(xs, np.arange(len(xs)) / len(xs), label=label, linewidth=1.2)
+    ys = np.arange(len(xs)) / len(xs)
+    if as_markers:
+        ax.plot(
+            xs,
+            ys,
+            label=label,
+            linestyle="none",
+            marker="o",
+            markersize=6,
+            markerfacecolor="none",
+            markeredgewidth=1.2,
+            markevery=max(1, len(xs) // 25),
+            color="C1",
+        )
+    else:
+        ax.plot(xs, ys, label=label, linewidth=1.6, color="C0")
 
 
 LEAK_UA = 20_000  # a sample above this at a wake-up is one the spike filter left in
@@ -109,8 +128,8 @@ def main() -> None:
             # From power-on, 3 s, one point in ten.
             shown = np.maximum(ua[:300_000:10], 0.1)
             ax_t.plot(np.arange(len(shown)) / 10_000, shown, label=label, linewidth=0.6, alpha=0.75)
-            ecdf(ax_h, ua[SKIP:][d0[SKIP:]], label)
-            ecdf(ax_l, ua[SKIP:][~d0[SKIP:]], label)
+            ecdf(ax_h, ua[SKIP:][d0[SKIP:]], label, as_markers=name != "app")
+            ecdf(ax_l, ua[SKIP:][~d0[SKIP:]], label, as_markers=name != "app")
         ax_t.set_yscale("log")
         ax_t.set_xlabel("time since power-on (s)")
         ax_t.set_ylabel("current (µA, log)")
