@@ -11,9 +11,11 @@ before relying on them.
 ## Rules
 
 - Only one program can hold the PPK2. If Nordic's Power Profiler app is
-  open, captures fail with `DataPortNotFound`. Close the app first.
-- Begin with `ppk2 list`. It shows each PPK2's USB serial and whether
-  each port is `data`, `idle` or `busy`.
+  open, a command fails with `error: could not identify the PPK2 data
+  port` (`DataPortNotFound` from the library). Close the app first.
+- Begin with `ppk2 list`. It shows each PPK2's USB serial and marks
+  each port `[data port]`, `[idle]` or `[busy: ...]`. Add
+  `--mask-serial` when the output goes into a screenshot or a report.
 - Exit codes: 1 for a device or session error with a one-line message,
   2 for a usage error, 130 after Ctrl-C. `ppk2 run` returns the
   command's code (127 not found, 128+N killed by signal N).
@@ -41,6 +43,14 @@ export,
 `Timestamp(ms),Current(uA),D0-D7,D0..D7`, with D0 the leftmost
 character of `D0-D7`, at 100,000 samples per second. In Ampere meter
 mode `--vdd` feeds the calibration: give the DUT's real supply voltage.
+
+A lost sample is a row of 0.2 µA with the digital inputs low, as in the
+app's export. The summary line at the end of a capture counts them.
+
+When a DUT wakes from sleep, the PPK2 can read tens of mA too high for
+40 µs. For short events that repeat, compare the median of their
+charge, not the mean
+([Principle](../../../docs/measure/principle.md#limit-waking-from-sleep)).
 
 Digital inputs: on the logic port, D0 to D7 to GPIOs, `GND` to the
 DUT's ground, `VCC` to the DUT's VDD.
@@ -97,3 +107,6 @@ just cross-validate BIN_A BIN_B     # capture with two binaries, then compare
 
 It passes when the headers are identical, the means are within 1 % and
 the KS statistic is below 0.05.
+
+The captures of the validation are not on `main`: `just captures`
+fetches them from the branch `captures`.

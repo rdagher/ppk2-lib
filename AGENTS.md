@@ -15,4 +15,6 @@ and units, and what `tests/test_docs.py` verifies.
 - The captures of the validation are on the branch `captures`, not on
   `main`. `just captures` puts them in
   `validation/evidence/bench_dut/captures/`, where git ignores them.
+- [.claude/skills/ppk2/SKILL.md](.claude/skills/ppk2/SKILL.md) is the
+  procedure for driving a PPK2 with this package.
 - [llms.txt](llms.txt) is the map of the documentation.
