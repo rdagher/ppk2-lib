@@ -10,6 +10,7 @@ site_url = "https://rdagher.github.io/ppk2-lib/"
 repo_url = "https://github.com/rdagher/ppk2-lib"
 repo_name = "rdagher/ppk2-lib"
 extra_css = ["stylesheets/extra.css"]
+extra_javascript = ["javascripts/diagram-zoom.js"]
 nav = [
   { "Introduction" = "index.md" },
   { "User guide" = [
@@ -34,9 +35,9 @@ nav = [
 ]
 
 [project.theme]
-# The classic variant is the look of Material for MkDocs. No web fonts:
-# the site uses the reader's system fonts and loads nothing from outside.
-variant = "classic"
+# No web fonts: the site uses the reader's system fonts. The one thing
+# loaded from outside is the Mermaid library, on pages with a diagram.
+variant = "modern"
 font = false
 features = [
   "content.code.copy",
