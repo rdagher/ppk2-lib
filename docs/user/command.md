@@ -61,6 +61,10 @@ One block per PPK2. `[data port]` is the port that answers, `[idle]`
 the other one. `[busy: held by another process?]` means the port could
 not be opened: close the program that holds it.
 
+`--mask-serial` prints only the last four characters of each serial
+number, in the port paths too. It is meant for a screenshot or a
+recording; the masked paths are not usable as `--port`.
+
 The exit code is 0 when every PPK2 has its data port identified, and 1
 otherwise. With no PPK2 attached it prints `no PPK2 found`. When a data
 port could not be identified it says so under that PPK2.

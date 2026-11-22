@@ -11,6 +11,8 @@ versions.
 
 - `ppk2 list`, `discover` and `metadata` find a PPK2 and show its
   calibration.
+- `ppk2 list --mask-serial` hides all but the last four characters of
+  each serial number, for a screenshot or a recording.
 - `ppk2 capture` records current and digital inputs in Ampere meter or
   Source meter mode, to the 11-column CSV that Nordic's Power Profiler
   app exports, or to a session file in the app's `.ppk2` format.

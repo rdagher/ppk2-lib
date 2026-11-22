@@ -84,9 +84,14 @@ def discover(serial: _SerialOption = None, port: _PortOption = None) -> None:
 
 
 @app.command("list")
-def list_() -> None:
+def list_(
+    mask_serial: Annotated[
+        bool,
+        typer.Option("--mask-serial", help="Print only the last four characters of each serial."),
+    ] = False,
+) -> None:
     """List connected PPK2s and mark each serial port: data port, idle or busy."""
-    _list_devices.list_devices()
+    _list_devices.list_devices(mask_serial)
 
 
 @app.command()

@@ -12,12 +12,16 @@ _STATUS_TAGS: dict[PortStatus, str] = {
 }
 
 
-def list_devices() -> None:
+def list_devices(mask_serial: bool = False) -> None:
     """Print one block per physical PPK2 with each port's probe status.
 
     Exit code 0 when every enumerated device has an identified data
     port; 1 when none is plugged in or when a device's data port could
     not be identified (typically because another process holds it).
+
+    With ``mask_serial`` only the last four characters of each serial
+    number are printed, in the port paths too: for a screenshot or a
+    recording.
     """
     devices = list_ppk2s()
     if not devices:
@@ -25,9 +29,12 @@ def list_devices() -> None:
         raise typer.Exit(code=1)
     unidentified = False
     for dev in devices:
-        typer.echo(f"PPK2  serial={dev.usb_serial}")
+        serial = dev.usb_serial
+        masked = "*" * (len(serial) - 4) + serial[-4:] if mask_serial else serial
+        typer.echo(f"PPK2  serial={masked}")
         for path in dev.ports:
-            typer.echo(f"  {path}   {_STATUS_TAGS[dev.statuses[path]]}")
+            shown = path.replace(serial, masked) if serial else path
+            typer.echo(f"  {shown}   {_STATUS_TAGS[dev.statuses[path]]}")
         if dev.data_port is None:
             unidentified = True
             typer.echo(

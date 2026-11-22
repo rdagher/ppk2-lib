@@ -38,6 +38,27 @@ def test_list_prints_one_block_per_device_with_status_tags(
     assert "/dev/cu.usbmodemA1B2C3D4E5F64   [idle]" in result.output
 
 
+def test_list_mask_serial_keeps_the_last_four_characters(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_listings(
+        monkeypatch,
+        [
+            Ppk2Listing(
+                usb_serial="A1B2C3D4E5F6",
+                ports=("/dev/cu.usbmodemA1B2C3D4E5F62",),
+                data_port="/dev/cu.usbmodemA1B2C3D4E5F62",
+                statuses={"/dev/cu.usbmodemA1B2C3D4E5F62": "data"},
+            )
+        ],
+    )
+    result = runner.invoke(app, ["list", "--mask-serial"])
+    assert result.exit_code == 0
+    assert "PPK2  serial=********E5F6" in result.output
+    assert "/dev/cu.usbmodem********E5F62   [data port]" in result.output
+    assert "A1B2C3D4" not in result.output
+
+
 def test_list_flags_busy_port_and_exits_1_when_data_port_unidentified(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
