@@ -9,6 +9,23 @@ from.
 The setup, the tables and the plots are on the results page. What the
 scripts print from these captures is in `summary.txt`.
 
+## Captures
+
+The six captures weigh 42 MB, so they are kept on the branch `captures`
+of this repository, at commit `1f7d123`, and installing the package
+does not download them. To put them in `captures/`:
+
+```sh
+just captures
+```
+
+or, without just, from the root of the repository:
+
+```sh
+git fetch origin captures
+git archive FETCH_HEAD '*.csv.xz' | tar -x -C validation/evidence/bench_dut/captures
+```
+
 ## Files
 
 | File | Content |
@@ -20,6 +37,8 @@ scripts print from these captures is in `summary.txt`.
 | `make_plots.py`, `plots/` | The script that draws the plots, and the plots. `wakeup.png` shows two wake-ups, one with readings the spike filter left in |
 
 ## Reproduction
+
+With the captures in place:
 
 ```sh
 uv run --group validation python validation/evidence/bench_dut/summary.py

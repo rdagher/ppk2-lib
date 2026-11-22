@@ -42,8 +42,9 @@ site/
 # Test fixtures (tiny, committed for reproducibility)
 !tests/fixtures/*.csv
 !tests/fixtures/*.bin
-# Committed captures of the validation round (compressed, lossless)
-!validation/evidence/*/captures/*.csv.xz
+# The captures of the validation round live on the branch `captures`;
+# `just captures` puts them here.
+/validation/evidence/*/captures/*.csv.xz
 
 # Firmware hex artefacts: built locally (`just hex`) or by the CI
 # firmware matrix. Never committed.

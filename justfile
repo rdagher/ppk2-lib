@@ -44,6 +44,12 @@ ci-hil: ci test-hw
 
 # ─── Validation (port-agnostic A/B captures) ───────────────────
 
+# Put the captures of the branch `captures` in the evidence folder (42 MB).
+captures:
+    git rev-parse -q --verify refs/heads/captures >/dev/null || git fetch origin captures:captures
+    mkdir -p validation/evidence/bench_dut/captures
+    git archive refs/heads/captures '*.csv.xz' | tar -x -C validation/evidence/bench_dut/captures
+
 # Redraw the validation plots from the stored captures (no hardware).
 # `git status` is clean afterwards if the plots are up to date.
 plots:

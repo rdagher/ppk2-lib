@@ -59,7 +59,7 @@ starts in the cycle. Compare it level by level, as the
 
 - [`bench_dut/`](evidence/bench_dut/README.md): the round of this
   release. The app against `ppk2 capture` in both modes on an
-  nRF54LM20 DK, with the six captures, the versions used, and the
+  nRF54LM20 DK, with the way to the six captures, the versions used, and the
   scripts that print the tables and draw the plots.
 
 Its DUT runs the [bench firmware](../tests/hil/bench-dut/) of the

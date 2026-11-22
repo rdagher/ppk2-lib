@@ -162,7 +162,10 @@ From a checkout:
 # the parser against the stored reference
 just test
 
-# the tables above, from the six stored captures
+# the six captures, from the branch `captures` of the repository (42 MB)
+just captures
+
+# the tables above, from those captures
 uv run --group validation python validation/evidence/bench_dut/summary.py
 
 # the plots above

@@ -81,9 +81,10 @@ regions["charge_uC"] = regions["sum"] * SAMPLE_S  # µA × s = µC
 print(regions[["duration_ms", "mean", "max", "charge_uC"]].round(2))
 ```
 
-On `validation/evidence/bench_dut/captures/source_ppk2_1.csv.xz`, a
-capture of the bench firmware of this repository, which keeps the CPU
-busy for 100 ms while D0 is high, the first rows are:
+On `source_ppk2_1.csv.xz`, a capture of the
+[validation](../validation/results.md#reproducing-the-results) of the bench
+firmware of this repository, which keeps the CPU busy for 100 ms while
+D0 is high, the first rows are:
 
 ```text
     duration_ms     mean      max  charge_uC
