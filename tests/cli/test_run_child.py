@@ -1,6 +1,11 @@
 """``ppk2 run`` child-handling tests: real child processes, no PPK2 involved."""
 
+import signal
+import subprocess
 import sys
+import textwrap
+import time
+from pathlib import Path
 
 import pytest
 
@@ -47,3 +52,30 @@ def test_signal_killed_child_maps_to_128_plus_n() -> None:
     """
     self_kill = "import os, signal; os.kill(os.getpid(), signal.SIGTERM)"
     assert spawn_and_wait([sys.executable, "-c", self_kill]) == 143
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals only")
+def test_a_terminated_wrapper_takes_its_child_with_it(tmp_path: Path) -> None:
+    """SIGTERM to the wrapper (CI cancellation): the child must not outlive it.
+
+    The child would write a file after two seconds. The wrapper is
+    terminated before that, and the file must never appear.
+    """
+    late = tmp_path / "late"
+    child = f"import time, pathlib; time.sleep(2); pathlib.Path({str(late)!r}).write_text('x')"
+    wrapper = textwrap.dedent(f"""
+        import sys
+        from ppk2.cli.commands.run import spawn_and_wait
+        from ppk2.cli.signals import signals_to_systemexit
+        with signals_to_systemexit("SIGTERM"):
+            print("ready", flush=True)
+            spawn_and_wait([sys.executable, "-c", {child!r}])
+    """)
+    proc = subprocess.Popen([sys.executable, "-c", wrapper], stdout=subprocess.PIPE)
+    assert proc.stdout is not None
+    assert proc.stdout.readline().strip() == b"ready"
+    time.sleep(0.3)  # the child is up
+    proc.send_signal(signal.SIGTERM)
+    assert proc.wait(timeout=10) == 143
+    time.sleep(2.5)
+    assert not late.exists()

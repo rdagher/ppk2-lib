@@ -16,6 +16,9 @@ from ppk2.cli.csv import noise_floor, vdd_to_mv
 from ppk2.cli.signals import signals_to_systemexit
 from ppk2.cli.trace import TraceFile
 
+#: How long a child gets to end after SIGTERM before it is killed.
+_CHILD_GRACE_S = 5.0
+
 
 def run(
     serial: str | None,
@@ -84,7 +87,7 @@ def run(
 
 
 def spawn_and_wait(cmd: list[str]) -> int:
-    """Run ``cmd`` in its own session, forward Ctrl-C, return its exit code.
+    """Run ``cmd`` in its own session, forward signals, return its exit code.
 
     In its own process group the child does not get the terminal's
     Ctrl-C: this wrapper does, forwards ``SIGINT`` to the child's group,
@@ -93,7 +96,9 @@ def spawn_and_wait(cmd: list[str]) -> int:
     shutdown.
 
     A missing executable returns 127 and a signal-killed child
-    ``128 + N``, as a shell would.
+    ``128 + N``, as a shell would. When this wrapper is terminated
+    (``SystemExit`` from SIGTERM or SIGHUP), the child's group gets
+    SIGTERM, then SIGKILL after ``_CHILD_GRACE_S``.
     """
     try:
         proc = subprocess.Popen(cmd, start_new_session=True)
@@ -107,6 +112,18 @@ def spawn_and_wait(cmd: list[str]) -> int:
         with suppress(ProcessLookupError):
             os.killpg(os.getpgid(proc.pid), signal.SIGINT)
         return _shell_exit_code(proc.wait())
+    except SystemExit:
+        # SIGTERM or SIGHUP to this wrapper: the child must not outlive
+        # the power it runs on.
+        with suppress(ProcessLookupError):
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        try:
+            proc.wait(timeout=_CHILD_GRACE_S)
+        except subprocess.TimeoutExpired:
+            with suppress(ProcessLookupError):
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            proc.wait()
+        raise
 
 
 def _shell_exit_code(returncode: int) -> int:
