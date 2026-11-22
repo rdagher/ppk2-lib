@@ -24,11 +24,11 @@ uv tool install "git+https://github.com/rdagher/ppk2-lib"
 uvx --from "git+https://github.com/rdagher/ppk2-lib" ppk2 list
 ```
 
-You need Python 3.11 or newer. The unit tests run on Linux, macOS and
-Windows with Python 3.11 and 3.13. The hardware tests have only run on
-macOS 26, so Windows and Linux are untested on a bench. On Windows,
-`ppk2 power on --hold` and Ctrl-C handling in `ppk2 run` use POSIX
-calls that Windows does not have.
+You need Python 3.11 or newer. The package runs on Linux, macOS and
+Windows: its unit tests pass on the three, with Python 3.11 and 3.13.
+The tests that need a PPK2 on a bench have run on macOS so far. On
+Windows, `ppk2 power on --hold` and Ctrl-C handling in `ppk2 run` use
+POSIX calls that Windows does not have.
 
 ## Quick start
 

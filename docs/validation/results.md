@@ -148,7 +148,9 @@ On purpose, and outside what the comparisons above exercise:
 
 ## Limitations
 
-- One PPK2, one dev kit, one computer under macOS.
+- The bench: one PPK2 and one dev kit, on a Mac. The package runs on
+  Linux and Windows too, where its unit tests pass, but no capture was
+  compared with the app there.
 - The reference is the app. Agreement with it says nothing about the
   absolute accuracy of the PPK2, which Nordic gives as better than
   ±20 %.

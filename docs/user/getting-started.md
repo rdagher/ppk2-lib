@@ -42,8 +42,10 @@ What it has been tested on:
 | Unit tests, Python 3.11 and 3.13 | yes | yes | yes |
 | Tests with a PPK2 on a bench | no | yes, macOS 26 | no |
 
-So the hardware tests have run only on macOS. Linux and Windows are
-expected to work.
+The package is written for the three systems and uses nothing that is
+specific to one of them: `pyserial` handles the serial port on each.
+What has run on a Mac only, so far, is the set of tests that need a
+PPK2 on a bench.
 
 ## Wiring
 

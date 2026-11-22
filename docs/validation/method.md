@@ -140,8 +140,9 @@ PPK2_HIL_SOURCE_MV=3300 just test-hw  # Source meter mode at 3.3 V
 - Absolute accuracy. The reference is the app, not a calibrated
   instrument. Agreement with the app says the arithmetic is the same;
   it says nothing about how close the PPK2 is to the true current.
-- Other units and other systems. Everything was measured on one PPK2,
-  under macOS.
+- Other units and other systems. The bench measurements were made on
+  one PPK2, on a Mac. The package runs on Linux and Windows as well,
+  where its unit tests pass; no capture has been compared there.
 - Lost samples. Their handling is tested on streams built for the
   purpose and by freezing a capture on the bench, not against the app,
   from which this package differs here on purpose.
