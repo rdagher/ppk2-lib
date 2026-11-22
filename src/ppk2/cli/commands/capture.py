@@ -105,10 +105,10 @@ def capture(
                     return
                 dataloss_warned = True
                 sys.stderr.write(
-                    f"  warning: data loss detected at sample ~{n_samples + n_dataloss}; "
-                    f"{total} placeholders so far. Likely cause: USB cable / hub / host "
-                    "contention. Capture continues; each is recorded as 0.2 µA, "
-                    "as in Nordic's app.\n"
+                    f"  warning: {total} samples lost so far, near sample "
+                    f"{n_samples + n_dataloss}. Likely cause: the USB cable, a hub or a "
+                    "busy computer. The capture goes on; each lost sample is recorded "
+                    "as 0.2 µA, as in Nordic's app.\n"
                 )
                 sys.stderr.flush()
 
@@ -172,16 +172,16 @@ def capture(
         )
         if n_dataloss > 0:
             sys.stderr.write(
-                f"  warning: {n_dataloss} data-loss placeholder samples "
-                f"({100.0 * n_dataloss / n_total:.3f} % of stream) "
-                "recorded as 0.2 µA each, as in Nordic's app\n"
+                f"  warning: {n_dataloss} samples lost "
+                f"({100.0 * n_dataloss / n_total:.3f} % of the stream), "
+                "each recorded as 0.2 µA, as in Nordic's app\n"
             )
         if wall > 0.5 and n_total > 0 and rate < _RATE_WATCHDOG_FRACTION * _SAMPLE_RATE_HZ:
             sys.stderr.write(
                 f"WARNING: stream rate {rate:.0f} Hz is "
-                f"{100.0 * rate / _SAMPLE_RATE_HZ:.1f}% of {_SAMPLE_RATE_HZ} Hz "
-                f"({n_total} samples in {wall:.2f} s): samples were dropped; "
-                "charge and timing figures may be unreliable.\n"
+                f"{100.0 * rate / _SAMPLE_RATE_HZ:.1f} % of {_SAMPLE_RATE_HZ} Hz "
+                f"({n_total} samples in {wall:.2f} s): samples were lost without "
+                "being counted; do not rely on the duration or the charge of this capture.\n"
             )
         sys.stderr.flush()
 

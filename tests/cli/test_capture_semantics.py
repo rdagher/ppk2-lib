@@ -172,7 +172,7 @@ def test_low_realized_rate_prints_dropped_samples_watchdog(
     captured = capsys.readouterr()
     assert code == 1
     assert "WARNING: stream rate" in captured.err
-    assert "figures may be unreliable" in captured.err
+    assert "do not rely on the duration or the charge" in captured.err
     assert "error: capture ended with 1 of 10000 samples" in captured.err
     assert len(out.read_text(encoding="utf-8").splitlines()) == 1 + 1  # the file is kept
 
@@ -204,7 +204,7 @@ def test_lost_samples_are_rows_of_0_2_ua_and_are_counted(
     rows = out.read_text(encoding="utf-8").splitlines()[1:]
     assert len(rows) == 5
     assert [r.split(",")[1] for r in rows].count("0.200") == 3
-    assert "3 data-loss placeholder samples" in captured.err
+    assert "3 samples lost" in captured.err
 
 
 def test_ctrl_c_flushes_csv_prints_interrupted_and_exits_130(
@@ -239,7 +239,7 @@ def test_ppk2_output_records_a_lost_sample_as_0_2_ua(
     assert currents[0] == currents[2] == 12.5
     assert abs(currents[1] - 0.2) < 1e-6  # a float32
     assert [pairs for _, pairs in frames(out)] == [0x555A, 0x5555, 0x555A]
-    assert "data-loss placeholder" in captured.err
+    assert "samples lost" in captured.err
 
 
 @pytest.mark.parametrize("seconds", ["nan", "inf", "0", "-1", "0.000001"])

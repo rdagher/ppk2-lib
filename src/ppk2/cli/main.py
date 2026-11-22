@@ -33,7 +33,7 @@ _SerialOption = Annotated[
     str | None,
     typer.Option(
         "--serial",
-        help="USB serial of a specific PPK2 (required when more than one is plugged in).",
+        help="USB serial number of one PPK2. Needed when several are attached.",
     ),
 ]
 _PortOption = Annotated[
@@ -41,8 +41,8 @@ _PortOption = Annotated[
     typer.Option(
         "--port",
         help=(
-            "PPK2 data-port device path (e.g. /dev/cu.usbmodem…). "
-            "Bypasses discovery and the data-port probe entirely."
+            "Path of the PPK2's data port, for example /dev/cu.usbmodemA1B2C3D4E5F62. "
+            "Skips the search for it."
         ),
     ),
 ]
@@ -53,7 +53,7 @@ _VddOption = Annotated[
         help=(
             "DUT supply voltage in volts. Source meter mode: what the PPK2 "
             "outputs. Ampere meter mode: only feeds the calibration, so give "
-            "the DUT's real supply voltage. Clamped to [0.8, 5.0]."
+            "the DUT's real supply voltage. Kept between 0.8 and 5.0."
         ),
     ),
 ]
@@ -79,7 +79,7 @@ def version() -> None:
 
 @app.command()
 def discover(serial: _SerialOption = None, port: _PortOption = None) -> None:
-    """Print the discovered PPK2's data-port device path."""
+    """Print the path of the PPK2's data port."""
     _discover.discover(serial, port)
 
 
@@ -147,8 +147,8 @@ def capture(
             help=(
                 "Per-range user gain override, RANGE:GAIN, with RANGE from 0 to 4 "
                 "(the app numbers the ranges 1 to 5). Repeatable; "
-                "e.g. --user-gain 2:1.05 --user-gain 4:0.98. GAIN from 0.9 to 1.1. Applied "
-                "host-side via Session.set_user_gain."
+                "for example --user-gain 2:1.05 --user-gain 4:0.98. GAIN from 0.9 to 1.1. "
+                "Applied on the computer: nothing is sent to the PPK2."
             ),
         ),
     ] = None,
@@ -186,7 +186,7 @@ def run(
 ) -> None:
     """Run a command with the DUT powered, optionally capturing the trace.
 
-    The command goes after `--`: ppk2 run --source --vdd 3.0 -- west flash
+    The command goes after `--`: ppk2 run --source --vdd 3.3 -- west flash
     """
     cmd = list(ctx.args)
     exit_code = _run.run(serial, port, cmd, out, vdd, source)

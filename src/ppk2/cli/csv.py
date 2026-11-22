@@ -54,5 +54,5 @@ def write_csv_row(out: TextIO, t_ms: float, current_ua: float, logic: int) -> No
 
 
 def vdd_to_mv(vdd: float) -> int:
-    """Convert ``--vdd`` volts to millivolts, clamped to the regulator's 800-5000 mV."""
+    """Convert ``--vdd`` volts to millivolts, kept within the regulator's 800 to 5,000 mV."""
     return max(VOLTAGE_LIMIT_HARDWARE_MIN_MV, min(VOLTAGE_LIMIT_HARDWARE_MAX_MV, round(vdd * 1000)))
