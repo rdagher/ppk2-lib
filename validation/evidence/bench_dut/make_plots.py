@@ -33,12 +33,14 @@ LABELS = (("app", "Power Profiler app"), ("ppk2_1", "ppk2 capture"))
 def ecdf(ax: plt.Axes, samples: np.ndarray, label: str, *, as_markers: bool) -> None:
     """Plot the empirical CDF of ``samples``, thinned to 20,000 points.
 
-    The two captures lie on each other, so one is a line and the other
-    25 open markers, evenly spaced along the distribution.
+    The two captures lie on each other, so one is a line with crosses
+    and the other open circles, 25 of each at the same ranks: a cross
+    inside a circle is where the two agree.
     """
     xs = np.sort(samples)
     xs = xs[:: max(1, len(xs) // 20_000)]
     ys = np.arange(len(xs)) / len(xs)
+    every = max(1, len(xs) // 25)
     if as_markers:
         ax.plot(
             xs,
@@ -46,14 +48,24 @@ def ecdf(ax: plt.Axes, samples: np.ndarray, label: str, *, as_markers: bool) -> 
             label=label,
             linestyle="none",
             marker="o",
-            markersize=6,
+            markersize=8,
             markerfacecolor="none",
             markeredgewidth=1.2,
-            markevery=max(1, len(xs) // 25),
+            markevery=every,
             color="C1",
         )
     else:
-        ax.plot(xs, ys, label=label, linewidth=1.6, color="C0")
+        ax.plot(
+            xs,
+            ys,
+            label=label,
+            linewidth=1.4,
+            marker="+",
+            markersize=7,
+            markeredgewidth=1.2,
+            markevery=every,
+            color="C0",
+        )
 
 
 LEAK_UA = 20_000  # a sample above this at a wake-up is one the spike filter left in
