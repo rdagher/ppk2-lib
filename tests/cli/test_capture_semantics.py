@@ -10,7 +10,7 @@ import signal
 from collections.abc import Callable
 from math import nan
 from pathlib import Path
-from time import sleep
+from time import monotonic, sleep
 
 import pytest
 
@@ -38,10 +38,12 @@ class _FakeSession:
         wall_s: float = 0.0,
         *,
         interrupt: bool = False,
+        silent: bool = False,
     ) -> None:
         self._samples = samples
         self._wall_s = wall_s
         self._interrupt = interrupt
+        self._silent = silent
 
     # -- lifecycle no-ops --------------------------------------------------
     def __enter__(self) -> "_FakeSession":
@@ -79,8 +81,15 @@ class _FakeSession:
         self,
         emit: Callable[[Sample], bool],
         on_dataloss: Callable[[int], None] | None = None,
+        keep_going: Callable[[], bool] | None = None,
     ) -> None:
         del on_dataloss
+        if self._silent:
+            # A PPK2 that sends nothing: only keep_going can end it.
+            assert keep_going is not None
+            while keep_going():
+                sleep(0.01)
+            return
         if self._interrupt:
             emit(_REAL)  # one row lands before the interrupt
             signal.raise_signal(signal.SIGINT)  # handled by capture's _SigintFlag
@@ -124,6 +133,20 @@ def test_zero_samples_exits_1_with_mode_power_diagnostic(
     assert code == 1
     assert "error: no samples captured: check the PPK2 mode and the DUT's power" in captured.err
     assert out.read_text().splitlines() == [CSV_HEADER]
+
+
+def test_a_silent_ppk2_ends_at_the_deadline_with_the_diagnostic(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    """No sample ever arrives: the deadline still ends the capture."""
+    _install(monkeypatch, _FakeSession(samples=[], silent=True))
+    started = monotonic()
+    code = dispatch(["capture", "-o", str(tmp_path / "silent.csv"), "-s", "0.2"])
+    assert monotonic() - started < 2.0
+    assert code == 1
+    assert "error: no samples captured" in capsys.readouterr().err
 
 
 def test_low_realized_rate_prints_dropped_samples_watchdog(

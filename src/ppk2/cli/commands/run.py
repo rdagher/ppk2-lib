@@ -136,7 +136,7 @@ def _drain_samples(
         return True
 
     try:
-        session.capture(emit)
+        session.capture(emit, keep_going=lambda: not stop_event.is_set())
     except Exception as exc:
         sys.stderr.write(
             f"ppk2: capture reader stopped ({exc}): the trace is incomplete "

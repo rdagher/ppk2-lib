@@ -61,8 +61,9 @@ class _StubSession:
         self,
         emit: Callable[[Sample], bool],
         on_dataloss: Callable[[int], None] | None = None,
+        keep_going: Callable[[], bool] | None = None,
     ) -> None:
-        del emit, on_dataloss
+        del emit, on_dataloss, keep_going
 
 
 def _fake_resolve(_serial: str | None, _port: str | None) -> str:

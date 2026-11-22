@@ -432,13 +432,19 @@ class Session:
         self,
         emit: Callable[[Sample], bool],
         on_dataloss: Callable[[int], None] | None = None,
+        keep_going: Callable[[], bool] | None = None,
     ) -> None:
         """Read the stream and call ``emit`` per sample until it returns ``False``.
 
         Args:
             emit: Called with each ``Sample``; return ``False`` to stop.
+                It is not called again after that.
             on_dataloss: Called with the running total of lost samples
                 whenever a read adds to it (at most once per read).
+            keep_going: Called when a read times out with no data;
+                return ``False`` to stop. Without it, a PPK2 that sends
+                nothing keeps ``capture`` waiting for ever, since
+                ``emit`` is never called.
         """
         parser = StreamParser(self._coeffs, self._vdd_mv, self._spike_filter)
         scratch = bytearray(4096)
@@ -446,12 +452,15 @@ class Session:
 
         def collect(sample: Sample) -> None:
             nonlocal stop
-            if not emit(sample):
+            # The rest of a read is dropped once emit has said stop.
+            if not stop and not emit(sample):
                 stop = True
 
         while not stop:
             n = self._read_into(scratch)
             if n == 0:
+                if keep_going is not None and not keep_going():
+                    return
                 continue
             before = parser.dataloss_total
             parser.push_bytes(bytes(scratch[:n]), collect)

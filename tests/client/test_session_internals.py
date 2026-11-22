@@ -22,7 +22,7 @@ from ppk2.client.session import (
     read_until_end,
 )
 from ppk2.protocol import CalibrationCoefficients, Opcode, SpikeFilter
-from tests.protocol.fixtures import METADATA_RAW
+from tests.protocol.fixtures import METADATA_RAW, STREAM_BIN
 
 if TYPE_CHECKING:
     import serial
@@ -561,3 +561,34 @@ def test_a_failed_handshake_releases_the_port(monkeypatch: pytest.MonkeyPatch) -
 
     assert opened, "no open attempt was made"
     assert all(port.events[-1] == "close" for port in opened)
+
+
+def test_capture_stops_on_a_silent_port_when_keep_going_says_so() -> None:
+    """A port that sends nothing never reaches emit: keep_going ends the capture."""
+    session = Session(cast("serial.Serial", _ChunkedReader([])), _identity_coeffs())
+    calls = 0
+
+    def keep_going() -> bool:
+        nonlocal calls
+        calls += 1
+        return calls < 3
+
+    session.capture(lambda _sample: True, keep_going=keep_going)
+
+    assert calls == 3
+
+
+def test_capture_does_not_call_emit_again_after_it_returns_false() -> None:
+    """One read holds 600 samples; emit says stop at the first and is left alone."""
+    stream = STREAM_BIN.read_bytes()
+    session = Session(cast("serial.Serial", _ChunkedReader([stream])), _identity_coeffs())
+    seen = 0
+
+    def emit(_sample: object) -> bool:
+        nonlocal seen
+        seen += 1
+        return False
+
+    session.capture(emit)
+
+    assert seen == 1

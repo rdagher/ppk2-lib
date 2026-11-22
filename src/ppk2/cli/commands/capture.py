@@ -129,7 +129,13 @@ def capture(
             # The trace starts about 10 ms before power-on (Known
             # caveats in docs/measure/protocol.md).
             session.drop_pending_backlog()
-            session.capture(emit, on_dataloss=on_dataloss)
+            session.capture(
+                emit,
+                on_dataloss=on_dataloss,
+                # A silent PPK2 never reaches emit: the deadline and
+                # Ctrl-C are checked here too.
+                keep_going=lambda: not stop_requested.flag and monotonic() < deadline,
+            )
             # Taken here: shutting the session down takes a tenth of a
             # second that is not capture time.
             wall = monotonic() - started
