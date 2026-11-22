@@ -1,8 +1,8 @@
 # Validation
 
-Two scripts that compare captures of the same bench: one made by this
-tool against one exported from Nordic's Power Profiler app, or two
-builds of this tool against each other.
+Scripts that compare captures of the same bench: one made by this tool
+against one exported from Nordic's Power Profiler app, or two builds of
+this tool against each other.
 
 ## Comparing two captures
 
@@ -59,8 +59,8 @@ starts in the cycle. Compare it level by level, as the
 
 - [`bench_dut/`](evidence/bench_dut/README.md): the round of this
   release. The app against `ppk2 capture` in both modes on an
-  nRF54LM20 DK, with the way to the six captures, the versions used, and the
-  scripts that print the tables and draw the plots.
+  nRF54LM20 DK, with the way to the six captures, the versions used,
+  and the scripts that print the tables and draw the plots.
 
 Its DUT runs the [bench firmware](../tests/hil/bench-dut/) of the
 hardware tests, which gives a known signal on D0 and D1.

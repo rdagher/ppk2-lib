@@ -1,16 +1,17 @@
 # Method
 
 The claim this package makes is narrow: on the same PPK2 and the same
-bench, it gives the numbers that Nordic's [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html) gives. The
-app is the reference throughout. This page says how the claim is
-tested; the [results](results.md) are on the next one.
+bench, it gives the numbers that Nordic's
+[Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html) gives. The app is the reference
+throughout. This page says how the claim is tested; the
+[results](results.md) are on the next one.
 
 It is tested at three levels, from one sample to a whole bench:
 
 | Level | What is compared | Against | Material |
 |---|---|---|---|
 | The parser | 600 recorded samples, one by one | The app's own parsing code | [`tests/fixtures/`](https://github.com/rdagher/ppk2-lib/tree/main/tests/fixtures) |
-| Whole captures | Two captures of one bench, taken back to back | The app's CSV export | `validation/` |
+| Whole captures | Two captures of one bench, taken back to back | The app's CSV export | [`validation/`](https://github.com/rdagher/ppk2-lib/tree/main/validation) |
 | A bench | What the tool reads from a signal known in advance | The bench firmware | [`tests/hil/`](https://github.com/rdagher/ppk2-lib/tree/main/tests/hil) |
 
 ## Parser comparison
@@ -22,13 +23,17 @@ nine times. The calibration text of the same PPK2 is stored next to it.
 
 The reference is `parsed_poweron.csv`: the output of the app's parser
 for those bytes. It was produced by running the app's code outside the
-app (`pc-nrfconnect-ppk` v4.4.1, [`src/device/serialDevice.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts)), with a
-small Node script. To produce it again:
+app (`pc-nrfconnect-ppk` v4.4.1,
+[`src/device/serialDevice.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts)),
+with a small Node script. To produce it again:
 
 ```sh
-git clone https://github.com/nordicsemi/pc-nrfconnect-ppk
+git clone --branch v4.4.1 --depth 1 https://github.com/nordicsemi/pc-nrfconnect-ppk
 node tests/fixtures/make_reference.mjs pc-nrfconnect-ppk
 ```
+
+It needs Node 24 or newer, and writes the same two files, byte for
+byte.
 
 The app's source is not copied into this repository: its licence
 allows using it, not redistributing it.
@@ -49,7 +54,7 @@ list the differences.
 A round compares captures made by the app and by `ppk2 capture`, on a
 bench that is not touched in between. They are taken within minutes of
 each other, because a bench drifts: with the temperature, and with the
-DUT (device under test) itself.
+device under test (DUT) itself.
 
 ### Procedure
 
@@ -66,14 +71,15 @@ Better still, capture with `ppk2 capture` before the app as well as
 after. The difference between those two captures is the drift of the
 bench, and the app's capture lies between them.
 
-All captures begin at power-on, so the DUT boots in each. Record with
+Every capture contains the power-on, so the DUT boots in each. Record with
 the round what a reader needs to repeat it: the version of the app,
 the firmware of the PPK2 and its calibration text (`ppk2 metadata`),
 and the commit of this package.
 
 ### Compared quantities
 
-[`validation/compare_cli.py`](https://github.com/rdagher/ppk2-lib/blob/main/validation/compare_cli.py) reads the two files and reports:
+[`validation/compare_cli.py`](https://github.com/rdagher/ppk2-lib/blob/main/validation/compare_cli.py)
+reads the two files and reports:
 
 - the header, which must be identical;
 - the sample rate;
@@ -85,8 +91,9 @@ It passes when the headers are identical, the means are within 1 % and
 the KS statistic is below 0.05.
 
 For a firmware that marks its work with D0 and D1, a second script,
-`validation/regions.py`, computes the current, the charge, the number
-and the width of the marked regions in each file.
+[`validation/regions.py`](https://github.com/rdagher/ppk2-lib/blob/main/validation/regions.py),
+computes the current, the charge, the number and the width of the
+marked regions in each file.
 
 ### Per-region comparison
 
@@ -107,16 +114,17 @@ digital input, the mean of their current is compared between the two
 captures, and the mean of their charge, which is the current added up
 over a region's duration. The regions are not paired one to one: the
 captures are different seconds of the DUT's life and do not hold the
-same number of them. The distribution of the current inside
-the workload and inside the idle is compared as well. There is no
-energy in the comparison, because a PPK2 measures current only.
+same number of them. The distribution of the current inside the
+workload and inside the idle is compared as well. There is no energy in
+the comparison, because a PPK2 measures current only.
 
 ## Hardware tests
 
 The hardware tests do not compare with the app. They check the tool
 against a signal that is known in advance, from the firmware in
-[`tests/hil/bench-dut`](https://github.com/rdagher/ppk2-lib/tree/main/tests/hil/bench-dut). D0 toggles at 5 Hz and D1 at 0.5 Hz. The CPU is
-busy while D0 is high, so the current steps with D0.
+[`tests/hil/bench-dut`](https://github.com/rdagher/ppk2-lib/tree/main/tests/hil/bench-dut).
+D0 toggles at 5 Hz and D1 at 0.5 Hz. The CPU is busy while D0 is high,
+so the current steps with D0.
 
 Ten tests check that:
 

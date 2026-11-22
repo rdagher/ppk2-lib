@@ -11,3 +11,5 @@ PPK2_HIL_SOURCE_MV=3300 just test-hw  # Source meter mode: PPK2 powers the kit a
 ```
 
 `just test` and `just ci` skip them: they carry the `hardware` marker.
+The [method page](../../docs/validation/method.md#hardware-tests) lists
+what they check.

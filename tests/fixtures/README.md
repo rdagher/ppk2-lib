@@ -5,7 +5,7 @@ the unit tests need no hardware.
 
 | File | What it is |
 |---|---|
-| [`metadata.raw`](metadata.raw) | The calibration text a PPK2 sent, 1032 bytes (2026-06-05). |
+| [`metadata.raw`](metadata.raw) | The calibration text a PPK2 sent, 1,032 bytes (2026-06-05). |
 | [`metadata.parsed.json`](metadata.parsed.json) | Those values as read by Nordic's own code. |
 | [`stream_poweron.bin`](stream_poweron.bin) | 600 samples (6 ms) of the same PPK2's stream while it powers a dev kit on. All five measurement ranges, nine range changes. |
 | [`parsed_poweron.csv`](parsed_poweron.csv) | Those samples as parsed by Nordic's own code: current and logic byte. |
@@ -17,14 +17,17 @@ with the [bench firmware](../hil/bench-dut/) on an nRF54LM20 DK.
 
 `parsed_poweron.csv` is what the parser of Nordic's Power Profiler app
 gives for `stream_poweron.bin`, with `metadata.raw` as calibration
-(`pc-nrfconnect-ppk` v4.4.1, `src/device/serialDevice.ts`). It was run
-from commit `39bba39`, six documentation commits after the tag. To produce it again you need Node 24 or
-newer and a checkout of the app:
+(`pc-nrfconnect-ppk` v4.4.1, `src/device/serialDevice.ts`). To produce
+it again you need Node 24 or newer and a checkout of the app at that
+tag:
 
 ```sh
-git clone https://github.com/nordicsemi/pc-nrfconnect-ppk
+git clone --branch v4.4.1 --depth 1 https://github.com/nordicsemi/pc-nrfconnect-ppk
 node tests/fixtures/make_reference.mjs pc-nrfconnect-ppk
 ```
+
+Run this way, the script writes the two reference files again, byte for
+byte.
 
 The app's source is not copied here: its licence allows using it, not
 redistributing it. [`nordic_hooks.mjs`](nordic_hooks.mjs) replaces the
