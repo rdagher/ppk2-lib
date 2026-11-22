@@ -23,6 +23,8 @@ that code in the capture, to the sample. A script then gives the
 current and the charge of that region alone, as a
 [recipe](user/recipes.md#current-of-a-marked-region) shows.
 
+![The parts. A developer, a CI job or an AI coding assistant run the ppk2 command or use the Python API on the host. The library drives the PPK2 over USB. The PPK2 measures the current of the DUT and samples its digital inputs. A capture is written as a CSV or a .ppk2 file. Beside them, one second of a capture with its marked regions](img/architecture.png)
+
 ## Command line
 
 ```console

@@ -96,6 +96,8 @@ with `just docs`. It has four parts.
 | Measurements | [Principle](docs/measure/principle.md), [protocol](docs/measure/protocol.md), [file formats](docs/measure/formats.md) |
 | Validation against Nordic's app | [Method](docs/validation/method.md), [results](docs/validation/results.md) |
 
+![The parts. A developer, a CI job or an AI coding assistant run the ppk2 command or use the Python API on the host. The library drives the PPK2 over USB. The PPK2 measures the current of the DUT and samples its digital inputs. A capture is written as a CSV or a .ppk2 file. Beside them, one second of a capture with its marked regions](docs/img/architecture.png)
+
 The package has three layers, each built on the one before:
 `ppk2.protocol` for the bytes, `ppk2.client` for the device, `ppk2.cli`
 for the command. The [changelog](CHANGELOG.md) lists what 0.1.0
