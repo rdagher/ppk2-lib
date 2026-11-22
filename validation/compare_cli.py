@@ -35,7 +35,9 @@ def load_csv(path: Path) -> pd.DataFrame:
 
 def _stats(df: pd.DataFrame) -> dict[str, float | int | bool]:
     """Compute the headline metrics for one capture."""
-    duration_s = float(df["Timestamp(ms)"].iloc[-1]) / 1000.0
+    # Between the first and the last row kept: --skip-initial-s drops the start.
+    timestamps = df["Timestamp(ms)"]
+    duration_s = float(timestamps.iloc[-1] - timestamps.iloc[0]) / 1000.0
     out: dict[str, float | int | bool] = {
         "rows": len(df),
         "duration_s": duration_s,
