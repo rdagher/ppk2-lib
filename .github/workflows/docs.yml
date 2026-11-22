@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  actions: read    # the deploy step lists the artifacts of this run
   pages: write
   id-token: write
 
@@ -18,11 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +36,16 @@ jobs:
         with:
           path: site
 
+  # A job of its own, as the deploy action's documentation recommends.
+  # In the same job as the upload, it looked for the artifact half a
+  # second after it was stored, and found none.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
