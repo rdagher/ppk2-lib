@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  actions: read    # the deploy step lists the artifacts of this run
   pages: write
   id-token: write
 
