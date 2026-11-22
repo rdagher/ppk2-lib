@@ -592,3 +592,19 @@ def test_capture_does_not_call_emit_again_after_it_returns_false() -> None:
     session.capture(emit)
 
     assert seen == 1
+
+
+def test_capture_asks_keep_going_when_the_bytes_hold_no_sample() -> None:
+    """Three bytes are no sample: emit is never called, keep_going still ends it."""
+    port = _ChunkedReader([b"\x00\x00\x00"])
+    session = Session(cast("serial.Serial", port), _identity_coeffs())
+    calls = 0
+
+    def keep_going() -> bool:
+        nonlocal calls
+        calls += 1
+        return False
+
+    session.capture(lambda _sample: True, keep_going=keep_going)
+
+    assert calls == 1

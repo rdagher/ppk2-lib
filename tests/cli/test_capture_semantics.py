@@ -165,13 +165,16 @@ def test_low_realized_rate_prints_dropped_samples_watchdog(
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
-    """0.6 s wall with a handful of samples ≪ 95 % of 100 kSPS -> WARNING."""
+    """One sample in 0.6 s: the rate warning, and exit 1 since 10,000 were asked for."""
     _install(monkeypatch, _FakeSession(samples=[_REAL], wall_s=0.6))
-    code = dispatch(["capture", "-o", str(tmp_path / "slow.csv"), "-s", "0.1"])
+    out = tmp_path / "slow.csv"
+    code = dispatch(["capture", "-o", str(out), "-s", "0.1"])
     captured = capsys.readouterr()
-    assert code == 0
+    assert code == 1
     assert "WARNING: stream rate" in captured.err
     assert "figures may be unreliable" in captured.err
+    assert "error: capture ended with 1 of 10000 samples" in captured.err
+    assert len(out.read_text(encoding="utf-8").splitlines()) == 1 + 1  # the file is kept
 
 
 def test_clean_short_capture_exits_0_without_watchdog(
@@ -181,7 +184,7 @@ def test_clean_short_capture_exits_0_without_watchdog(
 ) -> None:
     _install(monkeypatch, _FakeSession(samples=[_REAL] * 10))
     out = tmp_path / "clean.csv"
-    code = dispatch(["capture", "-o", str(out), "-s", "30"])
+    code = dispatch(["capture", "-o", str(out), "-s", "0.0001"])
     captured = capsys.readouterr()
     assert code == 0
     assert "WARNING: stream rate" not in captured.err  # wall < 0.5 s -> no watchdog
@@ -195,7 +198,7 @@ def test_lost_samples_are_rows_of_0_2_ua_and_are_counted(
 ) -> None:
     _install(monkeypatch, _FakeSession(samples=[_REAL, _NAN, _REAL, _NAN, _NAN]))
     out = tmp_path / "lossy.csv"
-    code = dispatch(["capture", "-o", str(out), "-s", "30"])
+    code = dispatch(["capture", "-o", str(out), "-s", "0.00005"])
     captured = capsys.readouterr()
     assert code == 0
     rows = out.read_text(encoding="utf-8").splitlines()[1:]
@@ -228,7 +231,7 @@ def test_ppk2_output_records_a_lost_sample_as_0_2_ua(
     _install(monkeypatch, _FakeSession(samples=[_REAL, _NAN, _REAL]))
     out = tmp_path / "trace.ppk2"
 
-    code = dispatch(["capture", "-o", str(out), "-s", "0.1"])
+    code = dispatch(["capture", "-o", str(out), "-s", "0.00003"])
 
     captured = capsys.readouterr()
     assert code == 0, captured.err
@@ -237,3 +240,21 @@ def test_ppk2_output_records_a_lost_sample_as_0_2_ua(
     assert abs(currents[1] - 0.2) < 1e-6  # a float32
     assert [pairs for _, pairs in frames(out)] == [0x555A, 0x5555, 0x555A]
     assert "data-loss placeholder" in captured.err
+
+
+@pytest.mark.parametrize("seconds", ["nan", "inf", "0", "-1", "0.000001"])
+def test_a_duration_that_is_not_one_is_refused_before_anything_is_opened(
+    seconds: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """An earlier file of the same name is left alone, and the PPK2 is not opened."""
+
+    def no_device(_serial: str | None, _port: str | None) -> str:
+        raise AssertionError("the device must not be looked for")
+
+    monkeypatch.setattr(capture_module, "resolve_device", no_device)
+    out = tmp_path / "kept.csv"
+    out.write_text("earlier capture\n", encoding="utf-8")
+    assert dispatch(["capture", "-o", str(out), f"--seconds={seconds}"]) == 2
+    assert out.read_text(encoding="utf-8") == "earlier capture\n"

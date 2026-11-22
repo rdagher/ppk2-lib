@@ -36,7 +36,7 @@ calibration uses it: give the voltage the DUT really runs at.
 | Code | Meaning |
 |---|---|
 | 0 | Done |
-| 1 | A device or session error, with a one-line message. Also a capture without a single sample |
+| 1 | A device or session error, with a one-line message. Also a capture that ends with fewer samples than `--seconds` asks for |
 | 2 | Wrong usage |
 | 130 | Stopped by Ctrl-C |
 
@@ -119,7 +119,7 @@ captured 500000 samples over 5.00 s (99936 Hz)
 | Option | Default | Meaning |
 |---|---|---|
 | `--out`, `-o PATH` | required | The file to write. A name ending in `.ppk2`, in any letter case, gives a session file, any other name a CSV |
-| `--seconds`, `-s FLOAT` | 30 | How long to capture. The capture ends when it holds that many seconds of samples |
+| `--seconds`, `-s FLOAT` | 30 | How long to capture. The capture ends when it holds that many seconds of samples. If they have not all come one second after that time, it stops, keeps the file and exits 1 |
 | `--user-gain RANGE:GAIN` | none | A gain from 0.9 to 1.1 for one range, 0 to 4. Can be repeated. See [gains](../develop/architecture.md#gains) |
 
 What to know about a capture:

@@ -4,7 +4,7 @@ import signal
 import sys
 from collections.abc import Callable, Iterable
 from contextlib import ExitStack, suppress
-from math import isnan
+from math import isfinite, isnan
 from pathlib import Path
 from time import monotonic
 from types import FrameType
@@ -49,6 +49,11 @@ def capture(
     # Parse the gains first: a malformed flag should fail before the
     # (slow) hardware discovery, not after.
     user_gains = [parse_user_gain_spec(spec) for spec in user_gain_specs]
+    if not (isfinite(seconds) and round(seconds * _SAMPLE_RATE_HZ) >= 1):
+        raise typer.BadParameter(
+            f"{seconds} is not a duration: give at least one sample, 0.00001 s",
+            param_hint="--seconds",
+        )
     device = resolve_device(serial, port)
     mv = vdd_to_mv(vdd)
     mode = Mode.SOURCE if source else Mode.AMPERE
@@ -187,6 +192,14 @@ def capture(
         if n_total == 0:
             sys.stderr.write(
                 "error: no samples captured: check the PPK2 mode and the DUT's power\n"
+            )
+            sys.stderr.flush()
+            raise typer.Exit(code=1)
+        if n_total < target:
+            # The clock ended it: the file is kept, and is not what was asked for.
+            sys.stderr.write(
+                f"error: capture ended with {n_total} of {target} samples: "
+                "the PPK2 stopped sending, or the computer did not keep up\n"
             )
             sys.stderr.flush()
             raise typer.Exit(code=1)

@@ -130,6 +130,17 @@ and left its samples in the `.frames` file, 6 bytes each. It is all
 that remains of that run, so it is not overwritten. Move it away if
 you want to keep it, or delete it, and run again.
 
+## Capture ended short
+
+```text
+error: capture ended with 2999000 of 3000000 samples: the PPK2 stopped sending, or the computer did not keep up
+```
+
+The samples that `--seconds` asks for had not all arrived one second
+after that time. The file holds what did arrive. A busy computer, a
+USB hub or a long cable are the usual causes: see
+[lost samples](#lost-samples-and-stream-rate-warnings).
+
 ## Current reads zero or far too low
 
 - In Ampere meter mode, the current must pass through the PPK2: supply

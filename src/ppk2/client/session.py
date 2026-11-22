@@ -441,10 +441,10 @@ class Session:
                 It is not called again after that.
             on_dataloss: Called with the running total of lost samples
                 whenever a read adds to it (at most once per read).
-            keep_going: Called when a read times out with no data;
-                return ``False`` to stop. Without it, a PPK2 that sends
-                nothing keeps ``capture`` waiting for ever, since
-                ``emit`` is never called.
+            keep_going: Called after every read; return ``False`` to
+                stop. Without it, a PPK2 that sends nothing, or nothing
+                that decodes to a sample, keeps ``capture`` waiting for
+                ever, since ``emit`` is never called.
         """
         parser = StreamParser(self._coeffs, self._vdd_mv, self._spike_filter)
         scratch = bytearray(4096)
@@ -458,9 +458,11 @@ class Session:
 
         while not stop:
             n = self._read_into(scratch)
+            # Asked after every read: bytes that hold no sample must not
+            # keep a capture going either.
+            if keep_going is not None and not keep_going():
+                return
             if n == 0:
-                if keep_going is not None and not keep_going():
-                    return
                 continue
             before = parser.dataloss_total
             parser.push_bytes(bytes(scratch[:n]), collect)

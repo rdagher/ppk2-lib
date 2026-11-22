@@ -207,7 +207,7 @@ samples already read after that one are dropped.
 
 When the PPK2 sends nothing, your function is never called and cannot
 stop the capture. Pass `keep_going` for that case: `capture` calls it
-when a read times out, and stops when it answers `False`.
+after every read of the serial port, and stops when it answers `False`.
 
 ```python
 deadline = time.monotonic() + 5

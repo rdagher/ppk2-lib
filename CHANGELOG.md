@@ -17,7 +17,7 @@ versions.
   that cannot be written and for a `--serial` that matches nothing.
 - `ppk2 run` terminates its command when it is itself terminated.
 - `ppk2 capture --seconds N` ends when the file holds N seconds of
-  samples: 500,000 for 5 s.
+  samples: 500,000 for 5 s. It exits 1 if they do not all come.
 - `ppk2 capture` records current and digital inputs in Ampere meter or
   Source meter mode, to the 11-column CSV that Nordic's Power Profiler
   app exports, or to a session file in the app's `.ppk2` format.
