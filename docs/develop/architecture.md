@@ -84,8 +84,8 @@ from ppk2 import Mode, Session, find_ppk2
 currents: list[float] = []
 
 with Session.open(find_ppk2().device) as session:
-    session.set_mode(Mode.AMPERE)
-    session.set_source_voltage(3300)  # Ampere meter mode: only feeds the calibration
+    session.set_mode(Mode.SOURCE)
+    session.set_source_voltage(3300)  # the PPK2 supplies the DUT at 3.3 V
     session.start_measuring()
     session.power_on()
     deadline = monotonic() + 5.0
@@ -100,7 +100,7 @@ print(f"{len(currents)} samples, mean {sum(currents) / len(currents):.2f} µA")
 ```
 
 ```text
-500736 samples, mean 697.73 µA
+499713 samples, mean 752.08 µA
 ```
 
 `capture` runs in the calling thread and calls your function for every

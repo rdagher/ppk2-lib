@@ -149,6 +149,17 @@ def test_a_silent_ppk2_ends_at_the_deadline_with_the_diagnostic(
     assert "error: no samples captured" in capsys.readouterr().err
 
 
+def test_a_capture_ends_on_the_samples_that_seconds_asks_for(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """--seconds 0.0001 is 10 samples: the file holds 10 rows, whatever else arrives."""
+    _install(monkeypatch, _FakeSession(samples=[_REAL] * 50))
+    out = tmp_path / "ten.csv"
+    assert dispatch(["capture", "-o", str(out), "-s", "0.0001"]) == 0
+    assert len(out.read_text().splitlines()) == 1 + 10
+
+
 def test_low_realized_rate_prints_dropped_samples_watchdog(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

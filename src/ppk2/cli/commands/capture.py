@@ -29,6 +29,9 @@ _DATALOSS_WARN_THRESHOLD = 500
 #: samples, and charge or timing figures taken from the file are off.
 _RATE_WATCHDOG_FRACTION = 0.95
 
+#: How long past ``--seconds`` a capture waits for samples that are late.
+_LATE_GRACE_S = 1.0
+
 
 def capture(
     serial: str | None,
@@ -84,7 +87,11 @@ def capture(
             sum_ua = 0.0
             last_progress = monotonic()
             started = monotonic()
-            deadline = started + seconds
+            # The capture ends on a number of samples, so that the
+            # trace holds the seconds asked for. The clock ends it only
+            # when the samples do not come.
+            target = round(seconds * _SAMPLE_RATE_HZ)
+            deadline = started + seconds + _LATE_GRACE_S
             dataloss_warned = False
 
             def on_dataloss(total: int) -> None:
@@ -124,7 +131,7 @@ def capture(
                     sys.stderr.flush()
                     last_progress = now
 
-                return monotonic() < deadline
+                return n_samples + n_dataloss < target and monotonic() < deadline
 
             # The trace starts about 10 ms before power-on (Known
             # caveats in docs/measure/protocol.md).
@@ -132,7 +139,7 @@ def capture(
             session.capture(
                 emit,
                 on_dataloss=on_dataloss,
-                # A silent PPK2 never reaches emit: the deadline and
+                # A silent PPK2 never reaches emit: the clock and
                 # Ctrl-C are checked here too.
                 keep_going=lambda: not stop_requested.flag and monotonic() < deadline,
             )

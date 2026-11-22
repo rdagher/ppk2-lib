@@ -109,17 +109,17 @@ says what each line is, and why `Calibrated: false` is not a fault.
 $ ppk2 capture --out first.csv --seconds 5 --source --vdd 3.3
 opening session (Source meter mode, vdd=3300 mV)
 capturing 5.00 s -> first.csv (Ctrl-C to stop early)
-  [  1.0s]       99504 samples  mean  946.81 µA
-  [  2.0s]      199681 samples  mean  821.63 µA
-  [  3.0s]      300033 samples  mean  778.87 µA
-  [  4.0s]      400385 samples  mean  757.42 µA
-captured 500736 samples over 5.01 s (100035 Hz)
+  [  1.0s]      100249 samples  mean  945.69 µA
+  [  2.0s]      199681 samples  mean  826.16 µA
+  [  3.0s]      300033 samples  mean  783.65 µA
+  [  4.0s]      400385 samples  mean  761.46 µA
+captured 500000 samples over 5.00 s (99936 Hz)
 ```
 
 | Option | Default | Meaning |
 |---|---|---|
 | `--out`, `-o PATH` | required | The file to write. A name ending in `.ppk2`, in any letter case, gives a session file, any other name a CSV |
-| `--seconds`, `-s FLOAT` | 30 | How long to capture |
+| `--seconds`, `-s FLOAT` | 30 | How long to capture. The capture ends when it holds that many seconds of samples |
 | `--user-gain RANGE:GAIN` | none | A gain from 0.9 to 1.1 for one range, 0 to 4. Can be repeated. See [gains](../develop/architecture.md#gains) |
 
 What to know about a capture:
@@ -144,7 +144,7 @@ What to know about a capture:
 
 ```console
 $ ppk2 convert first.csv first.ppk2
-wrote first.ppk2: 500736 samples at 100000 S/s (5.01 s)
+wrote first.ppk2: 500000 samples at 100000 S/s (5.00 s)
 ```
 
 Turns a CSV capture, plain or gzipped, into a `.ppk2` session file. It

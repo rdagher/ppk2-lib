@@ -23,10 +23,9 @@ during development is the number the pipeline checks.
 $ ppk2 capture --out boot.csv --seconds 3 --source --vdd 3.3
 opening session (Source meter mode, vdd=3300 mV)
 capturing 3.00 s -> boot.csv (Ctrl-C to stop early)
-  [  1.0s]      100191 samples  mean  947.46 µA
-  [  2.0s]      199681 samples  mean  823.90 µA
-  [  3.0s]      300033 samples  mean  781.88 µA
-captured 301056 samples over 3.01 s (100099 Hz)
+  [  1.0s]       99329 samples  mean  954.17 µA
+  [  2.0s]      199681 samples  mean  826.31 µA
+captured 300000 samples over 3.00 s (100037 Hz)
 ```
 
 The PPK2 powers the DUT at 3.3 V, switches it on as the capture starts,
