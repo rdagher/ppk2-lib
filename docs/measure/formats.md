@@ -164,11 +164,11 @@ writes the same in both formats, so a file made here and one saved by
 the app treat a loss alike.
 
 That value is a stand-in, not a reading. Each lost sample pulls a sum
-or a mean towards 0.2 µA: losing 1 % of the samples of a 1 mA trace lowers its mean by
-about 1 %. Nothing in the file tells such a row from a real reading of
-0.2 µA. What tells you is the capture itself: it warns once 500 samples
-are lost and gives the total at the end. The mean it prints leaves the
-lost samples out.
+or a mean towards 0.2 µA: losing 1 % of the samples of a 1 mA trace
+lowers its mean by about 1 %. Nothing in the file tells such a row
+from a real reading of 0.2 µA. What tells you is the capture itself:
+it warns once 500 samples are lost and gives the total at the end. The
+mean it prints leaves the lost samples out.
 
 In the library a lost sample stays distinct. It arrives as a `Sample`
 whose current is NaN, as the

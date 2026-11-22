@@ -48,9 +48,9 @@ meter mode.
 
 You need the toolchain of the
 [nRF Connect SDK](https://github.com/nrfconnect/sdk-nrf) installed by
-nrfutil, under `/opt/nordic/ncs`. The firmware is built and tested with SDK v3.3.1.
-`NCS_VERSION` and `NCS_WORKSPACE` override the defaults. Run these
-from this folder:
+nrfutil, under `/opt/nordic/ncs`. The firmware is built and tested
+with SDK v3.3.1. `NCS_VERSION` and `NCS_WORKSPACE` override the
+defaults. Run these from this folder:
 
 ```sh
 just build [BOARD]   # build/<dk>/
