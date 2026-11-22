@@ -12,4 +12,7 @@ and units, and what `tests/test_docs.py` verifies.
   Do not run it unless asked.
 - Every example in the documentation is run as printed before it is
   committed, and its output is the real one.
+- The captures of the validation are on the branch `captures`, not on
+  `main`. `just captures` puts them in
+  `validation/evidence/bench_dut/captures/`, where git ignores them.
 - [llms.txt](llms.txt) is the map of the documentation.
