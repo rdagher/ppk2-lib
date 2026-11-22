@@ -28,7 +28,7 @@ def current_micro_amps(
     Args:
         adc_14: 14-bit ADC value, straight from ``RawSample.adc_14``
             (the *4 rescale happens here).
-        range_idx: Range index, 0-4.
+        range_idx: Range index, 0 to 4.
         vdd_mv: Present supply voltage in millivolts (the last
             ``REGULATOR_SET``). Needed in Ampere meter mode too.
         coeffs: Per-device calibration from ``parse_metadata``.

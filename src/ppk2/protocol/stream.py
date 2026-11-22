@@ -3,15 +3,15 @@
 Feed raw serial bytes to ``StreamParser.push_bytes``; it calls back once
 per emitted sample. Each 4-byte word goes through two stages:
 
-1. **Counter resync.** A word with an out-of-range range field is
+1. Counter resync. A word with an out-of-range range field is
    dropped. A counter mismatch holds the sample back; the next in-sync
    sample releases what was held (those samples were real, just behind
    a brief gap). After ``MAX_BUFFERED_CORRUPTED`` mismatches in a row
    the gap is declared lost: NaN placeholders fill it, the held samples
    follow (they arrived after it), and the parser resyncs.
-2. **Spike filter.** Two exponential moving averages (one for ranges
-   0-3, a slower one for range 4) smooth the samples that follow a
-   range change. Knobs: ``SpikeFilter``.
+2. Spike filter. Two exponential moving averages (one for ranges
+   0 to 3, a slower one for range 4) smooth the samples that follow a
+   range change. Settings: ``SpikeFilter``.
 
 When bytes are lost on the way, the stream can resume in the middle of
 a word. The parser then looks for the byte offset at which the counters
@@ -39,7 +39,7 @@ class Sample:
     Attributes:
         current_micro_amps: Current in microamperes. NaN marks a lost
             sample: counter sync was not recovered in time.
-        logic: Digital inputs D0..D7 (bit 0 = D0); 0 for a lost sample.
+        logic: Digital inputs D0 to D7 (bit 0 is D0); 0 for a lost sample.
     """
 
     current_micro_amps: float
@@ -65,7 +65,7 @@ DEFAULT_SPIKE_FILTER_SAMPLES: int = 3
 
 @dataclass(frozen=True, slots=True)
 class SpikeFilter:
-    """Knobs of the spike filter applied after a range change.
+    """Settings of the spike filter applied after a range change.
 
     The same three settings as the spike filter of Nordic's app, with
     the app's defaults. The app numbers the ranges 1 to 5; here they
@@ -73,11 +73,14 @@ class SpikeFilter:
 
     Attributes:
         samples: How many samples after a range change are smoothed
-            (``>= 0``). The app's "Samples to smooth". More smooths
-            transients harder and follows a real new level later.
-        alpha: EMA coefficient for ranges 0-3, in ``[0, 1]``. The app's
+            (``>= 0``). The app's "Samples to smooth". A larger
+            value smooths a transient more and follows a real change of
+            level later.
+        alpha: Coefficient of the moving average for ranges 0 to 3, in
+            ``[0, 1]``. The app's
             "Coefficient for range 1-4".
-        alpha5: EMA coefficient for range 4, in ``[0, 1]``. The app's
+        alpha5: Coefficient of the moving average for range 4, in
+            ``[0, 1]``. The app's
             "Coefficient for range 5". This is the top range, 50 mA to
             1 A in the PPK2 user guide, and it gets the heavier
             smoothing.
@@ -168,10 +171,10 @@ class StreamParser:
     """Turns the PPK2 byte stream into ``Sample`` objects; one per capture.
 
     Reads need not land on 4-byte boundaries: up to 3 trailing bytes are
-    kept and prepended to the next ``push_bytes`` call. On macOS the
-    4096-byte reads have always come back aligned; other platforms, read
-    timeouts that fire mid-frame, and tests are what the remainder is
-    for.
+    kept and prepended to the next ``push_bytes`` call. The reads
+    seen on the bench have come back aligned. The remainder is for those
+    that do not: another system, a read that times out in the middle of
+    a word, a test.
     """
 
     def __init__(

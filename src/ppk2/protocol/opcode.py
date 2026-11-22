@@ -19,33 +19,34 @@ class Opcode(IntEnum):
     """Generic ON parameter byte. Rarely sent as an opcode of its own."""
 
     AVG_NUM_SET = 0x02
-    """Decimation count. Nordic flags it ``(no-firmware)``: the firmware
-    ignores it."""
+    """Decimation count. Nordic's source marks it as not handled by the
+    firmware, which ignores it."""
 
     TRIGGER_WINDOW_SET = 0x03
     """Triggered-capture window size (u16 LE)."""
 
     TRIGGER_INTERVAL_SET = 0x04
-    """Triggered-capture interval (u16 LE). Nordic flags it
-    ``(no-firmware)``."""
+    """Triggered-capture interval (u16 LE). Nordic's source marks it as
+    not handled by the firmware."""
 
     TRIGGER_SINGLE_SET = 0x05
     """Single-shot trigger arm."""
 
     AVERAGE_START = 0x06
-    """Start the 100 kSPS sample stream: 4-byte little-endian sample
-    frames until ``AVERAGE_STOP``."""
+    """Start the stream: 100,000 samples per second, each a 4-byte
+    little-endian word, until ``AVERAGE_STOP``."""
 
     AVERAGE_STOP = 0x07
     """Stop the sample stream."""
 
     RANGE_SET = 0x08
-    """Manual measurement-range override (u8, 0-4). Rarely used, the
-    firmware auto-ranges. Nordic flags it ``(no-firmware)``."""
+    """Manual measurement-range override (u8, 0 to 4). Rarely used, the
+    firmware auto-ranges. Nordic's source marks it as not handled by
+    the firmware."""
 
     LCD_SET = 0x09
-    """LCD backlight. The PPK2 has no LCD; Nordic flags it
-    ``(no-firmware)``."""
+    """LCD backlight. The PPK2 has no LCD; Nordic's source marks it as
+    not handled by the firmware."""
 
     DEVICE_RUNNING_SET = 0x0C
     """Power to the DUT: payload ``0x01`` on, ``0x00`` off. The app's "Enable power output".
@@ -57,7 +58,7 @@ class Opcode(IntEnum):
 
     REGULATOR_SET = 0x0D
     """Supply voltage in Source meter mode: ``[0x0D, mV >> 8, mV & 0xff]``
-    (big-endian), 800-5000 mV.
+    (big-endian), 800 to 5,000 mV.
 
     In Ampere meter mode the regulator is inactive, but the calibration
     still uses the last value sent (see ``current_micro_amps``).
@@ -87,12 +88,12 @@ class Opcode(IntEnum):
     """Disable firmware-side spike filtering."""
 
     GET_METADATA = 0x19
-    """Request the per-device calibration: ~1 KB of ASCII
+    """Request the per-device calibration: about 1 kB of ASCII
     ``key: value\\n`` lines ending with ``END``."""
 
     RESET = 0x20
-    """Soft-reset the firmware. The device drops off USB and
-    re-enumerates (~200-500 ms on macOS)."""
+    """Restart the firmware. The PPK2 leaves USB and comes back 200 to
+    500 ms later."""
 
     SET_USER_GAINS = 0x25
     """User gain override, payload ``[u8 range, f32 gain]``. Current

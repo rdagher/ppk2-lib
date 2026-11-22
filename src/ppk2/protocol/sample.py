@@ -19,11 +19,11 @@ class RawSample:
     """One sample frame after bit extraction: no calibration, no validation.
 
     Attributes:
-        adc_14: Raw 14-bit ADC reading (0-16383).
-        range: Auto-range index. Healthy firmware emits 0-4; 5 and up
+        adc_14: Raw 14-bit ADC reading (0 to 16,383).
+        range: Auto-range index. Healthy firmware emits 0 to 4; 5 and up
             means the parse is misaligned.
         counter: 6-bit per-sample counter, incrementing mod 64.
-        logic: Digital inputs D0..D7 in one byte (bit 0 = D0).
+        logic: Digital inputs D0 to D7 in one byte (bit 0 is D0).
     """
 
     adc_14: int
@@ -36,7 +36,7 @@ class RawSample:
         return self.range <= 4
 
     def pin(self, pin: int) -> bool:
-        """Whether digital input ``pin`` (0-7) was high; ``pin`` wraps modulo 8."""
+        """Whether digital input ``pin`` (0 to 7) was high; ``pin`` wraps modulo 8."""
         return ((self.logic >> (pin & 0x7)) & 1) != 0
 
 

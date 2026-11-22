@@ -1,6 +1,6 @@
-r"""Per-device calibration metadata returned by ``GET_META_DATA`` (0x19).
+r"""Per-device calibration metadata returned by ``GET_METADATA`` (0x19).
 
-The response is ~1 KB of ASCII ``key: value\n`` lines ending with a
+The response is about 1 kB of ASCII ``key: value\n`` lines ending with a
 literal ``END``. It can arrive split across reads: accumulate until
 ``END`` is in the buffer, then call ``parse_metadata``.
 
@@ -55,9 +55,9 @@ class CalibrationCoefficients:
         s: Per-range VDD-dependent linear slope.
         i: Per-range VDD-dependent linear intercept.
         ug: Per-range user gain (default 1.0).
-        vdd_mv: Supply voltage in millivolts, 800-5000: the last
+        vdd_mv: Supply voltage in millivolts, 800 to 5,000: the last
             ``REGULATOR_SET``. It survives host disconnects: a PPK2
-            left at 1800 mV reports 1800 on the next open. 3300 when
+            left at 1,800 mV reports it on the next open. 3,300 when
             the firmware omits it.
         mode: Power mode, ``1`` Ampere meter or ``2`` Source meter;
             anything else raises ``InvalidValue``. Ampere meter, the
@@ -109,7 +109,7 @@ class InvalidValue(MetadataError):
 
 
 def parse_metadata(buf: bytes) -> CalibrationCoefficients:
-    r"""Parse a full ``GET_META_DATA`` response into calibration coefficients.
+    r"""Parse a full ``GET_METADATA`` response into calibration coefficients.
 
     Tolerant of unknown keys, ``END`` with or without a newline, spaces
     around the ``:``, missing ``VDD``/``mode`` (see

@@ -109,7 +109,7 @@ class Session:
 
         The supply voltage starts at ``coeffs.vdd_mv``, the value the
         firmware reported and keeps across host disconnects: a PPK2
-        left at 1800 mV starts the next session at 1800 mV until
+        left at 1,800 mV starts the next session at 1,800 mV until
         ``set_source_voltage`` says otherwise. Same as Nordic's app.
         """
         self._port = port
@@ -138,8 +138,8 @@ class Session:
         """Open ``device`` and run the metadata handshake.
 
         Up to 3 attempts, 0.5 s then 1.0 s apart. The retries are for
-        the macOS USB CDC wedge that can follow another process's
-        capture, especially one that sent ``RESET`` on close.
+        a port left stuck by another program's capture (seen on
+        macOS), above all one that sent ``RESET`` on close.
         """
         last_err: SessionError = SerialIOError("open: never attempted")
         for attempt in range(_OPEN_ATTEMPTS):
@@ -193,9 +193,9 @@ class Session:
     def close(self) -> None:
         """Stop the stream, cut power to the DUT, wait for the stream to end, close the port.
 
-        Idempotent; errors are swallowed. No ``RESET`` is sent: on macOS it
-        triggers a USB re-enumeration (~200-500 ms) that often wedges the next
-        session.
+        Idempotent; errors are swallowed. No ``RESET`` is sent: it makes the
+        PPK2 leave USB and come back, which takes 200 to 500 ms and can
+        block the next session.
 
         The port is not closed while samples still arrive. Closed right
         after ``AVERAGE_STOP``, the PPK2 can miss the command and keep
@@ -229,9 +229,9 @@ class Session:
     def set_mode(self, mode: Mode) -> None:
         """Select the measurement mode.
 
-        Call it before ``start_measuring``. A change sent during a
-        stream was once reported as ignored; on the unit tested it was
-        applied, but nothing here relies on it.
+        Call it before ``start_measuring``. On the PPK2 tested, a
+        change sent during a stream was applied too; nothing here
+        relies on that.
         """
         self._write(bytes([Opcode.SET_POWER_MODE.byte(), int(mode)]))
 
@@ -242,8 +242,8 @@ class Session:
         meter mode the regulator is inactive, but the value still feeds
         the calibration: set it to the DUT's real supply voltage.
 
-        Values outside 800-5000 mV are clamped; the firmware ignores
-        them otherwise.
+        Values outside 800 to 5,000 mV are brought back to the nearest
+        limit; the firmware would ignore them.
 
         Raises:
             ValueError: If ``mv`` exceeds the cap set with
@@ -272,7 +272,7 @@ class Session:
 
         A host-side guard against typing a DUT-damaging voltage, like
         the app's voltage limit ("Set max supply voltage to"). The cap
-        is itself clamped to 800-5000 mV, and it does not change a
+        is itself kept within 800 to 5,000 mV, and it does not change a
         supply voltage already above it.
 
         Raises:
@@ -293,7 +293,7 @@ class Session:
     # ── Stream control ─────────────────────────────────────────────────
 
     def start_measuring(self) -> None:
-        """Start the 100 kSPS sample stream."""
+        """Start the stream of samples, 100,000 per second."""
         self._write(bytes([Opcode.AVERAGE_START.byte()]))
         self._stream_started_at = monotonic()
         self._stream_bytes = 0
@@ -359,12 +359,12 @@ class Session:
         host-side too. The override is gone at ``close``.
 
         Args:
-            range_idx: Which of the five measurement ranges, 0-4. The
+            range_idx: Which of the five measurement ranges, 0 to 4. The
                 app numbers them 1 to 5.
             gain: The gain, from 0.9 to 1.1 as in the app.
 
         Raises:
-            ValueError: If ``range_idx`` is not 0-4, or ``gain`` is not
+            ValueError: If ``range_idx`` is not 0 to 4, or ``gain`` is not
                 from 0.9 to 1.1.
             RuntimeError: If called while a stream runs, between
                 ``start_measuring`` and ``stop_measuring``.
@@ -389,7 +389,7 @@ class Session:
         )
         self._coeffs = replace(self._coeffs, ug=new_ug)
 
-    # ── Spike-filter knobs ─────────────────────────────────────────────
+    # ── Spike-filter settings ──────────────────────────────────────────
 
     def set_spike_filter(
         self,
@@ -398,14 +398,14 @@ class Session:
         alpha: float | None = None,
         alpha5: float | None = None,
     ) -> None:
-        """Change spike-filter knobs; the ones not passed keep their value.
+        """Change settings of the spike filter; those not passed keep their value.
 
         Host-side, like Nordic's app: the next ``capture`` builds its
-        parser with these. See ``SpikeFilter`` for what each knob does
+        parser with these. See ``SpikeFilter`` for what each setting does
         and its limits. The change is gone at ``close``.
 
         Raises:
-            ValueError: If a knob is out of range.
+            ValueError: If a setting is out of range.
             RuntimeError: If called while a stream runs, between
                 ``start_measuring`` and ``stop_measuring``.
         """
@@ -423,7 +423,7 @@ class Session:
         )
 
     def spike_filter(self) -> SpikeFilter:
-        """The spike-filter knobs the next ``capture`` will use."""
+        """The spike-filter settings the next ``capture`` will use."""
         return self._spike_filter
 
     # ── Capture loop ───────────────────────────────────────────────────
@@ -591,7 +591,7 @@ def _recover_and_negotiate(port: serial.Serial) -> CalibrationCoefficients:
     """Stop any stream, reset on retries, read and parse the metadata.
 
     Up to 3 attempts. A failed write is recorded as the failure instead
-    of being skipped: under a macOS CDC wedge every write errors out,
+    of being skipped: on a port that is stuck every write fails,
     and reporting a later parse failure would hide the real cause.
     """
     last_failure = "(no attempts made)"
@@ -621,7 +621,7 @@ def _recover_and_negotiate(port: serial.Serial) -> CalibrationCoefficients:
         try:
             port.write(bytes([Opcode.GET_METADATA.byte()]))
         except serial.SerialException as exc:
-            last_failure = f"write GET_META_DATA: {exc}"
+            last_failure = f"write GET_METADATA: {exc}"
             continue
 
         try:

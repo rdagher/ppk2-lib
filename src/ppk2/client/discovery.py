@@ -32,8 +32,8 @@ import serial.tools.list_ports
 from ppk2.client.session import flush_input, read_until_end
 from ppk2.protocol import MetadataError, Opcode, parse_metadata
 
-#: Default polling budget for ``find_ppk2``, in seconds: long enough to
-#: ride out the USB re-enumeration that follows a ``RESET`` on macOS.
+#: Default polling budget for ``find_ppk2``, in seconds: long enough for
+#: a PPK2 to come back on USB after a ``RESET``.
 DEFAULT_DISCOVERY_TIMEOUT_S = 3.0
 
 #: What a probe found on one port: the data port answers the metadata
@@ -126,8 +126,8 @@ def find_ppk2(
 ) -> PortInfo:
     """Find the single PPK2 on the bus and return its data port.
 
-    Polls for up to ``timeout_s`` seconds, so a call right after a
-    teardown rides out the USB re-enumeration.
+    Polls for up to ``timeout_s`` seconds, so that a PPK2
+    just plugged in, or coming back on USB, is found.
 
     Args:
         timeout_s: Polling budget in seconds; 0 for a single pass.
