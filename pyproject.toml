@@ -68,8 +68,10 @@ build-backend = "hatchling.build"
 packages = ["src/ppk2"]
 
 [tool.hatch.build.targets.sdist]
-# Source, tests, and docs only.
-include = ["/src", "/tests", "/docs", "/CHANGELOG.md"]
+# The source and the tests that run from it alone. tests/test_docs.py
+# checks the documentation of the repository, which is not shipped.
+include = ["/src", "/tests", "/CHANGELOG.md"]
+exclude = ["/tests/test_docs.py"]
 
 [tool.pytest.ini_options]
 minversion = "8"
