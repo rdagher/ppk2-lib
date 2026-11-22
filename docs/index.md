@@ -1,10 +1,10 @@
 # ppk2-lib
 
-A Python library and command-line tool for Nordic's Power Profiler
-Kit II (PPK2). The PPK2 measures the current of a device under test
-(DUT) and samples eight digital inputs with it, 100,000 times per
-second. With ppk2-lib a script, a terminal or a CI job drives it,
-without the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html).
+A Python library and command-line tool for Nordic's
+[Power Profiler Kit II](https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2) (PPK2). The PPK2 measures the current
+of a device under test (DUT) and samples eight digital inputs with it,
+100,000 times per second. With ppk2-lib a script, a terminal or a CI
+job drives it, without the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html).
 
 This is an experimental release (0.1.0). It works and is checked on
 hardware, but the API may still change between 0.x versions.
@@ -13,7 +13,7 @@ hardware, but the API may still change between 0.x versions.
 
 The Power Profiler app is made for looking at a trace by hand. A
 power measurement has to be repeated: after every change, on every
-board, in CI. That takes a command and a library, the
+variant of a device, in CI. That takes a command and a library, the
 same ones at the desk and on the test bench, so that a number seen
 during development is the number the pipeline checks.
 
@@ -28,8 +28,8 @@ capturing 3.00 s -> boot.csv (Ctrl-C to stop early)
 captured 300000 samples over 3.00 s (100037 Hz)
 ```
 
-The PPK2 powers the DUT at 3.3 V, switches it on as the capture starts,
-and writes the same CSV the app exports. A few more:
+The PPK2 powers the DUT at 3.3 V and switches it on as the capture
+starts. The file is a CSV in the format the app exports. A few more:
 
 ```sh
 ppk2 capture --out idle.ppk2 --seconds 30    # a session file in the app's format
@@ -56,8 +56,9 @@ sample of 1 mA or more.
 ## Continuous integration
 
 `ppk2 run` powers the DUT, records while a command runs, and exits
-with that command's exit code. A test job can therefore record the
-current of the very run it checks:
+with that command's exit code. On a runner that has the PPK2 and the
+DUT attached, a test job can therefore record the current of the very
+run it checks:
 
 ```sh
 ppk2 run --source --vdd 3.3 --out tests.csv -- pytest tests/
@@ -105,7 +106,7 @@ The [recipes](user/recipes.md) show several of these.
 
 ## Limitations
 
-- Time: one sample lasts 10 µs, so a shorter edge is not resolved.
+- Time: one sample lasts 10 µs, so anything shorter is not resolved.
 - Accuracy: it is the PPK2's own, which Nordic gives as better than
   ±20 %. ppk2-lib is checked against Nordic's app, not against a
   calibrated instrument.
@@ -115,11 +116,5 @@ The [recipes](user/recipes.md) show several of these.
 
 ## Package names
 
-| What | Name |
-|---|---|
-| Distribution, what you install | `ppk2-lib` |
-| Python package, what you import | `ppk2` |
-| Command | `ppk2` |
-
-The distribution has its own name because `ppk2-api` on PyPI is
-another project.
+The distribution, which is what you install, is `ppk2-lib`. The Python
+package and the command are both `ppk2`.

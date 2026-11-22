@@ -1,9 +1,9 @@
 # Command reference
 
-`ppk2` does from a terminal what the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html) does with a
-PPK2: find it, switch power to the DUT (device under test), and record current and digital
-inputs to a file. `python -m ppk2` is the same program, and every
-command has `--help`.
+`ppk2` does from a terminal what the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html) does
+with a PPK2: find it, switch power to the device under test (DUT), and
+record current and digital inputs to a file. `python -m ppk2` is the
+same program, and every command has `--help`.
 
 Only one program can hold a PPK2. Quit the app before you start.
 
@@ -24,7 +24,7 @@ Only one program can hold a PPK2. Quit the app before you start.
 |---|---|---|---|
 | `--serial TEXT` | none | `discover`, `metadata`, `power`, `capture`, `run` | The USB serial number of one PPK2. Needed when several are attached |
 | `--port PATH` | none | `discover`, `metadata`, `power`, `capture`, `run` | The path of the data port. Skips the search |
-| `--vdd FLOAT` | 3.3 | `power`, `capture`, `run` | The DUT's supply voltage in volts, kept between 0.8 and 5.0 |
+| `--vdd FLOAT` | 3.3 | `power`, `capture`, `run` | The DUT's supply voltage in volts. A value outside 0.8 to 5.0 is brought back to the nearest of the two |
 | `--source` | off | `power`, `capture`, `run` | Source meter mode instead of Ampere meter mode |
 
 `--vdd` means two things. In Source meter mode it is the voltage the
@@ -36,7 +36,7 @@ calibration uses it: give the voltage the DUT really runs at.
 | Code | Meaning |
 |---|---|
 | 0 | Done |
-| 1 | A device or session error, with a one-line message. Also a capture that ends with fewer samples than `--seconds` asks for |
+| 1 | An error with the PPK2, the session or the output file, with a one-line message. Also a capture that ends with fewer samples than `--seconds` asks for |
 | 2 | Wrong usage |
 | 130 | Stopped by Ctrl-C |
 
@@ -44,9 +44,9 @@ calibration uses it: give the voltage the DUT really runs at.
 command was not found, 128 plus the signal number if a signal killed
 it.
 
-Errors never show a traceback. They are one line starting with
-`error:`, and [troubleshooting](troubleshooting.md) lists
-them.
+An error is one line starting with `error:`, and
+[troubleshooting](troubleshooting.md) lists them. A wrong option or
+value is reported with the usage line of the command.
 
 ## `ppk2 list`
 
@@ -119,18 +119,20 @@ captured 500000 samples over 5.00 s (99936 Hz)
 | Option | Default | Meaning |
 |---|---|---|
 | `--out`, `-o PATH` | required | The file to write. A name ending in `.ppk2`, in any letter case, gives a session file, any other name a CSV |
-| `--seconds`, `-s FLOAT` | 30 | How long to capture. The capture ends when it holds that many seconds of samples. If they have not all come one second after that time, it stops, keeps the file and exits 1 |
+| `--seconds`, `-s FLOAT` | 30 | How long to capture, as seconds of samples |
 | `--user-gain RANGE:GAIN` | none | A gain from 0.9 to 1.1 for one range, 0 to 4. Can be repeated. See [gains](../develop/architecture.md#gains) |
 
 What to know about a capture:
 
 - It switches the DUT on as it starts and off as it ends, in both
   modes, so the boot is in the file. The current rises about 10 ms
-  into it.
-  This is a choice: every capture starts from a DUT that is off. In
-  Source meter mode the PPK2 is the supply, and in Ampere meter mode it
-  sits in series with it, so in both the switch is in the DUT's power
-  path.
+  into it. This is a choice: every capture starts from a DUT that is
+  off. In Source meter mode the PPK2 is the supply, and in Ampere meter
+  mode it sits in series with it, so in both the switch is in the DUT's
+  power path.
+- It ends when the file holds the seconds asked for: 500,000 samples
+  for 5 s. If they have not all come one second after that time, it
+  stops, keeps the file and exits with 1.
 - Progress goes to the terminal once per second, the samples go to the
   file only.
 - Currents below 0.2 µA are written as 0, as the app does.
@@ -155,8 +157,8 @@ The digital inputs must be `0` or `1`: the `-` and `X` that the app
 writes when it exports at a lower rate are not accepted.
 
 A gap in the timestamps is filled with samples of 0.2 µA, the way a
-[lost sample](../measure/formats.md#lost-samples) is recorded. A gap of more than
-one second is refused, and so are timestamps that go back. If the
+[lost sample](../measure/formats.md#lost-samples) is recorded. A gap of
+more than one second is refused, and so are timestamps that go back. If the
 conversion fails, an earlier file of the same name is left as it was.
 
 ## `ppk2 power`
@@ -171,13 +173,13 @@ Switches power to the DUT, as the app's Enable power output does.
 Power lasts only while the command runs, because the PPK2 cuts it when
 its serial port closes. `ppk2 power on` without `--hold` therefore
 powers the DUT only for an instant and is of little use. With `--hold`
-it waits for Ctrl-C.
+it waits for Ctrl-C. `--hold` does not work on Windows yet.
 
 ## `ppk2 run`
 
 ```sh
-ppk2 run --source --vdd 3.0 -- west flash
-ppk2 run --source --vdd 3.0 --out flash.csv -- west flash
+ppk2 run --source --vdd 3.3 -- west flash
+ppk2 run --source --vdd 3.3 --out flash.csv -- west flash
 ```
 
 Runs the command after `--` with the DUT powered, and returns its exit
@@ -188,8 +190,9 @@ with or without `--out`, since the PPK2 cannot be told to pause.
 Ctrl-C is passed on to the command. When `ppk2 run` itself is
 terminated, by `kill` or a closed terminal, it terminates the command
 first, and kills it if it has not ended after 5 s. However the command
-ends, the DUT is unpowered afterwards. [Flashing](recipes.md#flashing-a-dut-powered-by-the-ppk2) is
-the usual reason to use it.
+ends, the DUT is unpowered afterwards.
+[Flashing](recipes.md#flashing-a-dut-powered-by-the-ppk2) is the usual
+reason to use it.
 
 ## Signals
 

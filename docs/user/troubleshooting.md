@@ -13,7 +13,9 @@ It shows every PPK2 the computer sees and the state of its two ports.
 Most of the problems below show up here.
 
 An error of `ppk2` is one line starting with `error:`, with exit code
-1. Each section below begins with that line.
+1. Each section below begins with that line. The errors of
+`ppk2 convert` are about its input file: they name the file and the
+line, and are not repeated here.
 
 ## No PPK2 found
 
@@ -46,8 +48,8 @@ error: could not identify the PPK2 data port: none of [...] answered GET_METADAT
 
 The ports are there, but none answered. The line names the ports in
 place of `[...]`. The cause is another program holding the PPK2, nearly
-always the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html). `ppk2 list` then shows a port as
-`[busy: held by another process?]`.
+always the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html). `ppk2 list` then shows a port
+as `[busy: held by another process?]`.
 
 Quit the app, or disconnect the PPK2 inside it. If you know the path of
 the data port, `--port` skips the search.
@@ -92,9 +94,9 @@ error: metadata recovery failed after 3 attempts; last: <cause>
 The port opened but the PPK2 did not send its calibration. `ppk2` has
 already asked again, with a `RESET` in between, and reopened the port.
 
-- A capture that ended badly can leave the port stuck, on macOS in
-  particular. Wait a few seconds and try again. If that fails, unplug
-  the PPK2 and plug it back.
+- A capture that ended badly can leave the port stuck. This was seen
+  on macOS, the only system tried. Wait a few seconds and try again.
+  If that fails, unplug the PPK2 and plug it back.
 - Right after a process was killed, the system can refuse to open the
   port for a second or two.
 - Another program that just used the PPK2 may still be closing it.
@@ -106,8 +108,8 @@ error: no samples captured: check the PPK2 mode and the DUT's power
 ```
 
 The PPK2 answered but sent nothing during the capture. Check that the
-mode matches the wiring: `--source` when the PPK2 supplies the DUT (device under test),
-nothing when the DUT has its own supply.
+mode matches the wiring: `--source` when the PPK2 supplies the device
+under test (DUT), nothing when the DUT has its own supply.
 
 ## Output not writable
 
@@ -137,9 +139,21 @@ error: capture ended with 2999000 of 3000000 samples: the PPK2 stopped sending, 
 ```
 
 The samples that `--seconds` asks for had not all arrived one second
-after that time. The file holds what did arrive. A busy computer, a
-USB hub or a long cable are the usual causes: see
+after that time. The file holds what did arrive. A busy computer or a
+poor USB link can cause it: see
 [lost samples](#lost-samples-and-stream-rate-warnings).
+
+## Serial error
+
+```text
+error: serial read: <cause>
+```
+
+The link to the PPK2 broke while the command ran: the cable was pulled,
+or the PPK2 lost its power. The line can also start with
+`serial write:` or `serial open:`, and it ends with the system's
+message. An output file is completed with what was recorded until
+then.
 
 ## Current reads zero or far too low
 
@@ -153,7 +167,8 @@ USB hub or a long cable are the usual causes: see
 
 ## Digital inputs high while the DUT is off
 
-They can. Without power on the DUT, the inputs are not driven.
+Without power on the DUT, nothing drives the inputs, and they can read
+high.
 
 ## Lost samples and stream-rate warnings
 
@@ -171,9 +186,10 @@ cable, without a hub, and close what else loads the machine.
 
 Capture the same DUT with the app and with `ppk2 capture`, export the
 app's capture as CSV, and compare the two files. The repository's
-[`validation/compare_cli.py`](https://github.com/rdagher/ppk2-lib/blob/main/validation/compare_cli.py) does it and writes a report. The
-[validation](../validation/method.md) describes the procedure, and its
-[results](../validation/results.md) show it on one dev kit, in both modes.
+[`validation/compare_cli.py`](https://github.com/rdagher/ppk2-lib/blob/main/validation/compare_cli.py)
+does it and writes a report. The [validation](../validation/method.md)
+describes the procedure, and its [results](../validation/results.md)
+show it on one dev kit, in both modes.
 
 ## See also
 

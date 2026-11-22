@@ -21,8 +21,9 @@ uv tool install "git+https://github.com/rdagher/ppk2-lib"
 it once without installing anything.
 
 This gives you the `ppk2` command and the `ppk2` Python package. You
-need Python 3.11 or newer. Two dependencies come with it, [`pyserial`](https://pyserial.readthedocs.io/)
-and [`typer`](https://typer.tiangolo.com/); there is nothing to compile.
+need Python 3.11 or newer. Two dependencies come with it,
+[`pyserial`](https://pyserial.readthedocs.io/) and
+[`typer`](https://typer.tiangolo.com/); there is nothing to compile.
 
 ```console
 $ ppk2 version
@@ -49,14 +50,16 @@ PPK2 on a bench.
 
 ## Wiring
 
-Wire it as you would for the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html). The PPK2 has two
-modes, named here as in the app, and the wiring decides which one you
-use.
+Wire it as you would for the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html). The PPK2
+has two modes, named here as in the app, and the wiring decides which
+one you use. Nordic's [PPK2 user guide](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html) shows both wirings on a
+dev kit, for the [Ampere meter](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/measure_current_ampere_meter.html) and for the
+[Source meter](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/measure_current_source_meter.html).
 
 ### Ampere meter mode
 
-The DUT (device under test) has its own supply and the PPK2 sits in series with it. This is
-the default.
+The device under test (DUT) has its own supply and the PPK2 sits in
+series with it. This is the default.
 
 ```text
   supply  ──────►  VIN  ┐
@@ -84,8 +87,8 @@ supply voltage, from 0.8 to 5.0 V.
   DUT GND ───────  GND
 ```
 
-The PPK2 can supply up to 1 A. Nordic's user guide asks for a second
-USB cable, in the `USB POWER ONLY` socket, above 400 mA.
+The PPK2 can supply up to 1 A. Above 400 mA the user guide recommends
+a second USB supply, on the `USB POWER ONLY` socket.
 
 A DUT powered this way is off until a command switches it on, and off
 again when the command ends: the PPK2 cuts power when its serial port
@@ -226,18 +229,22 @@ group.
 
 ### Windows
 
-The PPK2 shows up as two COM ports. `ppk2 power on --hold` and Ctrl-C
-handling in `ppk2 run` use POSIX calls that Windows does not have.
+The PPK2 shows up as two COM ports. Two things do not work on Windows
+yet, because they use POSIX calls: `ppk2 power on --hold`, and Ctrl-C
+during `ppk2 run`.
 
 ## Nordic development kits
 
 - nRF52840 DK: measure with switch SW6 on "nRF only". Otherwise the
-  interface chip stays on the measured supply and adds about 85 mA.
+  interface chip stays on the measured supply, and its current hides
+  that of the nRF52840.
 - nRF54L15 DK and nRF54LM20 DK: put the PPK2 across the
   current-measurement header. With everything else left connected, the
-  nRF54LM20 DK idled at about 4 µA.
-- After flashing, an nRF chip stays in debug mode and draws about 1 mA
-  more until it is power-cycled. A capture power-cycles it.
+  nRF54LM20 DK idles at 1.4 µA with the bench firmware of this
+  repository, as the [validation](../validation/results.md) shows.
+- After flashing, an nRF chip stays in debug mode and draws more until
+  it is power-cycled. On the nRF54LM20 DK the same firmware idled at
+  330 µA after a flash and a reset. A capture power-cycles the DUT.
 
 ## Next steps
 

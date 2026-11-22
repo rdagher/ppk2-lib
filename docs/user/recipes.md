@@ -4,12 +4,12 @@ Four jobs people use a PPK2 for, done from a script.
 
 ## Flashing a DUT powered by the PPK2
 
-A DUT (device under test) that gets its power from the PPK2 is off until a command
-switches it on, and its debug port does not answer. To flash it, power
-it for the time the programmer runs:
+A device under test (DUT) that gets its power from the PPK2 is off
+until a command switches it on, and its debug port does not answer. To
+flash it, power it for the time the programmer runs:
 
 ```sh
-ppk2 run --source --vdd 3.0 -- west flash
+ppk2 run --source --vdd 3.3 -- west flash
 ```
 
 `ppk2 run` switches power on, runs the command after `--`, and
@@ -21,7 +21,7 @@ To flash from another terminal, or to debug, hold the power on until
 Ctrl-C:
 
 ```sh
-ppk2 power on --source --vdd 3.0 --hold
+ppk2 power on --source --vdd 3.3 --hold
 ```
 
 The same from Python:
@@ -33,15 +33,17 @@ from ppk2 import Mode, Session, find_ppk2
 
 with Session.open(find_ppk2().device) as session:
     session.set_mode(Mode.SOURCE)
-    session.set_source_voltage(3000)
+        session.set_source_voltage(3300)
     session.power_on()  # the power is up about 1 ms later
     code = subprocess.run(["west", "flash"]).returncode
 raise SystemExit(code)
 ```
 
-An nRF chip stays in debug mode after it is flashed and draws about
-1 mA more until it is power-cycled. Measure with a fresh `ppk2 capture`,
-which power-cycles it, not inside the session that flashed.
+An nRF chip stays in debug mode after it is flashed and draws more
+until it is power-cycled. On the nRF54LM20 DK, the bench firmware of
+this repository then idled at 330 µA, against 1.4 µA after a power
+cycle. Measure with a fresh `ppk2 capture`, which power-cycles the DUT,
+not inside the session that flashed.
 
 ## Current of a marked region
 
@@ -81,10 +83,10 @@ regions["charge_uC"] = regions["sum"] * SAMPLE_S  # µA × s = µC
 print(regions[["duration_ms", "mean", "max", "charge_uC"]].round(2))
 ```
 
-On `source_ppk2_1.csv.xz`, a capture of the
-[validation](../validation/results.md#reproducing-the-results) of the bench
-firmware of this repository, which keeps the CPU busy for 100 ms while
-D0 is high, the first rows are:
+Run on `source_ppk2_1.csv.xz`, one of the captures of the
+[validation](../validation/results.md#reproducing-the-results), it
+prints these first rows. The firmware of that bench keeps the CPU busy
+for 100 ms while D0 is high:
 
 ```text
     duration_ms     mean      max  charge_uC
@@ -96,8 +98,8 @@ D0
 ```
 
 Over the 147 regions of that 30 s capture the mean current stayed
-between 1,382.40 and 1,387.90 µA. [pandas](https://pandas.pydata.org/) reads the compressed file as
-it is.
+between 1,382.40 and 1,387.90 µA. [pandas](https://pandas.pydata.org/)
+reads the compressed file as it is.
 
 Three things to watch:
 
@@ -142,7 +144,7 @@ class RegionCurrent:
 
 regions = RegionCurrent(wanted=10)
 with Session.open(find_ppk2().device) as session:
-    session.set_mode(Mode.AMPERE)
+        session.set_mode(Mode.SOURCE)
     session.set_source_voltage(3300)
     session.start_measuring()
     session.power_on()
@@ -153,7 +155,7 @@ print(f"{len(regions.means_ua)} regions, mean current {mean:.2f} µA")
 ```
 
 ```text
-10 regions, mean current 1381.83 µA
+10 regions, mean current 1386.63 µA
 ```
 
 ## Long captures
@@ -163,12 +165,13 @@ first question is the size of the file.
 
 | Duration | Samples | CSV | `.ppk2` |
 |---:|---:|---:|---:|
-| 1 minute | 6 million | 240 MB | about 8 MB |
-| 1 hour | 360 million | 14 GB | about 0.5 GB |
-| 8 hours | 2.9 billion | 115 GB | about 4 GB |
+| 1 minute | 6 million | 240 MB | about 7 MB |
+| 1 hour | 360 million | 14 GB | about 0.45 GB |
+| 8 hours | 2.9 billion | 115 GB | about 3.5 GB |
 
-The `.ppk2` column comes from the bench firmware of this repository; a
-session file is compressed, so a noisier signal takes more. While it is
+The `.ppk2` column comes from a capture of ten minutes of the bench
+firmware of this repository, which took 73.5 MB. A session file is
+compressed, so a noisier signal takes more. While it is
 being written, a `.ppk2` capture uses 6 bytes per sample in a file next
 to the output: 36 MB per minute, 17 GB for 8 hours.
 
@@ -178,10 +181,11 @@ ppk2 capture --out hour.ppk2 --seconds 3600
 
 What to expect:
 
-- The longest capture run for this release lasted two minutes. Nothing
-  in the program depends on the duration, but hours-long captures have
-  not been run, and a session file of several gigabytes has not been
-  tried, here or in the app.
+- The longest capture run for this release lasted ten minutes, to a
+  `.ppk2` file: 60,000,000 samples, none lost. Nothing in the program
+  depends on the duration, but hours-long captures have not been run,
+  and a session file of several gigabytes has not been tried, here or
+  in the app.
 - Ctrl-C stops the capture and completes the file. A CSV always ends on
   a complete row. A `.ppk2` file appears complete or not at all.
 - When the computer does not keep up, samples are lost. The capture
