@@ -42,8 +42,8 @@ What it has been tested on:
 | Unit tests, Python 3.11 and 3.13 | yes | yes | yes |
 | Tests with a PPK2 on a bench | no | yes, macOS 26 | no |
 
-So Linux and Windows are expected to work but have not measured
-anything yet.
+So the hardware tests have run only on macOS. Linux and Windows are
+expected to work.
 
 ## Wiring
 
@@ -113,7 +113,7 @@ PPK2  serial=A1B2C3D4E5F6
 A PPK2 has two serial ports and only one carries data. `ppk2 list`
 shows which, and marks a port `busy` when another program holds it.
 With several PPK2s attached, add `--serial A1B2C3D4E5F6` to any
-command.
+command that opens one.
 
 ```console
 $ ppk2 metadata

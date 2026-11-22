@@ -6,7 +6,7 @@ code of this release.
 | Level | Result | Run on |
 |---|---|---|
 | The parser, 600 samples | Every current equal to three decimals, every digital byte identical | The current code |
-| Captures in Ampere meter mode | Current and charge per marked region within 0.11 % of the app's | 2026-11-21 |
+| Captures in Ampere meter mode | Mean current and mean charge of the marked regions within 0.11 % of the app's | 2026-11-21 |
 | Captures in Source meter mode | Current and charge per marked region within 0.04 % of the app's | 2026-11-21 |
 | The 0.2 µA floor | No value between 0 and 0.2 µA, in either tool | 2026-11-21 |
 | A `.ppk2` file opened in the app | Loads; average, maximum and charge of a 10 s window equal to those of the CSV | 2026-11-21 |

@@ -13,6 +13,9 @@ versions.
   calibration.
 - `ppk2 list --mask-serial` hides all but the last four characters of
   each serial number, for a screenshot or a recording.
+- Errors are one line starting with `error:`, also for an output file
+  that cannot be written and for a `--serial` that matches nothing.
+- `ppk2 run` terminates its command when it is itself terminated.
 - `ppk2 capture` records current and digital inputs in Ampere meter or
   Source meter mode, to the 11-column CSV that Nordic's Power Profiler
   app exports, or to a session file in the app's `.ppk2` format.
@@ -35,6 +38,9 @@ versions.
   voltage limit and spike-filter settings.
 - Lost samples are reported and keep their place in the trace. The
   files record each as 0.2 µA, as Nordic's app does.
+- `Session.capture` stops calling its callback once it has returned
+  `False`, and takes `keep_going` to end a capture on a PPK2 that sends
+  nothing.
 - When bytes of the stream are lost, the parser finds the start of the
   words again and goes on.
 - A session leaves the PPK2 quiet for the next program, and opens a
@@ -45,8 +51,8 @@ versions.
 - The parser gives the same samples as the app's on a recorded stream
   that crosses all five measurement ranges.
 - Captures of the same bench by the app and by `ppk2 capture` agree:
-  current and charge per marked region within 0.11 %, in both modes,
-  and the same 0.2 µA floor. See
+  the mean current and the mean charge of the marked regions within
+  0.11 %, in both modes, and the same 0.2 µA floor. See
   [`validation/evidence/`](validation/evidence/bench_dut/README.md).
 - Hardware tests and their bench firmware are in
   [`tests/hil/`](tests/hil/README.md).

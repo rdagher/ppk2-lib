@@ -5,7 +5,7 @@ changing the library itself are in `CONTRIBUTING.md` at the root of the
 repository.
 
 The `ppk2` package has three layers. Each one uses only the layer below
-it, and each can be imported alone.
+it.
 
 | Layer | What it does | Needs |
 |---|---|---|
@@ -202,10 +202,17 @@ def on_sample(sample: Sample) -> bool:
 answered `False`. A function that always answers `True` never comes
 back, so give it a way to stop: a deadline, or a number of samples.
 
-The stop takes effect between two reads of the serial port, not
-between two samples. One read brings up to 1,024 samples, and your
-function is still called for the rest of that read after it answered
-`False`. Write it so that this does no harm.
+Your function is not called again once it has answered `False`. The
+samples already read after that one are dropped.
+
+When the PPK2 sends nothing, your function is never called and cannot
+stop the capture. Pass `keep_going` for that case: `capture` calls it
+when a read times out, and stops when it answers `False`.
+
+```python
+deadline = time.monotonic() + 5
+session.capture(on_sample, keep_going=lambda: time.monotonic() < deadline)
+```
 
 An exception raised in the function leaves `capture`, and the `with`
 block still closes the session.

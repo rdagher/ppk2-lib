@@ -325,9 +325,10 @@ involved, so rows are exactly 10 µs apart.
 
 - A lost sample keeps its place. Each sample carries a counter; when
   the counter jumps, the parser puts a placeholder where each missing
-  sample was. The trace keeps its true length, and the
-  [protocol page](protocol.md#5-stream-reassembly) says
-  how.
+  sample was. The trace keeps its true length, with one limit. The
+  counter has 6 bits, so a loss of exactly 64 samples, or a multiple
+  of 64, goes unseen, and a longer loss is counted short by a multiple
+  of 64. The [protocol page](protocol.md#5-stream-reassembly) says how.
 - The rate is fixed. The PPK2 has no command that makes it send fewer
   samples: its firmware ignores `AVG_NUM_SET`. When the app shows fewer
   samples per second, it has averaged blocks of samples on the

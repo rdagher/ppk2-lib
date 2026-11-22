@@ -186,7 +186,10 @@ What to expect:
   a complete row. A `.ppk2` file appears complete or not at all.
 - When the computer does not keep up, samples are lost. The capture
   warns once 500 are missing and gives the total at the end. The trace
-  keeps its true length.
+  keeps its true length as long as fewer than 64 samples are lost in a
+  row. Past that the count can be short by a multiple of 64, and the
+  summary then shows a rate below 100,000 Hz. Check that rate before
+  relying on the duration or the charge of a long capture.
 - The rate cannot be lowered at the PPK2. To keep fewer values, average
   blocks of samples afterwards: `ppk2 convert` accepts a CSV reduced to
   a power of ten, such as 1,000 samples per second.

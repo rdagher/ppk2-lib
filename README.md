@@ -93,17 +93,18 @@ with `just docs`. It has four parts.
 | Measurements | [Principle](docs/measure/principle.md), [protocol](docs/measure/protocol.md), [file formats](docs/measure/formats.md) |
 | Validation against Nordic's app | [Method](docs/validation/method.md), [results](docs/validation/results.md) |
 
-The package has three layers, each usable alone: `ppk2.protocol` for
-the bytes, `ppk2.client` for the device, `ppk2.cli` for the command.
+The package has three layers, each built on the one before:
+`ppk2.protocol` for the bytes, `ppk2.client` for the device, `ppk2.cli`
+for the command.
 The [changelog](CHANGELOG.md) lists what 0.1.0 contains and its limits.
 
 ## Validation
 
 The parser gives the same samples as the parser of Nordic's app on a
 recorded stream that crosses all five measurement ranges. Captures of
-the same bench by the app and by `ppk2 capture`, minutes apart, agree
-within 0.11 % on the current and the charge of each marked region, in
-both modes.
+the same bench by the app and by `ppk2 capture`, minutes apart, were
+compared in both modes: the mean current and the mean charge of the
+marked regions differ by 0.11 % at most.
 
 ![The app's capture and this tool's, overlaid from power-on, in Ampere meter mode](validation/evidence/bench_dut/plots/ampere_parity.png)
 

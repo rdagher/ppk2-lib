@@ -42,7 +42,8 @@ What else to know:
 - A value below 0.2 µA is written as `0.000`, as in the app.
 - When the app exports at a lower sample rate, its digital columns can
   also hold `-` and `X`. At the full rate both tools write only `0` and
-  `1`.
+  `1`. `ppk2 convert` does not accept `-` and `X`: it reports the row
+  as malformed.
 - A row is about 40 bytes. One minute is 240 MB and one hour 14 GB.
 
 This format was chosen because it is the app's. A capture made here and
@@ -146,7 +147,8 @@ While a capture runs, the samples go to a file next to the output,
 named after it with `.frames` added, 6 bytes per sample. At the end the
 session file is built from it and put in place in one step. If that
 fails, the `.frames` file stays, and an earlier session file of the
-same name is left untouched. A capture without a single sample writes
+same name is left untouched. A later run to the same name refuses to
+start while that `.frames` file is there, so that it is not lost. A capture without a single sample writes
 no file.
 
 ## Lost samples

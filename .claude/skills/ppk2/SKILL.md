@@ -83,18 +83,31 @@ capture power-cycles it.
 ## From Python
 
 ```python
+import time
+
 from ppk2 import Mode, Session, find_ppk2
+
+samples = []
 
 with Session.open(find_ppk2().device) as session:
     session.set_mode(Mode.AMPERE)        # or Mode.SOURCE
     session.set_source_voltage(3000)     # mV
     session.start_measuring()
     session.power_on()
-    session.capture(lambda sample: keep_going)   # returning False ends the capture
+    deadline = time.monotonic() + 1.0    # one second from power-on
+
+    def on_sample(sample) -> bool:
+        samples.append(sample.current_micro_amps)
+        return time.monotonic() < deadline   # False ends the capture
+
+    session.capture(on_sample, keep_going=lambda: time.monotonic() < deadline)
+
+print(len(samples), "samples")
 ```
 
-The callback is the only way out of `capture`: it must return `False`
-at some point. More in
+The callback ends `capture` by returning `False`. `keep_going` ends it
+when the PPK2 sends nothing, a case in which the callback is never
+called. More in
 [`docs/develop/architecture.md`](../../../docs/develop/architecture.md) and
 [`docs/measure/protocol.md`](../../../docs/measure/protocol.md).
 

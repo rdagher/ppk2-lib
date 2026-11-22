@@ -61,6 +61,15 @@ close the nRF Connect Power Profiler, or whatever else holds the port
 The same cause, met while opening the port: the system reported it as
 busy. The line ends with these words.
 
+## No PPK2 with that serial
+
+```text
+error: no PPK2 with serial A1B2C3D4E5F7: attached A1B2C3D4E5F6
+```
+
+A PPK2 is attached, but not the one `--serial` names. The line lists
+the serial numbers that are there.
+
 ## Several PPK2s
 
 ```text
@@ -99,6 +108,27 @@ error: no samples captured: check the PPK2 mode and the DUT's power
 The PPK2 answered but sent nothing during the capture. Check that the
 mode matches the wiring: `--source` when the PPK2 supplies the DUT (device under test),
 nothing when the DUT has its own supply.
+
+## Output not writable
+
+```text
+error: /data/trace.csv: Permission denied
+```
+
+The output file could not be created or written. The line names the
+path and gives the system's reason: a folder without write permission,
+a full disk.
+
+## Frames left by an unfinished run
+
+```text
+error: trace.ppk2.frames: left by a run that did not finish: move or delete it
+```
+
+An earlier capture or conversion to that `.ppk2` name did not finish
+and left its samples in the `.frames` file, 6 bytes each. It is all
+that remains of that run, so it is not overwritten. Move it away if
+you want to keep it, or delete it, and run again.
 
 ## Current reads zero or far too low
 

@@ -102,9 +102,12 @@ instrument:
 - A current drifts over minutes. Two captures of `ppk2 capture` four
   minutes apart differed by 0.05 % in the round of this release.
 
-So a round is judged region by region. For each marked region the
-mean current is compared, and the charge, which is that current added
-up over the region's duration. The distribution of the current inside
+So a round is judged by kind of region. For the regions marked by one
+digital input, the mean of their current is compared between the two
+captures, and the mean of their charge, which is the current added up
+over a region's duration. The regions are not paired one to one: the
+captures are different seconds of the DUT's life and do not hold the
+same number of them. The distribution of the current inside
 the workload and inside the idle is compared as well. There is no
 energy in the comparison, because a PPK2 measures current only.
 

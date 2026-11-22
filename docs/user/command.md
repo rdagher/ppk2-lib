@@ -151,6 +151,8 @@ Turns a CSV capture, plain or gzipped, into a `.ppk2` session file. It
 needs the `Timestamp(ms)` and `Current(uA)` columns and reads the
 digital inputs from `D0-D7` if the column is there. The sample rate
 comes from the timestamps and must be a power of ten up to 100,000.
+The digital inputs must be `0` or `1`: the `-` and `X` that the app
+writes when it exports at a lower rate are not accepted.
 
 A gap in the timestamps is filled with samples of 0.2 µA, the way a
 [lost sample](../measure/formats.md#lost-samples) is recorded. A gap of more than
@@ -183,8 +185,10 @@ code. With `--out` it records while the command runs, to a CSV or a
 `.ppk2` file. It reads the stream in a second thread for that time,
 with or without `--out`, since the PPK2 cannot be told to pause.
 
-Ctrl-C is passed on to the command. However the command ends, the DUT
-is unpowered afterwards. [Flashing](recipes.md#flashing-a-dut-powered-by-the-ppk2) is
+Ctrl-C is passed on to the command. When `ppk2 run` itself is
+terminated, by `kill` or a closed terminal, it terminates the command
+first, and kills it if it has not ended after 5 s. However the command
+ends, the DUT is unpowered afterwards. [Flashing](recipes.md#flashing-a-dut-powered-by-the-ppk2) is
 the usual reason to use it.
 
 ## Signals
@@ -193,6 +197,8 @@ Ctrl-C, `kill` and a closed terminal all end a command the same way:
 the stream is stopped, the DUT is switched off, the port is closed and
 the output file is completed. The exit code is 130 after Ctrl-C, and
 128 plus the signal number after `kill` or a closed terminal.
+`ppk2 power on --hold` is the exception: Ctrl-C is how it is meant to
+end, and it returns 0.
 
 If the process is killed outright, with `kill -9`, the PPK2 still cuts
 power by itself, but it keeps streaming. The next `ppk2` command stops

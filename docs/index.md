@@ -12,8 +12,8 @@ hardware, but the API may still change between 0.x versions.
 ## Motivation
 
 The Power Profiler app is made for looking at a trace by hand. A
-measurement worth making once is usually worth repeating: after every
-change, on every board, in CI. That takes a command and a library, the
+power measurement has to be repeated: after every change, on every
+board, in CI. That takes a command and a library, the
 same ones at the desk and on the test bench, so that a number seen
 during development is the number the pipeline checks.
 
