@@ -17,6 +17,12 @@ variant of a device, in CI. That takes a command and a library, the
 same ones at the desk and on the test bench, so that a number seen
 during development is the number the pipeline checks.
 
+The digital inputs make the measurement finer than an average over a
+capture. A GPIO that the firmware raises around a piece of code marks
+that code in the capture, to the sample. A script then gives the
+current and the charge of that region alone, as a
+[recipe](user/recipes.md#current-of-a-marked-region) shows.
+
 ## Command line
 
 ```console

@@ -5,6 +5,10 @@ A Python library and command-line tool for Nordic's
 eight digital inputs at 100,000 samples per second from a script, a
 terminal or a CI job, without the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html).
 
+A GPIO that the firmware raises around a piece of code shows on a
+digital input, so a capture also tells what that code alone draws. The
+[recipes](docs/user/recipes.md#current-of-a-marked-region) show how.
+
 This is an experimental release (0.1.0). It works and is checked on
 hardware, but the API may still change between 0.x versions.
 
