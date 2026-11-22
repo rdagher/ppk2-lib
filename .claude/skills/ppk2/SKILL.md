@@ -16,8 +16,10 @@ before relying on them.
 - Begin with `ppk2 list`. It shows each PPK2's USB serial and marks
   each port `[data port]`, `[idle]` or `[busy: ...]`. Add
   `--mask-serial` when the output goes into a screenshot or a report.
-- Exit codes: 1 for a device or session error with a one-line message,
-  2 for a usage error, 130 after Ctrl-C. `ppk2 run` returns the
+- Exit codes: 1 for an error, with one line starting with `error:`. A
+  capture that ends with fewer samples than asked also exits 1. 2 is a
+  usage error, and 130 follows Ctrl-C, except for
+  `ppk2 power on --hold`, which returns 0. `ppk2 run` returns the
   command's code (127 not found, 128+N killed by signal N).
 - Power to the device under test (DUT) ends with the command. The PPK2
   cuts it when its port closes. Only `ppk2 power on --hold` or a
@@ -32,7 +34,7 @@ before relying on them.
 
 ```sh
 ppk2 capture --out trace.csv --seconds 30                       # Ampere meter mode
-ppk2 capture --source --vdd 3.0 --out trace.csv --seconds 30    # Source meter mode: the PPK2 powers the DUT
+ppk2 capture --source --vdd 3.3 --out trace.csv --seconds 30    # Source meter mode: the PPK2 powers the DUT
 ppk2 capture --out trace.ppk2 --seconds 30                      # a file in the app's .ppk2 format
 ppk2 convert trace.csv trace.ppk2                               # the same, from a CSV
 ```
@@ -61,21 +63,22 @@ Until a command switches power on, the DUT is off and its debug port
 does not answer.
 
 ```sh
-ppk2 run --source --vdd 3.0 -- west flash    # power it for one command
-ppk2 power on --source --vdd 3.0 --hold      # or hold it, and flash from another shell
+ppk2 run --source --vdd 3.3 -- west flash    # power it for one command
+ppk2 power on --source --vdd 3.3 --hold      # or hold it, and flash from another shell
 ```
 
-In Ampere meter mode, drop `--source`. After flashing, an nRF chip stays in
-debug mode and draws about 1 mA more until it is power-cycled. A
-capture power-cycles it.
+In Ampere meter mode, drop `--source`. After flashing, an nRF chip
+stays in debug mode and draws more until it is power-cycled: 330 µA
+where it idles at 1.4 µA, on the nRF54LM20 DK. A capture power-cycles
+the DUT, so measure with a fresh one.
 
 ## Bench notes
 
 - nRF52840 DK: measure with SW6 on "nRF only". Otherwise the interface
-  chip adds about 85 mA.
+  chip stays on the measured supply and hides the nRF52840's current.
 - nRF54L15 and nRF54LM20 DKs: PPK2 in series at the current-measurement
-  header. The nRF54LM20 DK idled at about 4 µA with everything
-  connected; the nRF54L15 DK has not been measured.
+  header. The nRF54LM20 DK idles at 1.4 µA with the bench firmware and
+  everything connected; the nRF54L15 DK has not been measured.
 - Idle currents drift between captures. Compare a signal with two
   levels region by region, not over the whole trace
   ([`validation/README.md`](../../../validation/README.md)).
@@ -91,7 +94,7 @@ samples = []
 
 with Session.open(find_ppk2().device) as session:
     session.set_mode(Mode.AMPERE)        # or Mode.SOURCE
-    session.set_source_voltage(3000)     # mV
+    session.set_source_voltage(3300)     # mV
     session.start_measuring()
     session.power_on()
     deadline = time.monotonic() + 1.0    # one second from power-on

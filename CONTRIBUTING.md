@@ -191,8 +191,8 @@ For a class with many methods, list the ones to show:
 
 - A space between a number and its unit, the percent sign included:
   `13.5 %`, `0.2 µA`. This is the SI convention (NIST SP 811, 7.2 and
-  7.10.2). The exceptions are quotations, such as the app's `200nA`,
-  and `Current(uA)` in code font.
+  7.10.2). The exception is text in code font, such as
+  `Current(uA)`.
 - A range is written `0.8 to 5.0 V`.
 - Digits are grouped with a comma from four digits on: `301,056`
   samples, `2,244.7 µC`. SP 811 advises a space instead; the comma is

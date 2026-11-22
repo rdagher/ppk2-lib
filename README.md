@@ -1,9 +1,9 @@
 # ppk2-lib
 
-A Python library and command-line tool for Nordic's Power Profiler
-Kit II (PPK2). It records current and the eight digital inputs at
-100,000 samples per second from a script, a terminal or a CI job,
-without the Power Profiler app.
+A Python library and command-line tool for Nordic's
+[Power Profiler Kit II](https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2) (PPK2). It records current and the
+eight digital inputs at 100,000 samples per second from a script, a
+terminal or a CI job, without the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html).
 
 This is an experimental release (0.1.0). It works and is checked on
 hardware, but the API may still change between 0.x versions.
@@ -26,9 +26,9 @@ uvx --from "git+https://github.com/rdagher/ppk2-lib" ppk2 list
 
 You need Python 3.11 or newer. The package runs on Linux, macOS and
 Windows: its unit tests pass on the three, with Python 3.11 and 3.13.
-The tests that need a PPK2 on a bench have run on macOS so far. On
-Windows, `ppk2 power on --hold` and Ctrl-C handling in `ppk2 run` use
-POSIX calls that Windows does not have.
+The tests that need a PPK2 on a bench have run on macOS so far. Two
+things do not work on Windows yet, because they use POSIX calls:
+`ppk2 power on --hold`, and Ctrl-C during `ppk2 run`.
 
 ## Quick start
 
@@ -94,8 +94,12 @@ with `just docs`. It has four parts.
 
 The package has three layers, each built on the one before:
 `ppk2.protocol` for the bytes, `ppk2.client` for the device, `ppk2.cli`
-for the command.
-The [changelog](CHANGELOG.md) lists what 0.1.0 contains and its limits.
+for the command. The [changelog](CHANGELOG.md) lists what 0.1.0
+contains and its limits.
+
+For AI coding assistants, [`llms.txt`](llms.txt) maps the documentation
+and [`.claude/skills/ppk2/SKILL.md`](.claude/skills/ppk2/SKILL.md) is a
+procedure for driving a PPK2 with this package.
 
 ## Validation
 
@@ -108,7 +112,8 @@ marked regions differ by 0.11 % at most.
 ![The app's capture and this tool's, overlaid from power-on, in Ampere meter mode](validation/evidence/bench_dut/plots/ampere_parity.png)
 
 All of this was measured on one PPK2. The reference is Nordic's app,
-not a calibrated instrument.
+not a calibrated instrument. The [method](docs/validation/method.md)
+and the [results](docs/validation/results.md) have the details.
 
 ## Development
 
@@ -119,7 +124,7 @@ just test-hw     # hardware tests: needs a PPK2 and the bench firmware
 just docs        # build the documentation site into site/
 ```
 
-## Origin and licence
+## Origin
 
 The protocol code was written from a reading of the source of Nordic's
 app ([pc-nrfconnect-ppk](https://github.com/nordicsemi/pc-nrfconnect-ppk))
@@ -134,14 +139,17 @@ whose licence allows reading and running it but not redistributing it.
   source, last checked at
   [v4.4.1](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts),
   and every result is checked against it.
-- Nordic's `ppk2` skill of Nordic MCP: a local server that lets an AI
-  assistant drive the kit and watch a live trace. A separate program
-  with a different aim.
+- The `ppk2` skill of Nordic MCP, Nordic's own tooling for AI
+  assistants: a local server through which an assistant drives the kit
+  and shows a live trace. It is made for working with an assistant,
+  where this package is a library and a command for scripts and CI.
 - IRNAS's [ppk2-api-python](https://github.com/IRNAS/ppk2-api-python),
   another Python library for the PPK2, under GPL-2.0. It is not a
   reference here and no code is shared with it.
 
+## Licence
+
+[Apache-2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT), at your option.
+
 ppk2-lib is not affiliated with or endorsed by Nordic Semiconductor.
 PPK2, Power Profiler Kit and nRF are Nordic's product names.
-
-Licensed under Apache-2.0 or MIT, at your option.

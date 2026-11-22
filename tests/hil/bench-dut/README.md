@@ -10,11 +10,13 @@ whose timing is known in advance.
 
 Two kernel timers toggle the pins from interrupt context, so the edges
 do not depend on the scheduler. The main thread spins while D0 is high
-and sleeps while it is low. The current therefore has two levels that follow D0. On the nRF54LM20
-DK at 3.3 V they are about 1.4 mA, and 1.4 µA in the median. The mean of
-the low level is 15 µA, the boot and the wake-ups included.
+and sleeps while it is low. The current therefore has two levels that
+follow D0. On the nRF54LM20 DK at 3.3 V they are about 1.4 mA, and
+1.4 µA in the median. The mean of the low level is 15 µA, the boot and
+the wake-ups included.
 
-## Boards
+## Dev kits
+
 
 | Dev kit | Board target | D0 | D1 |
 |---|---|---|---|
@@ -32,20 +34,21 @@ either.
 
 Connect the logic port of the PPK2:
 
-```
-D0   to the board's D0 pin
-D1   to the board's D1 pin
-GND  to board ground
-VCC  to the board's VDD (the level reference for the inputs)
+```text
+D0   to the dev kit's D0 pin
+D1   to the dev kit's D1 pin
+GND  to the dev kit's ground
+VCC  to the dev kit's VDD (the level reference for the inputs)
 ```
 
-Then put the PPK2 in the board's supply, in Ampere meter or Source
+Then put the PPK2 in the dev kit's supply, in Ampere meter or Source
 meter mode.
 
 ## Building and flashing
 
-You need the nRF Connect SDK toolchain installed by nrfutil, under
-`/opt/nordic/ncs`. The firmware is built and tested with SDK v3.3.1.
+You need the toolchain of the
+[nRF Connect SDK](https://github.com/nrfconnect/sdk-nrf) installed by
+nrfutil, under `/opt/nordic/ncs`. The firmware is built and tested with SDK v3.3.1.
 `NCS_VERSION` and `NCS_WORKSPACE` override the defaults. Run these
 from this folder:
 
@@ -60,7 +63,7 @@ just clean
 With several kits attached, pick one with `DK_SERIAL=<serial>`. CI
 builds the three images on every firmware change.
 
-If the PPK2 powers the board, the board is off until a command turns
+If the PPK2 powers the dev kit, the kit is off until a command turns
 it on: flash with `ppk2 run --source --vdd 3.3 -- just flash`.
 
 ## Signal check

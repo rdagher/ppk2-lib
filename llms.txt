@@ -2,10 +2,10 @@
 
 > A Python library and command-line tool for Nordic's Power Profiler
 > Kit II (PPK2). It records current and eight digital inputs at 100,000
-> samples per second, to a CSV identical to the Power Profiler app's
-> export or to a session file in the app's `.ppk2` format, in Ampere meter or
-> Source meter mode, and it switches power to the device under test
-> (DUT) from a script.
+> samples per second, to a CSV in the format of the Power Profiler
+> app's export or to a session file in the app's `.ppk2` format, in
+> Ampere meter or Source meter mode, and it switches power to the
+> device under test (DUT) from a script.
 > Experimental: the API may change between 0.x versions. Not on PyPI
 > yet; install from git.
 
@@ -26,15 +26,15 @@ Four parts: user guide, developer guide, measurements, validation against Nordic
 - [Getting started](docs/user/getting-started.md): install, the two wirings, the digital inputs, a first capture, reading the file
 - [Command reference](docs/user/command.md): every command and option, exit codes, signals
 - [Recipes](docs/user/recipes.md): flashing a DUT powered by the PPK2, current of a marked region, long captures, comparing two builds
+- [Troubleshooting](docs/user/troubleshooting.md): every error line and what to do
 - [Architecture](docs/develop/architecture.md): the three layers, the life of a session, the capture callback, settings, threads, design choices
 - [API reference](docs/develop/api.md): discovery, Session, stream parser, calibration, commands
-- [Troubleshooting](docs/user/troubleshooting.md): every error line and what to do
 - [Principle](docs/measure/principle.md): modes, ranges, calibration formula, spike filter, the 0.2 µA floor, time, digital inputs, accuracy
 - [Protocol](docs/measure/protocol.md): the bytes and the behaviour of the PPK2, a session on the wire, known caveats
 - [File formats](docs/measure/formats.md): the CSV and the `.ppk2` session file
 - [Method](docs/validation/method.md): the three levels of comparison with Nordic's app, the bench procedure
 - [Results](docs/validation/results.md): tables and plots of the round, differences from the app, limits
-- [Contributing](CONTRIBUTING.md): the rules for the documentation: where each kind goes, Nordic's wording, numbers and units
+- [Contributing](CONTRIBUTING.md): the checks to run, and the rules for the documentation: where each kind goes, Nordic's wording, numbers and units
 - [Changelog](CHANGELOG.md)
 
 ## Hardware tests

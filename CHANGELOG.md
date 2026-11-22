@@ -10,39 +10,35 @@ versions.
 ### Command line
 
 - `ppk2 list`, `discover` and `metadata` find a PPK2 and show its
-  calibration.
-- `ppk2 list --mask-serial` hides all but the last four characters of
-  each serial number, for a screenshot or a recording.
-- Errors are one line starting with `error:`, also for an output file
-  that cannot be written and for a `--serial` that matches nothing.
-- `ppk2 run` terminates its command when it is itself terminated.
-- `ppk2 capture --seconds N` ends when the file holds N seconds of
-  samples: 500,000 for 5 s. It exits 1 if they do not all come.
+  calibration. `ppk2 list --mask-serial` hides all but the last four
+  characters of each serial number, for a screenshot or a recording.
 - `ppk2 capture` records current and digital inputs in Ampere meter or
   Source meter mode, to the 11-column CSV that Nordic's Power Profiler
   app exports, or to a session file in the app's `.ppk2` format.
+  `--seconds N` gives N seconds of samples, 500,000 for 5 s, and the
+  command exits 1 if they do not all come.
 - `ppk2 convert` turns a CSV capture into a `.ppk2` file.
 - `ppk2 power on|off` switches power to the device under test (DUT),
   and `--hold` keeps it on until Ctrl-C.
 - `ppk2 run -- <command>` powers the DUT for the duration of a command
-  and can record meanwhile.
-- Exit codes: 1 for a device or session error with a one-line message,
-  2 for a usage error, 130 after Ctrl-C. `run` returns the command's
-  code.
+  and can record meanwhile. When it is terminated, it terminates the
+  command.
+- Exit codes: 1 for an error with the PPK2, the session or the output
+  file, with one line starting with `error:`; 2 for a usage error; 130
+  after Ctrl-C. `run` returns the command's code.
 
 ### Library
 
 - `ppk2.protocol`: commands, calibration text, sample decoding,
-  calibration formula and stream parser, on the standard library
-  alone.
+  calibration formula and stream parser. This layer uses the standard
+  library only.
 - `ppk2.client`: discovery of the data port, and a `Session` with
   Ampere meter and Source meter modes, power switching, user gain, a
   voltage limit and spike-filter settings.
 - Lost samples are reported and keep their place in the trace. The
   files record each as 0.2 µA, as Nordic's app does.
-- `Session.capture` stops calling its callback once it has returned
-  `False`, and takes `keep_going` to end a capture on a PPK2 that sends
-  nothing.
+- `Session.capture` calls a function for every sample until it returns
+  `False`. `keep_going` ends a capture on a PPK2 that sends nothing.
 - When bytes of the stream are lost, the parser finds the start of the
   words again and goes on.
 - A session leaves the PPK2 quiet for the next program, and opens a
@@ -62,9 +58,11 @@ versions.
 ### Limitations
 
 - Synchronous only.
-- Windows runs the unit tests but has not been tried on a bench, and
-  `power on --hold` and Ctrl-C handling in `run` use POSIX calls.
-- Only the sampling mode of the PPK2 is covered, not its trigger mode.
+- On a bench it has run on macOS only. Linux and Windows pass the unit
+  tests. On Windows, `power on --hold` and Ctrl-C during `run` do not
+  work yet.
+- Captures are continuous, like the Data logger mode of the app. There
+  is no equivalent of its Scope mode, which samples on a trigger.
 - A capture starts about 10 ms before the DUT's power comes up. The
   [protocol page](docs/measure/protocol.md#10-known-caveats) has
   the measurements.
