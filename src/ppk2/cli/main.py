@@ -254,6 +254,10 @@ def dispatch(argv: list[str] | None = None) -> int:
         hint = _ERRNO16_HINT if errno16_in_chain(exc) else ""
         sys.stderr.write(f"error: serial I/O failed ({exc}){hint}\n")
         return 1
+    except OSError as exc:
+        # The output file: a folder that cannot be written, a full disk.
+        sys.stderr.write(f"error: {exc.filename or 'output'}: {exc.strerror or exc}\n")
+        return 1
     return 0
 
 

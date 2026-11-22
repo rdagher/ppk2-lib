@@ -84,10 +84,10 @@ class DiscoveryError(Exception):
 
 
 class NotFound(DiscoveryError):
-    """No PPK2 (USB ``0x1915:0xC00A``) on the bus."""
+    """No PPK2 (USB ``0x1915:0xC00A``) on the bus, or none with the serial asked for."""
 
-    def __init__(self) -> None:
-        super().__init__("no PPK2 found (USB 1915:C00A): plug one in or check the cable")
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(message or "no PPK2 found (USB 1915:C00A): plug one in or check the cable")
 
 
 class Ambiguous(DiscoveryError):
@@ -256,7 +256,9 @@ def find_group_in_by_serial(ports: list[RawPort], usb_serial: str) -> tuple[str,
     groups = group_ppk2s(ports)
     paths = groups.get(usb_serial)
     if paths is None:
-        raise NotFound
+        if not groups:
+            raise NotFound
+        raise NotFound(f"no PPK2 with serial {usb_serial}: attached {', '.join(sorted(groups))}")
     return usb_serial, tuple(sorted(paths))
 
 

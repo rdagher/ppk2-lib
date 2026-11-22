@@ -100,3 +100,13 @@ def test_errno16_detected_through_cause_chain() -> None:
     assert errno16_in_chain(outer)
     assert not errno16_in_chain(SerialIOError("no errno anywhere"))
     assert not errno16_in_chain(OSError(13, "permission denied"))
+
+
+def test_an_output_that_cannot_be_written_is_one_error_line(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An OSError from the output file: one line naming the path, exit 1, no traceback."""
+    error = PermissionError(13, "Permission denied", "/read-only/trace.csv")
+    monkeypatch.setattr(discover_module, "resolve_device", _raiser(error))
+    assert dispatch(["discover"]) == 1
+    assert capsys.readouterr().err == "error: /read-only/trace.csv: Permission denied\n"

@@ -375,3 +375,10 @@ def test_classify_ports_recovery_reaches_busy_when_no_idle() -> None:
 
     statuses = classify_ports(("/dev/a", "/dev/b"), quick, recovering)
     assert statuses == {"/dev/a": "data", "/dev/b": "busy"}
+
+
+def test_by_serial_missing_names_the_serials_that_are_attached() -> None:
+    """A wrong --serial with a PPK2 attached is not 'no PPK2 found'."""
+    ports = [_ppk2_port("/dev/cu.usbmodemAAA1", "AAA")]
+    with pytest.raises(NotFound, match="no PPK2 with serial MISSING: attached AAA"):
+        find_group_in_by_serial(ports, "MISSING")
