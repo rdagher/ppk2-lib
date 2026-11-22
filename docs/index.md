@@ -1,10 +1,12 @@
 # ppk2-lib
 
 A Python library and command-line tool for Nordic's
-[Power Profiler Kit II](https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2) (PPK2). The PPK2 measures the current
-of a device under test (DUT) and samples eight digital inputs with it,
-100,000 times per second. With ppk2-lib a script, a terminal or a CI
-job drives it, without the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html).
+[Power Profiler Kit II](https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2) (PPK2).
+The PPK2 measures the current of a device under test (DUT) and samples
+eight digital inputs with it, 100,000 times per second.
+
+With ppk2-lib, a script, a terminal or a CI job drives the PPK2,
+without the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html).
 
 This is an experimental release (0.1.0). It works and is checked on
 hardware, but the API may still change between 0.x versions.
@@ -12,16 +14,21 @@ hardware, but the API may still change between 0.x versions.
 ## Motivation
 
 The Power Profiler app is made for looking at a trace by hand. A
-power measurement has to be repeated: after every change, on every
-variant of a device, in CI. That takes a command and a library, the
-same ones at the desk and on the test bench, so that a number seen
-during development is the number the pipeline checks.
+power measurement has to be repeated:
+
+- after every change;
+- on every variant of a device;
+- in CI.
+
+That takes a command and a library, the same ones at the desk and on
+the test bench, so that a number seen during development is the number
+the pipeline checks.
 
 The digital inputs make the measurement finer than an average over a
-capture. A GPIO that the firmware raises around a piece of code marks
-that code in the capture, to the sample. A script then gives the
-current and the charge of that region alone, as a
-[recipe](user/recipes.md#current-of-a-marked-region) shows.
+capture. When the firmware raises a GPIO around a piece of code, the
+capture shows when that code ran, to the sample. A script then gives
+the current and the charge of that region alone: see the
+[recipe](user/recipes.md#current-of-a-marked-region).
 
 ![The parts. A developer, a CI job or an AI coding assistant run the ppk2 command or use the Python API on the host. The library drives the PPK2 over USB. The PPK2 measures the current of the DUT and samples its digital inputs. A capture is written as a CSV or a .ppk2 file. Beside them, one second of a capture with its marked regions](img/architecture.png)
 
@@ -37,7 +44,8 @@ captured 300000 samples over 3.00 s (100037 Hz)
 ```
 
 The PPK2 powers the DUT at 3.3 V and switches it on as the capture
-starts. The file is a CSV in the format the app exports. A few more:
+starts. `boot.csv` is a CSV in the format the app exports. A few more
+commands:
 
 ```sh
 ppk2 capture --out idle.ppk2 --seconds 30    # a session file in the app's format
@@ -63,10 +71,14 @@ sample of 1 mA or more.
 
 ## Continuous integration
 
-`ppk2 run` powers the DUT, records while a command runs, and exits
-with that command's exit code. On a runner that has the PPK2 and the
-DUT attached, a test job can therefore record the current of the very
-run it checks:
+`ppk2 run`:
+
+- powers the DUT;
+- records while a command runs;
+- exits with that command's exit code.
+
+So on a runner with the PPK2 and the DUT attached, a test job can
+record the current of the very run it checks:
 
 ```sh
 ppk2 run --source --vdd 3.3 --out tests.csv -- pytest tests/
@@ -81,8 +93,8 @@ ua = np.loadtxt("tests.csv", delimiter=",", skiprows=1, usecols=1)
 assert ua.mean() < 2000, f"mean current {ua.mean():.0f} µA is over the budget"
 ```
 
-The [recipes](user/recipes.md) go further: the current of one marked
-piece of code, and comparing two builds.
+See the [recipes](user/recipes.md) for more: the current of one
+marked piece of code, and comparing two builds.
 
 ## Contents
 
@@ -126,3 +138,19 @@ The [recipes](user/recipes.md) show several of these.
 
 The distribution, which is what you install, is `ppk2-lib`. The Python
 package and the command are both `ppk2`.
+
+## Related projects
+
+- Nordic's Power Profiler app,
+  [pc-nrfconnect-ppk](https://github.com/nordicsemi/pc-nrfconnect-ppk).
+  It is the reference for this package: the protocol was read in its
+  source, last checked at
+  [v4.4.1](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts),
+  and every result is checked against it.
+- The `ppk2` skill of Nordic MCP, Nordic's own tooling for AI
+  assistants: a local server through which an assistant drives the kit
+  and shows a live trace. It is made for working with an assistant,
+  while this package is a library and a command for scripts and CI.
+- IRNAS's [ppk2-api-python](https://github.com/IRNAS/ppk2-api-python),
+  another Python library for the PPK2, under GPL-2.0. It is not a
+  reference here, and no code is shared with it.

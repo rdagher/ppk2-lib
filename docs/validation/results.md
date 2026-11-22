@@ -2,7 +2,7 @@
 
 What the three levels of the [method](method.md) found. The parser,
 the calibration and the start of a capture are those of this release.
-[Hardware tests](#hardware-tests) lists what changed after the
+See [Hardware tests](#hardware-tests) for what changed after the
 captures.
 
 | Level | Result | Run on |
@@ -26,7 +26,9 @@ calibration of each range and the spike filter are part of what agrees.
 The device under test (DUT) is an nRF54LM20 DK that runs the
 [bench firmware](https://github.com/rdagher/ppk2-lib/tree/main/tests/hil/bench-dut):
 D0 toggles at 5 Hz and D1 at 0.5 Hz, and the CPU is busy while D0 is
-high. The bench was captured for 30 s by the app and by `ppk2 capture`,
+high.
+
+The bench was captured for 30 s by the app and by `ppk2 capture`,
 within minutes of each other and without being touched in between.
 
 | Item | Value |
@@ -39,12 +41,15 @@ within minutes of each other and without being touched in between.
 | DUT | nRF54LM20 DK with the bench firmware |
 | Captures | 30 s each at 100,000 samples per second. Those of `ppk2 capture` start at power-on, the app's about 0.7 s before it |
 
-The current of a region is its mean current, and its charge is that
-current added up over its width. Each is given as the mean ± the
-standard deviation over the regions. A difference is that of the means,
-as a share of the app's, computed before rounding. The KS statistic
-compares the distributions of the current over the same 26 s, starting
-2 s after power-on.
+How to read the tables:
+
+- The current of a region is its mean current, and its charge is that
+  current added up over its width.
+- Each is given as the mean ± the standard deviation over the regions.
+- A difference is that of the means, as a share of the app's, computed
+  before rounding.
+- The KS statistic compares the distributions of the current over the
+  same 26 s, starting 2 s after power-on.
 
 ### Ampere meter mode, 3.3 V
 
@@ -64,9 +69,11 @@ The app's capture was taken between two of `ppk2 capture`.
 | KS statistic against the app | | 0.0037 | 0.0032 |
 
 A D1 region lasts one second, so its charge in µC is, to rounding, its
-current in µA. The two captures of `ppk2 capture` differ from each
-other by 0.05 % on the D0 current. So the difference from the app is
-of the size of the bench's own drift over four minutes.
+current in µA.
+
+The two captures of `ppk2 capture` differ from each other by 0.05 % on
+the D0 current. So the difference from the app is of the size of the
+bench's own drift over four minutes.
 
 ![Both captures in Ampere meter mode, overlaid from power-on, and the distribution of the current](../img/parity_ampere.png)
 
@@ -123,19 +130,21 @@ what `ppk2` writes. The two files are not in the repository: the CSV is
 
 ## Hardware tests
 
-All ten pass, at 3.3 V on an nRF54LM20 DK. They were run in both modes
-on 2026-11-21, on the code of the captures above. After that the way a
-capture ends and the handling of errors changed: a capture now stops
-on its count of samples, and fails when they do not all come. The ten
-were run again on the code of this release on 2026-11-22, in Source
-meter mode. The parser, the calibration and the start of a capture,
-which the captures above check, did not change.
+All ten pass, at 3.3 V on an nRF54LM20 DK. They were run twice:
+
+- on 2026-11-21, in both modes, on the code of the captures above;
+- on 2026-11-22, in Source meter mode, on the code of this release.
+
+Between the two runs, the way a capture ends and the handling of errors
+changed: a capture now stops on its count of samples, and fails when
+they do not all arrive. The parser, the calibration and the start of a
+capture, which the captures above check, did not change.
 
 One more check was made by hand: a running capture was frozen for 3 s,
 which makes the computer lose samples. Three such captures recovered,
-with 18 to 34 samples marked lost and normal currents afterwards. The
-[protocol page](../measure/protocol.md#5-stream-reassembly) says how
-the parser finds its place again.
+with 18 to 34 samples marked lost and normal currents afterwards. See
+the [protocol page](../measure/protocol.md#5-stream-reassembly) for
+how the parser finds its place again.
 
 ## Differences from the app
 
@@ -144,9 +153,9 @@ On purpose, and outside what the comparisons above exercise:
 - Lost samples. The app's code duplicates held samples, counts a lost
   gap one short, and places the samples received after a gap before
   it. This package emits each sample once, counts the full gap, and
-  keeps the order. The
+  keeps the order. See the
   [protocol page](../measure/protocol.md#5-stream-reassembly)
-  has the five points with their line references. Both record a lost
+  for the five points, with their line references. Both record a lost
   sample as 0.2 µA.
 - Where a capture starts. In the app you start the capture and enable
   power by hand. `ppk2 capture` does both, and its file begins about

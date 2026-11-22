@@ -1,15 +1,21 @@
 # File formats
 
 `ppk2` writes the two formats of the
-[Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html): the CSV the app exports, and the `.ppk2`
-session file it saves and loads. A name ending in `.ppk2` gives a
-session file, any other name a CSV.
+[Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html):
+
+- the CSV the app exports;
+- the `.ppk2` session file it saves and loads.
+
+A name ending in `.ppk2` gives a session file, any other name a CSV.
 
 ## CSV
 
 `ppk2 capture` writes the same file as the app's export at the full
-sample rate, to the character: the same 11 columns, the same way of
-writing timestamps, the same digital columns.
+sample rate, to the character:
+
+- the same 11 columns;
+- the same way of writing timestamps;
+- the same digital columns.
 
 The header and three rows of a capture of the
 [validation](../validation/results.md), where D0 rises:
@@ -40,8 +46,8 @@ clock: rows are exactly 0.01 ms apart.
 What else to know:
 
 - A lost sample is a row with a current of `0.200` and all digital
-  inputs at 0. Nordic's app records a lost sample this way, and the
-  files follow it so that they can be compared. See
+  inputs at 0. Nordic's app records a lost sample this way, and `ppk2`
+  does the same so that the files can be compared. See
   [lost samples](#lost-samples) below.
 - A value below 0.2 µA is written as `0.000`, as in the app.
 - When the app exports at a lower sample rate, its digital columns can
@@ -50,10 +56,10 @@ What else to know:
   as malformed.
 - A row is about 40 bytes. One minute is 240 MB and one hour 14 GB.
 
-This format was chosen because it is the app's. A capture made here and
-one exported from the app can be compared directly, which is what the
-[validation](../validation/method.md) does, and whatever reads the
-app's export reads this.
+This format was chosen because it is the app's. A capture made here
+can be compared directly with one exported from the app, as the
+[validation](../validation/method.md) does. Any tool that reads the
+app's export reads this file too.
 
 ### Reading a CSV
 
@@ -75,16 +81,16 @@ df = pd.read_csv("capture.csv", dtype={"D0-D7": str})
 print((df["D0"] == 1).sum(), "samples with D0 high")
 ```
 
-Pass `dtype={"D0-D7": str}`. Without it pandas reads `00000001` as the
-number 1 and the leading zeros are gone. A gzipped file reads the same
+Pass `dtype={"D0-D7": str}`. Without it, pandas reads `00000001` as
+the number 1 and the leading zeros are gone. A gzipped file reads the same
 way: both libraries open `capture.csv.gz` directly.
 
 ## Session file (`.ppk2`)
 
 A `.ppk2` file is what the app writes with Save / Export and loads
 again. `ppk2 capture --out x.ppk2` and `ppk2 convert` write this
-format, so that a capture made from a script can be looked at in the
-app's chart.
+format, so a capture made from a script can be opened in the app's
+chart.
 
 It is a zip of three files:
 
@@ -114,7 +120,7 @@ packet-beta
 | Digital channels | 4 and 5 | Two bits per channel, big-endian: `01` low, `10` high. D0 is in the lowest pair |
 
 `ppk2` writes a current below 0.2 µA as zero, which is how the app
-reads it. `metadata.json` of a capture at the full rate:
+reads it. For a capture at the full rate, `metadata.json` is:
 
 ```json
 {"metadata": {"samplesPerSecond": 100000}, "formatVersion": 2}
@@ -127,16 +133,26 @@ reads it from the timestamps of the CSV.
 
 The layout comes from the README of the app's repository and from its
 source at v4.4.1. Unit tests check what `ppk2` writes against that
-layout: the three files, the bytes of a sample, the overview, the
-handling of lost samples.
+layout:
+
+- the three files;
+- the bytes of a sample;
+- the overview;
+- the handling of lost samples.
 
 A session file written by `ppk2 convert` was opened in the app:
-30 s and 3,000,320 samples, with digital inputs. It loaded
-without an error. Over the last 10 s the app showed an average of
-699.32 µA, a maximum of 171.80 mA and a charge of 6.99 mC. These are
-the figures computed from the CSV of the same capture, and D0 and D1
-toggled as in the CSV. The
-[results](../validation/results.md#session-file) have the table.
+30 s and 3,000,320 samples, with digital inputs. It loaded without an
+error.
+
+Over the last 10 s, the app showed the same figures as those computed
+from the CSV of the same capture:
+
+- an average of 699.32 µA;
+- a maximum of 171.80 mA;
+- a charge of 6.99 mC.
+
+D0 and D1 toggled as in the CSV. See the
+[results](../validation/results.md#session-file) for the table.
 
 This is one file on one version of the app. A later version of the app
 may change the format.
@@ -144,16 +160,21 @@ may change the format.
 ### Size and write procedure
 
 A capture of 5 s on the bench of this repository took 0.7 MB as a
-session file and 20.1 MB as a CSV. The file is compressed, so a noisier
-signal takes more.
+session file and 20.1 MB as a CSV. The session file is compressed, so
+a noisier signal takes more space.
 
 While a capture runs, the samples go to a file next to the output,
-named after it with `.frames` added, 6 bytes per sample. At the end the
-session file is built from it and put in place in one step. If that
-fails, the `.frames` file stays, and an earlier session file of the
-same name is left untouched. A later run to the same name refuses to
-start while that `.frames` file is there, so that it is not lost. A
-capture without a single sample writes no file.
+named after it with `.frames` added, 6 bytes per sample. At the end,
+the session file is built from it and put in place in one step.
+
+If that step fails:
+
+- the `.frames` file stays;
+- an earlier session file of the same name is left untouched;
+- a later run to the same name refuses to start while that `.frames`
+  file is there, so that it is not lost.
+
+A capture without a single sample writes no file.
 
 ## Lost samples
 
@@ -165,11 +186,14 @@ the app treat a loss alike.
 
 That value is a stand-in, not a reading. Each lost sample pulls a sum
 or a mean towards 0.2 µA: losing 1 % of the samples of a 1 mA trace
-lowers its mean by about 1 %. Nothing in the file tells such a row
-from a real reading of 0.2 µA. What tells you is the capture itself:
-it warns once 500 samples are lost and gives the total at the end. The
-mean it prints leaves the lost samples out.
+lowers its mean by about 1 %.
 
-In the library a lost sample stays distinct. It arrives as a `Sample`
-whose current is NaN, as the
-[architecture page](../develop/architecture.md#capture-callback) shows.
+Nothing in the file tells such a row from a real reading of 0.2 µA.
+The capture itself tells you: it warns once 500 samples are lost, and
+gives the total at the end. The mean it prints leaves the lost samples
+out.
+
+In the library, a lost sample stays distinct: it arrives as a `Sample`
+whose current is NaN. See the
+[architecture page](../develop/architecture.md#capture-callback) for
+the callback that receives it.

@@ -10,10 +10,14 @@ whose timing is known in advance.
 
 Two kernel timers toggle the pins from interrupt context, so the edges
 do not depend on the scheduler. The main thread spins while D0 is high
-and sleeps while it is low. The current therefore has two levels that
-follow D0. On the nRF54LM20 DK at 3.3 V they are about 1.4 mA, and
-1.4 µA in the median. The mean of the low level is 15 µA, the boot and
-the wake-ups included.
+and sleeps while it is low.
+
+So the current has two levels that follow D0. On the nRF54LM20 DK at
+3.3 V:
+
+- the high level is about 1.4 mA;
+- the low level is 1.4 µA in the median. Its mean is 15 µA, the boot
+  and the wake-ups included.
 
 ## Dev kits
 
@@ -59,9 +63,9 @@ just flash [BOARD]   # program the connected kit
 just clean
 ```
 
-`BOARD` is one of the targets above and defaults to the nRF54LM20 DK.
-With several kits attached, pick one with `DK_SERIAL=<serial>`. CI
-builds the three images on every firmware change.
+`BOARD` is one of the targets above. By default, it is the nRF54LM20
+DK. If several kits are attached, pick one with `DK_SERIAL=<serial>`.
+CI builds the three images on every firmware change.
 
 If the PPK2 powers the dev kit, the kit is off until a command turns
 it on: flash with `ppk2 run --source --vdd 3.3 -- just flash`.

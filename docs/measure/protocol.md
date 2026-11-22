@@ -23,7 +23,7 @@ The code is in
 for the bytes and in
 [`src/ppk2/client/session.py`](https://github.com/rdagher/ppk2-lib/blob/main/src/ppk2/client/session.py)
 for the order of things. The file formats `ppk2` writes are not part of
-the protocol; they are under [file formats](formats.md).
+the protocol: see [file formats](formats.md) for them.
 
 ## 1. The device
 
@@ -85,9 +85,9 @@ packet-beta
 16-23: "0xE4"
 ```
 
-Only `GET_METADATA` has an answer. The other commands are not
-acknowledged: the way to know that one took effect is to look at what
-follows, the stream or the next calibration text.
+Only `GET_METADATA` gets an answer. The other commands are not
+acknowledged: to know that one took effect, look at what follows, the
+stream or the next calibration text.
 
 Nordic's source lists more commands, among them `TRIGGER_*`,
 `SWITCH_POINT_*`, `LCD_SET` and `RANGE_SET`. This package does not use
@@ -114,7 +114,7 @@ IA: 60
 END
 ```
 
-There is no length field. Read until `END` arrives; the text can come
+There is no length field. Read until `END` arrives: the text can come
 in several pieces. Then:
 
 1. Start at the first key, `Calibrated`. The end of a stream that was
@@ -139,8 +139,8 @@ was left with, and they survive a disconnect. A new session starts from
 them. Some firmware versions omit them; the parser then assumes 3,300 mV
 and Ampere meter mode.
 
-The [Principle](principle.md#calibration) page
-says what each array is for.
+See the [Principle](principle.md#calibration) page for what each
+array is for.
 
 ## 4. Sample word
 
@@ -223,13 +223,19 @@ passes the range check, held or not, in the order received.
 It finds its place again. When the computer loses bytes of the stream,
 the stream can resume in the middle of a word. Every later word is
 then read across two samples: the currents are garbage, and they stay
-garbage to the end of the capture. The parser notices this by the held
-samples. Samples that arrive after a gap follow one another; words read
-across two samples do not, or carry a range above 4. It then goes back
-to the first word in doubt and tries each byte offset in turn, until
-eight words in a row follow one another. The gap is filled with
-placeholders, the spike filter starts afresh, and parsing resumes
-there.
+garbage to the end of the capture.
+
+The parser notices this by the held samples. Samples that arrive after
+a gap follow one another. Words read across two samples do not, or
+carry a range above 4.
+
+The parser then goes back to the first word in doubt and tries each
+byte offset in turn, until eight words in a row follow one another.
+Then:
+
+- the gap is filled with placeholders;
+- the spike filter starts afresh;
+- parsing resumes there.
 
 A capture frozen for 3 s on the bench lost its place in this way.
 Without the search, 79 % of what followed was marked lost and the mean
@@ -275,10 +281,10 @@ x  = (adc * 4 - O[r]) * ((1.8 / 163840) / R[r])
 uA = UG[r] * (x * (GS[r] * x + GI[r]) + S[r] * vdd + I[r]) * 1e6
 ```
 
-It is the formula of the app's `getAdcResult`, and
-`ppk2.protocol.current_micro_amps` in this package. The
-[Principle](principle.md#calibration) page
-explains the terms and works an example.
+It is the formula of the app's `getAdcResult`. In this package it is
+`ppk2.protocol.current_micro_amps`. See the
+[Principle](principle.md#calibration) page for the terms and a worked
+example.
 
 ## 7. Spike filter
 
@@ -296,9 +302,8 @@ replaces them:
 
 These are the rules and defaults of Nordic's app. The output matches
 the app's sample for sample on the fixture stream, which crosses all
-five ranges. The
-[Principle](principle.md#spike-filter) page
-has the settings and the numbers.
+five ranges. See the [Principle](principle.md#spike-filter) page for
+the settings and the numbers.
 
 ## 8. Modes
 
@@ -317,9 +322,9 @@ Nothing in this package relies on that.
 
 ## 9. Session sequence
 
-What goes between the computer and the PPK2 during one session of the
-library, from `Session.open` to the end of the `with` block, with the
-waits this package adds:
+The following diagram shows what goes between the computer and the
+PPK2 during one session of the library, from `Session.open` to the end
+of the `with` block, with the waits this package adds:
 
 ```mermaid
 sequenceDiagram
@@ -362,9 +367,11 @@ The same in steps:
 6. `AVERAGE_STOP`, `DEVICE_RUNNING_SET` off, read until the line is
    quiet, close the port.
 
-`ppk2 capture` and `ppk2 run` end a little differently. They switch
-power off first, then stop the stream and read it out, and only then
-close the session, which sends step 6 once more.
+`ppk2 capture` and `ppk2 run` end a little differently:
+
+1. They switch power off first.
+2. They stop the stream and read it out.
+3. Only then do they close the session, which sends step 6 once more.
 
 The waits, and which of them the PPK2 really needs:
 
@@ -375,8 +382,8 @@ The waits, and which of them the PPK2 really needs:
 | Reading until 50 ms without a byte, for 0.5 s at most, at the end | Otherwise the end of the stream goes to the next program | Yes |
 | 0.5 s, then 1 s, between attempts to open | A port left stuck by a capture that ended badly | When that happens |
 
-The [architecture page](../develop/architecture.md#session-lifecycle)
-shows the same sequence from the side of the Python calls.
+See the [architecture page](../develop/architecture.md#session-lifecycle)
+for the same sequence from the side of the Python calls.
 
 ### Session differences from Nordic's app
 
@@ -413,8 +420,8 @@ Measured on 2026-11-20 on one PPK2 under macOS:
 
 So `stop_measuring` and `Session.close` read until the line is quiet,
 and the calibration parser starts at the first key. Before that, the
-data port could look like the silent one after a session, which read
-as a firmware that had stopped answering.
+data port could look like the silent one after a session, as if the
+firmware had stopped answering.
 
 ### Host backlog at stream start
 
@@ -433,18 +440,26 @@ samples arrive slowly at first, at about 170 kB/s for 0.3 s. Once level,
 the host stays about 6.5 ms behind.
 
 For the same 0.3 s the PPK2 holds the commands it receives. Measured on
-2026-11-21: a `DEVICE_RUNNING_SET` sent 0, 50, 100, 200 or 300 ms after
-`AVERAGE_START` brought the power up 314 to 315 ms into the stream each
-time. Sent at 350 ms or later, it brought it up 1 to 2 ms after it was
-sent.
+2026-11-21, with a `DEVICE_RUNNING_SET` sent after `AVERAGE_START`:
+
+| Sent after `AVERAGE_START` | Power came up |
+|---|---|
+| 0, 50, 100, 200 or 300 ms | 314 to 315 ms into the stream, each time |
+| 350 ms or later | 1 to 2 ms after it was sent |
 
 A power switch sent while the host is behind lands that far into the
 samples still to be read. Sent at 0.5 s, it put the rise of the current
-104 to 109 ms into a capture. `power_on` therefore reads first until
-the host has caught up: until 0.35 s have passed and it has read as
-many bytes as the PPK2 has produced since `AVERAGE_START`, to within
-10 ms. That takes until about 0.9 s after the start. In seven captures
-made this way the current rose 9 to 11 ms into the file.
+104 to 109 ms into a capture.
+
+So `power_on` first reads until the host has caught up, that is until
+both:
+
+- 0.35 s have passed;
+- it has read as many bytes as the PPK2 has produced since
+  `AVERAGE_START`, to within 10 ms.
+
+That takes until about 0.9 s after the start. In seven captures made
+this way, the current rose 9 to 11 ms into the file.
 
 Timestamps come from the sample count, not from the clock, so the trace
 itself is exact either way.
@@ -452,8 +467,8 @@ itself is exact either way.
 ### Power and the serial port
 
 The PPK2 cuts power to the DUT when the host drops DTR, which the
-operating system does when the port closes. Power therefore cannot
-outlive the process that enabled it, even after `kill -9`. Raising DTR
+operating system does when the port closes. So power cannot outlive
+the process that enabled it, even after `kill -9`. Raising DTR
 again does not restore it. Observed on 2026-11-20 in both modes.
 
 ### `RESET` on close
@@ -461,22 +476,28 @@ again does not restore it. Observed on 2026-11-20 in both modes.
 `RESET` makes the PPK2 drop off USB for 200 to 500 ms and can block the
 next program that opens the port. Nordic's app never sends it. This
 package sends it in two places, and waits for the device to come back
-both times: on a second handshake attempt, and in discovery's
-last-resort probe (`probe_port_recover`).
+both times:
+
+- on a second handshake attempt;
+- in discovery's last-resort probe (`probe_port_recover`).
 
 ### Stuck port
 
 After a capture that ended badly, the next open can time out on the
 calibration. This was seen on macOS, the only system tried.
+
 `Session.open` tries three times, 0.5 s and then 1 s apart. If that
 fails, unplug the PPK2 and plug it back. Right after a killed process,
 the driver can also refuse to open the port for a second or two.
 
 ### Precautions that are not needed
 
-Three precautions can be met in code that drives a PPK2: waiting 200 ms
-after `AVERAGE_START` before switching power, switching power only
-while a stream runs, and reading on for a second after the switch.
+Some code that drives a PPK2 takes three precautions:
+
+- waiting 200 ms after `AVERAGE_START` before switching power;
+- switching power only while a stream runs;
+- reading on for a second after the switch.
+
 Nordic's app follows none of them, and none was needed on the PPK2
 measured, on 2026-11-20 and 2026-11-21:
 
@@ -489,21 +510,22 @@ measured, on 2026-11-20 and 2026-11-21:
 
 ### Ignored commands
 
-`AVG_NUM_SET` is ignored: Nordic's app never sends it, and its
-sample-rate setting thins the data on the host. `SET_USER_GAINS` is
-accepted and ignored too. On 2026-11-21 a gain of 1.10 was written to
-all five ranges: the `UG` values the PPK2 reports stayed at 1.0, and
-the mean current moved by 0.18 % where 10 % was asked for. Nordic's app
-does send it, and also applies the gain itself to every sample, which
-is what takes effect.
-`Session.set_user_gain` applies the gain on the host and sends nothing.
+`AVG_NUM_SET` is ignored. Nordic's app never sends it, and its
+sample-rate setting thins the data on the host.
 
+`SET_USER_GAINS` is accepted and ignored too. On 2026-11-21 a gain of
+1.10 was written to all five ranges: the `UG` values the PPK2 reports
+stayed at 1.0, and the mean current moved by 0.18 % where 10 % was
+asked for.
 
+Nordic's app does send it, and also applies the gain itself to every
+sample, which is what takes effect. `Session.set_user_gain` applies the
+gain on the host and sends nothing.
 
 ### First-generation PPK
 
-It has other USB IDs and another protocol. This package only accepts
-`1915:C00A`.
+The first-generation PPK has other USB IDs and another protocol. It is
+not supported: this package only accepts `1915:C00A`.
 
 ## 11. References
 

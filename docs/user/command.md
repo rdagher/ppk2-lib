@@ -27,9 +27,11 @@ Only one program can hold a PPK2. Quit the app before you start.
 | `--vdd FLOAT` | 3.3 | `power`, `capture`, `run` | The DUT's supply voltage in volts. A value outside 0.8 to 5.0 is brought back to the nearest of the two |
 | `--source` | off | `power`, `capture`, `run` | Source meter mode instead of Ampere meter mode |
 
-`--vdd` means two things. In Source meter mode it is the voltage the
-PPK2 supplies. In Ampere meter mode it sets nothing, but the
-calibration uses it: give the voltage the DUT really runs at.
+`--vdd` means two things:
+
+- In Source meter mode, it is the voltage the PPK2 supplies.
+- In Ampere meter mode, it sets nothing, but the calibration uses it:
+  give the voltage the DUT really runs at.
 
 ## Exit codes
 
@@ -40,12 +42,13 @@ calibration uses it: give the voltage the DUT really runs at.
 | 2 | Wrong usage |
 | 130 | Stopped by Ctrl-C |
 
-`ppk2 run` returns the exit code of its command instead: 127 if the
-command was not found, 128 plus the signal number if a signal killed
-it.
+`ppk2 run` returns the exit code of its command instead:
 
-An error is one line starting with `error:`, and
-[troubleshooting](troubleshooting.md) lists them. A wrong option or
+- 127 if the command was not found;
+- 128 plus the signal number if a signal killed it.
+
+An error is one line starting with `error:`. See
+[troubleshooting](troubleshooting.md) for the list. A wrong option or
 value is reported with the usage line of the command.
 
 ## `ppk2 list`
@@ -57,17 +60,20 @@ PPK2  serial=A1B2C3D4E5F6
   /dev/cu.usbmodemA1B2C3D4E5F64   [idle]
 ```
 
-One block per PPK2. `[data port]` is the port that answers, `[idle]`
-the other one. `[busy: held by another process?]` means the port could
-not be opened: close the program that holds it.
+One block per PPK2, with a mark on each port:
+
+- `[data port]`: the port that answers;
+- `[idle]`: the other one;
+- `[busy: held by another process?]`: the port could not be opened.
+  Close the program that holds it.
 
 `--mask-serial` prints only the last four characters of each serial
 number, in the port paths too. It is meant for a screenshot or a
 recording; the masked paths are not usable as `--port`.
 
 The exit code is 0 when every PPK2 has its data port identified, and 1
-otherwise. With no PPK2 attached it prints `no PPK2 found`. When a data
-port could not be identified it says so under that PPK2.
+otherwise. If no PPK2 is attached, it prints `no PPK2 found`. If a
+data port could not be identified, it says so under that PPK2.
 
 ## `ppk2 discover`
 
@@ -97,11 +103,11 @@ I : [    5.155071e-08,    -2.181893e-07,     5.512471e-05,    -2.677141e-04,    
 UG: [    1.000000e+00,     1.000000e+00,     1.000000e+00,     1.000000e+00,     1.000000e+00]
 ```
 
-The calibration the PPK2 reports, five values per line, one per
-measurement range. `VDD` and `mode` are the supply voltage and the mode
-the PPK2 was left in. The
+It prints the calibration the PPK2 reports, five values per line, one
+per measurement range. `VDD` and `mode` are the supply voltage and the
+mode the PPK2 was left in. See the
 [Principle](../measure/principle.md#calibration) page
-says what each line is, and why `Calibrated: false` is not a fault.
+for what each line is, and why `Calibrated: false` is not a fault.
 
 ## `ppk2 capture`
 
@@ -140,7 +146,7 @@ What to know about a capture:
 - If samples were lost, the summary says how many. It also warns when
   the rate over the capture fell below 95,000 samples per second.
 
-[File formats](../measure/formats.md) describes both kinds of file.
+See [File formats](../measure/formats.md) for both kinds of file.
 
 ## `ppk2 convert`
 
@@ -149,12 +155,15 @@ $ ppk2 convert first.csv first.ppk2
 wrote first.ppk2: 500000 samples at 100000 S/s (5.00 s)
 ```
 
-Turns a CSV capture, plain or gzipped, into a `.ppk2` session file. It
-needs the `Timestamp(ms)` and `Current(uA)` columns and reads the
-digital inputs from `D0-D7` if the column is there. The sample rate
-comes from the timestamps and must be a power of ten up to 100,000.
-The digital inputs must be `0` or `1`: the `-` and `X` that the app
-writes when it exports at a lower rate are not accepted.
+Turns a CSV capture, plain or gzipped, into a `.ppk2` session file.
+The CSV needs:
+
+- the `Timestamp(ms)` and `Current(uA)` columns. The digital inputs
+  are read from `D0-D7` if the column is there.
+- a sample rate, taken from the timestamps, that is a power of ten up
+  to 100,000.
+- digital inputs that are `0` or `1`. The `-` and `X` that the app
+  writes when it exports at a lower rate are not accepted.
 
 A gap in the timestamps is filled with samples of 0.2 µA, the way a
 [lost sample](../measure/formats.md#lost-samples) is recorded. A gap of
@@ -171,9 +180,9 @@ ppk2 power off
 Switches power to the DUT, as the app's Enable power output does.
 
 Power lasts only while the command runs, because the PPK2 cuts it when
-its serial port closes. `ppk2 power on` without `--hold` therefore
-powers the DUT only for an instant and is of little use. With `--hold`
-it waits for Ctrl-C. `--hold` does not work on Windows yet.
+its serial port closes. So `ppk2 power on` without `--hold` powers the
+DUT for an instant only, which is of little use. With `--hold` it waits
+for Ctrl-C. `--hold` is not supported on Windows yet.
 
 ## `ppk2 run`
 
@@ -190,18 +199,21 @@ with or without `--out`, since the PPK2 cannot be told to pause.
 Ctrl-C is passed on to the command. When `ppk2 run` itself is
 terminated, by `kill` or a closed terminal, it terminates the command
 first, and kills it if it has not ended after 5 s. However the command
-ends, the DUT is unpowered afterwards.
-[Flashing](recipes.md#flashing-a-dut-powered-by-the-ppk2) is the usual
-reason to use it.
+ends, the DUT is unpowered afterwards. The usual reason to use it is
+[flashing](recipes.md#flashing-a-dut-powered-by-the-ppk2).
 
 ## Signals
 
 Ctrl-C, `kill` and a closed terminal all end a command the same way:
-the stream is stopped, the DUT is switched off, the port is closed and
-the output file is completed. The exit code is 130 after Ctrl-C, and
-128 plus the signal number after `kill` or a closed terminal.
-`ppk2 power on --hold` is the exception: Ctrl-C is how it is meant to
-end, and it returns 0.
+
+- the stream is stopped;
+- the DUT is switched off;
+- the port is closed;
+- the output file is completed.
+
+The exit code is 130 after Ctrl-C, and 128 plus the signal number after
+`kill` or a closed terminal. `ppk2 power on --hold` is the exception:
+Ctrl-C is how it is meant to end, and it returns 0.
 
 If the process is killed outright, with `kill -9`, the PPK2 still cuts
 power by itself, but it keeps streaming. The next `ppk2` command stops

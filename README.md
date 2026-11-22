@@ -1,13 +1,16 @@
 # ppk2-lib
 
-A Python library and command-line tool for Nordic's
-[Power Profiler Kit II](https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2) (PPK2). It records current and the
-eight digital inputs at 100,000 samples per second from a script, a
-terminal or a CI job, without the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html).
+ppk2-lib provides a Python library and CLI for scripted measurements
+with Nordic's
+[Power Profiler Kit II](https://www.nordicsemi.com/Products/Development-hardware/Power-Profiler-Kit-2)
+(PPK2). It records current and the eight digital inputs at 100,000
+samples per second, from a terminal or in CI. Its captures
+are checked against Nordic's
+[Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html).
 
 A GPIO that the firmware raises around a piece of code shows on a
-digital input, so a capture also tells what that code alone draws. The
-[recipes](docs/user/recipes.md#current-of-a-marked-region) show how.
+digital input, so a capture also tells
+[what that code draws](docs/user/recipes.md#current-of-a-marked-region).
 
 This is an experimental release (0.1.0). It works and is checked on
 hardware, but the API may still change between 0.x versions.
@@ -20,23 +23,19 @@ hardware, but the API may still change between 0.x versions.
 pip install "git+https://github.com/rdagher/ppk2-lib"
 ```
 
-With [uv](https://docs.astral.sh/uv/), as a tool that has its own
-environment, or for one run without installing:
+Or with [uv](https://docs.astral.sh/uv/):
 
 ```sh
 uv tool install "git+https://github.com/rdagher/ppk2-lib"
 uvx --from "git+https://github.com/rdagher/ppk2-lib" ppk2 list
 ```
 
-You need Python 3.11 or newer. The package runs on Linux, macOS and
-Windows: its unit tests pass on the three, with Python 3.11 and 3.13.
-The tests that need a PPK2 on a bench have run on macOS so far. Two
-things do not work on Windows yet, because they use POSIX calls:
-`ppk2 power on --hold`, and Ctrl-C during `ppk2 run`.
+You need Python 3.11 or newer. On Windows, two things do not work yet:
+see [platform notes](docs/user/getting-started.md#windows).
 
 ## Quick start
 
-Wire the PPK2 as you would for the app, quit the app, and run:
+Wire the PPK2 as for the app, quit the app, and run:
 
 ```console
 $ ppk2 list
@@ -52,13 +51,9 @@ capturing 3.00 s -> boot.csv (Ctrl-C to stop early)
 captured 300000 samples over 3.00 s (100037 Hz)
 ```
 
-This is Source meter mode: the PPK2 powers the device under test (DUT)
-at 3.3 V. `boot.csv` has the same 11 columns as the app's export, and
-the DUT's boot is at the start of it. Without `--source` the PPK2 is in
-Ampere meter mode and measures a DUT that has its own supply.
-
-The DUT is switched on as the capture starts: the current rises about
-10 ms into the file.
+With `--source`, the PPK2 powers the device under test (DUT) at 3.3 V.
+Without it, the PPK2 is in Ampere meter mode, for a DUT with its own
+supply.
 
 A few more commands:
 
@@ -81,47 +76,25 @@ with Session.open(find_ppk2().device) as session:
     session.capture(lambda sample: sample.current_micro_amps < 1000)
 ```
 
-`capture` calls your function for every sample and stops when it
-returns `False`.
-
 ## Documentation
 
-The documentation is published at
-<https://rdagher.github.io/ppk2-lib/>. Its source is in
-[`docs/`](docs/index.md), and `just docs` builds the site locally. It
-has four parts.
-
-| Part | Pages |
-|---|---|
-| User guide | [Getting started](docs/user/getting-started.md), [command reference](docs/user/command.md), [recipes](docs/user/recipes.md), [troubleshooting](docs/user/troubleshooting.md) |
-| Developer guide | [Architecture](docs/develop/architecture.md), [API reference](docs/develop/api.md) |
-| Measurements | [Principle](docs/measure/principle.md), [protocol](docs/measure/protocol.md), [file formats](docs/measure/formats.md) |
-| Validation against Nordic's app | [Method](docs/validation/method.md), [results](docs/validation/results.md) |
+The documentation is published at <https://rdagher.github.io/ppk2-lib/>,
+built from [`docs/`](docs/index.md) by `just docs`.
 
 ![The parts. A developer, a CI job or an AI coding assistant run the ppk2 command or use the Python API on the host. The library drives the PPK2 over USB. The PPK2 measures the current of the DUT and samples its digital inputs. A capture is written as a CSV or a .ppk2 file. Beside them, one second of a capture with its marked regions](docs/img/architecture.png)
 
-The package has three layers, each built on the one before:
-`ppk2.protocol` for the bytes, `ppk2.client` for the device, `ppk2.cli`
-for the command. The [changelog](CHANGELOG.md) lists what 0.1.0
-contains and its limits.
-
-For AI coding assistants, [`llms.txt`](llms.txt) maps the documentation
-and [`.claude/skills/ppk2/SKILL.md`](.claude/skills/ppk2/SKILL.md) is a
-procedure for driving a PPK2 with this package.
+See the [changelog](CHANGELOG.md) for what 0.1.0 contains and for its
+limits. For AI coding assistants, [`llms.txt`](llms.txt) maps the
+documentation, and [`.claude/skills/ppk2/SKILL.md`](.claude/skills/ppk2/SKILL.md)
+is a procedure for driving a PPK2.
 
 ## Validation
 
-The parser gives the same samples as the parser of Nordic's app on a
-recorded stream that crosses all five measurement ranges. Captures of
-the same bench by the app and by `ppk2 capture`, minutes apart, were
-compared in both modes: the mean current and the mean charge of the
-marked regions differ by 0.11 % at most.
-
-![The app's capture and this tool's, overlaid from power-on, in Ampere meter mode](validation/evidence/bench_dut/plots/ampere_parity.png)
-
-All of this was measured on one PPK2. The reference is Nordic's app,
-not a calibrated instrument. The [method](docs/validation/method.md)
-and the [results](docs/validation/results.md) have the details.
+Captures of the same bench by the app and by `ppk2 capture` agree
+within 0.11 % on the mean current and charge of the marked regions,
+in both modes. See the [method](docs/validation/method.md) and
+the [results](docs/validation/results.md), with their limits: one PPK2,
+and the app as the reference.
 
 ## Development
 
@@ -136,24 +109,17 @@ just docs        # build the documentation site into site/
 
 The protocol code was written from a reading of the source of Nordic's
 app ([pc-nrfconnect-ppk](https://github.com/nordicsemi/pc-nrfconnect-ppk))
-and from measurements on a bench. It contains none of that source,
+and from bench measurements. It contains none of that source,
 whose licence allows reading and running it but not redistributing it.
 
 ## Related projects
 
-- Nordic's Power Profiler app,
-  [pc-nrfconnect-ppk](https://github.com/nordicsemi/pc-nrfconnect-ppk).
-  It is the reference for this package: the protocol was read in its
-  source, last checked at
-  [v4.4.1](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts),
-  and every result is checked against it.
-- The `ppk2` skill of Nordic MCP, Nordic's own tooling for AI
-  assistants: a local server through which an assistant drives the kit
-  and shows a live trace. It is made for working with an assistant,
-  where this package is a library and a command for scripts and CI.
-- IRNAS's [ppk2-api-python](https://github.com/IRNAS/ppk2-api-python),
-  another Python library for the PPK2, under GPL-2.0. It is not a
-  reference here and no code is shared with it.
+- Nordic's Power Profiler app: the reference for this package.
+- The `ppk2` skill of Nordic MCP, Nordic's tooling for AI assistants.
+- IRNAS's [ppk2-api-python](https://github.com/IRNAS/ppk2-api-python):
+  another Python library for the PPK2, under GPL-2.0.
+
+See [related projects](docs/index.md#related-projects) for more.
 
 ## Licence
 

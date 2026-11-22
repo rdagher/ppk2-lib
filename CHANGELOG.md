@@ -16,7 +16,7 @@ versions.
   Source meter mode, to the 11-column CSV that Nordic's Power Profiler
   app exports, or to a session file in the app's `.ppk2` format.
   `--seconds N` gives N seconds of samples, 500,000 for 5 s, and the
-  command exits 1 if they do not all come.
+  command exits 1 if they do not all arrive.
 - `ppk2 convert` turns a CSV capture into a `.ppk2` file.
 - `ppk2 power on|off` switches power to the device under test (DUT),
   and `--hold` keeps it on until Ctrl-C.
@@ -24,8 +24,8 @@ versions.
   and can record meanwhile. When it is terminated, it terminates the
   command.
 - Exit codes: 1 for an error with the PPK2, the session or the output
-  file, with one line starting with `error:`; 2 for a usage error; 130
-  after Ctrl-C. `run` returns the command's code.
+  file, with one line starting with `error:`. 2 for a usage error, and
+  130 after Ctrl-C. `run` returns the command's code.
 
 ### Library
 
@@ -63,8 +63,8 @@ versions.
   work yet.
 - Captures are continuous, like the Data logger mode of the app. There
   is no equivalent of its Scope mode, which samples on a trigger.
-- A capture starts about 10 ms before the DUT's power comes up. The
-  [protocol page](docs/measure/protocol.md#10-known-caveats) has
+- A capture starts about 10 ms before the DUT's power comes up. See
+  the [protocol page](docs/measure/protocol.md#10-known-caveats) for
   the measurements.
 - `.ppk2` files follow the layout the app documents. One 30 s file
   was opened in the app and showed the figures of its CSV.

@@ -18,7 +18,7 @@ with the [bench firmware](../hil/bench-dut/) on an nRF54LM20 DK.
 `parsed_poweron.csv` is what the parser of Nordic's Power Profiler app
 gives for `stream_poweron.bin`, with `metadata.raw` as calibration
 (`pc-nrfconnect-ppk` v4.4.1, `src/device/serialDevice.ts`). To produce
-it again you need Node 24 or newer and a checkout of the app at that
+it again, you need Node 24 or newer and a checkout of the app at that
 tag:
 
 ```sh
@@ -31,7 +31,7 @@ byte.
 
 The app's source is not copied here: its licence allows using it, not
 redistributing it. [`nordic_hooks.mjs`](nordic_hooks.mjs) replaces the
-two parts that tie the parser to the desktop app, the serial worker and
+two parts that tie the parser to the desktop app: the serial worker and
 the logger.
 
 `metadata.parsed.json` is what the same code reads from `metadata.raw`.
@@ -39,7 +39,12 @@ The script writes both files.
 
 ## Coverage
 
-Bit extraction, the calibration of each range, the spike filter across
-range changes, and the logic byte. It has no lost sample and no corrupt
-word: those cases are unit tests in
-[`tests/protocol/test_stream.py`](../protocol/test_stream.py).
+The fixtures cover:
+
+- bit extraction;
+- the calibration of each range;
+- the spike filter across range changes;
+- the logic byte.
+
+They hold no lost sample and no corrupt word: those cases are unit
+tests in [`tests/protocol/test_stream.py`](../protocol/test_stream.py).

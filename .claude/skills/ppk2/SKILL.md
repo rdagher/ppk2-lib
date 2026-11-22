@@ -40,22 +40,29 @@ ppk2 convert trace.csv trace.ppk2                               # the same, from
 ```
 
 A capture switches the DUT on as it starts, so the boot is at the start
-of the file, about 10 ms in. The CSV has the 11 columns of the app's
-export,
-`Timestamp(ms),Current(uA),D0-D7,D0..D7`, with D0 the leftmost
-character of `D0-D7`, at 100,000 samples per second. In Ampere meter
-mode `--vdd` feeds the calibration: give the DUT's real supply voltage.
+of the file, about 10 ms in.
+
+The CSV uses the 11 columns of the app's export,
+`Timestamp(ms),Current(uA),D0-D7,D0..D7`, at 100,000 samples per
+second. D0 is the leftmost character of `D0-D7`.
+
+In Ampere meter mode, `--vdd` feeds the calibration: give the DUT's
+real supply voltage.
 
 A lost sample is a row of 0.2 µA with the digital inputs low, as in the
 app's export. The summary line at the end of a capture counts them.
 
 When a DUT wakes from sleep, the PPK2 can read tens of mA too high for
 40 µs. For short events that repeat, compare the median of their
-charge, not the mean
-([Principle](../../../docs/measure/principle.md#limit-waking-from-sleep)).
+charge, not the mean. See
+[Principle](../../../docs/measure/principle.md#limit-waking-from-sleep)
+for this limit.
 
-Digital inputs: on the logic port, D0 to D7 to GPIOs, `GND` to the
-DUT's ground, `VCC` to the DUT's VDD.
+To use the digital inputs, connect on the logic port:
+
+- D0 to D7 to GPIOs;
+- `GND` to the DUT's ground;
+- `VCC` to the DUT's VDD.
 
 ## Flashing a DUT powered through the PPK2
 
@@ -74,14 +81,15 @@ the DUT, so measure with a fresh one.
 
 ## Bench notes
 
-- nRF52840 DK: measure with SW6 on "nRF only". Otherwise the interface
-  chip stays on the measured supply and hides the nRF52840's current.
+- nRF52840 DK: set SW6 to "nRF only" to measure. Otherwise the
+  interface chip stays on the measured supply and hides the nRF52840's
+  current.
 - nRF54L15 and nRF54LM20 DKs: PPK2 in series at the current-measurement
   header. The nRF54LM20 DK idles at 1.4 µA with the bench firmware and
-  everything connected; the nRF54L15 DK has not been measured.
+  everything connected. The nRF54L15 DK has not been measured.
 - Idle currents drift between captures. Compare a signal with two
-  levels region by region, not over the whole trace
-  ([`validation/README.md`](../../../validation/README.md)).
+  levels region by region, not over the whole trace. See
+  [`validation/README.md`](../../../validation/README.md) for how.
 
 ## From Python
 
@@ -109,10 +117,10 @@ print(len(samples), "samples")
 ```
 
 The callback ends `capture` by returning `False`. `keep_going` ends it
-when the PPK2 sends nothing, a case in which the callback is never
-called. More in
-[`docs/develop/architecture.md`](../../../docs/develop/architecture.md) and
-[`docs/measure/protocol.md`](../../../docs/measure/protocol.md).
+when the PPK2 sends nothing, since the callback is then never called.
+See [`docs/develop/architecture.md`](../../../docs/develop/architecture.md)
+and [`docs/measure/protocol.md`](../../../docs/measure/protocol.md) for
+more.
 
 ## Comparing two captures
 
@@ -121,8 +129,11 @@ just compare-cli A.csv B.csv        # statistics of two captures, side by side
 just cross-validate BIN_A BIN_B     # capture with two binaries, then compare
 ```
 
-It passes when the headers are identical, the means are within 1 % and
-the KS statistic is below 0.05.
+The comparison passes when:
+
+- the headers are identical;
+- the means are within 1 %;
+- the KS statistic is below 0.05.
 
 The captures of the validation are not on `main`: `just captures`
 fetches them from the branch `captures`.

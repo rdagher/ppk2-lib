@@ -14,8 +14,8 @@ ppk2 run --source --vdd 3.3 -- west flash
 
 `ppk2 run` switches power on, runs the command after `--`, and
 switches power off when it ends. It exits with the command's exit code,
-so it fits in a Makefile, a `just` recipe or a CI job. Add
-`--out flash.csv` to record while the programmer runs.
+so it fits in a Makefile, a `just` recipe or a CI job. To record while
+the programmer runs, add `--out flash.csv`.
 
 To flash from another terminal, or to debug, hold the power on until
 Ctrl-C:
@@ -33,7 +33,7 @@ from ppk2 import Mode, Session, find_ppk2
 
 with Session.open(find_ppk2().device) as session:
     session.set_mode(Mode.SOURCE)
-        session.set_source_voltage(3300)
+    session.set_source_voltage(3300)
     session.power_on()  # the power is up about 1 ms later
     code = subprocess.run(["west", "flash"]).returncode
 raise SystemExit(code)
@@ -42,8 +42,8 @@ raise SystemExit(code)
 An nRF chip stays in debug mode after it is flashed and draws more
 until it is power-cycled. On the nRF54LM20 DK, the bench firmware of
 this repository then idled at 330 µA, against 1.4 µA after a power
-cycle. Measure with a fresh `ppk2 capture`, which power-cycles the DUT,
-not inside the session that flashed.
+cycle. So measure with a fresh `ppk2 capture`, which power-cycles the
+DUT, and not inside the session that flashed.
 
 ## Current of a marked region
 
@@ -59,9 +59,9 @@ gpio_set(MARK_PIN, 0);
 ```
 
 Wire the pin to `D0` of the logic port, with the port's `GND` and `VCC`
-connected as in [getting started](getting-started.md#digital-inputs),
+connected as in [getting started](getting-started.md#digital-inputs-optional),
 and capture as usual. The `D0` column of the file is 1 exactly while
-the code ran.
+the code runs.
 
 The current of a region is the mean of its samples. One sample lasts
 10 µs, so the charge of a region is the sum of its samples times 10 µs,
@@ -83,7 +83,7 @@ regions["charge_uC"] = regions["sum"] * SAMPLE_S  # µA × s = µC
 print(regions[["duration_ms", "mean", "max", "charge_uC"]].round(2))
 ```
 
-Run on `source_ppk2_1.csv.xz`, one of the captures of the
+On `source_ppk2_1.csv.xz`, one of the captures of the
 [validation](../validation/results.md#reproducing-the-results), it
 prints these first rows. The firmware of that bench keeps the CPU busy
 for 100 ms while D0 is high:
@@ -144,7 +144,7 @@ class RegionCurrent:
 
 regions = RegionCurrent(wanted=10)
 with Session.open(find_ppk2().device) as session:
-        session.set_mode(Mode.SOURCE)
+    session.set_mode(Mode.SOURCE)
     session.set_source_voltage(3300)
     session.start_measuring()
     session.power_on()
@@ -155,7 +155,7 @@ print(f"{len(regions.means_ua)} regions, mean current {mean:.2f} µA")
 ```
 
 ```text
-10 regions, mean current 1386.63 µA
+10 regions, mean current 1384.43 µA
 ```
 
 ## Long captures
@@ -171,9 +171,10 @@ first question is the size of the file.
 
 The `.ppk2` column comes from a capture of ten minutes of the bench
 firmware of this repository, which took 73.5 MB. A session file is
-compressed, so a noisier signal takes more. While it is
-being written, a `.ppk2` capture uses 6 bytes per sample in a file next
-to the output: 36 MB per minute, 17 GB for 8 hours.
+compressed, so a noisier signal takes more.
+
+While it is being written, a `.ppk2` capture uses 6 bytes per sample in
+a file next to the output: 36 MB per minute, 17 GB for 8 hours.
 
 ```sh
 ppk2 capture --out hour.ppk2 --seconds 3600
@@ -210,8 +211,8 @@ Capture the same workload before and after, and compare the files.
 3. Flash the second build.
 4. Capture again, to `after.csv`.
 
-A checkout of the repository has a script that compares the two and
-writes a report:
+To compare the two files and write a report, run this script from a
+checkout of the repository:
 
 ```sh
 uv run --group validation python -m validation.compare_cli before.csv after.csv \
@@ -222,12 +223,14 @@ It reports the mean of each file and the Kolmogorov-Smirnov (KS)
 statistic between the two distributions: 0 when they are the same, 1
 when they do not overlap.
 
-Know how much two identical runs differ before you read a difference
-as a result. In the [validation](../validation/results.md), two
+Before you read a difference as a result, know how much two identical
+runs differ. In the [validation](../validation/results.md), two
 captures of the same firmware taken four minutes apart differ by 0.05 %
 on the current of a marked region. At a few µA the spread can be
-larger. Measure the spread of your own bench with two runs of one
-build, and trust only differences well above it.
+larger.
+
+Measure the spread of your own bench with two runs of one build, and
+trust only differences well above it.
 
 Two more cautions:
 

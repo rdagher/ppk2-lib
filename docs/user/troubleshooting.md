@@ -129,8 +129,8 @@ error: trace.ppk2.frames: left by a run that did not finish: move or delete it
 
 An earlier capture or conversion to that `.ppk2` name did not finish
 and left its samples in the `.frames` file, 6 bytes each. It is all
-that remains of that run, so it is not overwritten. Move it away if
-you want to keep it, or delete it, and run again.
+that remains of that run, so it is not overwritten. If you want to keep
+it, move it away; otherwise delete it. Then run again.
 
 ## Capture ended short
 
@@ -184,12 +184,18 @@ cable, without a hub, and close what else loads the machine.
 
 ## Checking a measurement
 
-Capture the same DUT with the app and with `ppk2 capture`, export the
-app's capture as CSV, and compare the two files. The repository's
+To check a measurement against the app:
+
+1. Capture the same DUT with the app and with `ppk2 capture`.
+2. Export the app's capture as CSV.
+3. Compare the two files.
+
+The repository's
 [`validation/compare_cli.py`](https://github.com/rdagher/ppk2-lib/blob/main/validation/compare_cli.py)
-does it and writes a report. The [validation](../validation/method.md)
-describes the procedure, and its [results](../validation/results.md)
-show it on one dev kit, in both modes.
+does the comparison and writes a report. See the
+[validation](../validation/method.md) for the procedure. Its
+[results](../validation/results.md) show it on one dev kit, in both
+modes.
 
 ## See also
 

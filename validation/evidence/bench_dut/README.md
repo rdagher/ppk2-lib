@@ -1,17 +1,19 @@
 # Round of 2026-11-21: the app against `ppk2 capture`
 
-One bench, captured by Nordic's Power Profiler app and by
-`ppk2 capture` within minutes of each other, in both modes. The
+One bench, captured by Nordic's
+[Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html) and by
+`ppk2 capture` within minutes of each other, in both modes. See the
 [results page](../../../docs/validation/results.md) of the
-documentation has the setup, the tables and the plots. This folder
-holds what they come from, and `summary.txt` is what the scripts print
-from the captures.
+documentation for the setup, the tables and the plots.
+
+This folder holds what they come from. `summary.txt` is what the
+scripts print from the captures.
 
 ## Captures
 
-The six captures weigh 42 MB, so they are kept on the branch `captures`
-of this repository, at commit `1f7d123`, and installing the package
-does not download them. To put them in `captures/`:
+The six captures weigh 42 MB. They are kept on the branch `captures`
+of this repository, at commit `1f7d123`, so installing the package
+does not download them. To put them in `captures/`, run:
 
 ```sh
 just captures
@@ -36,7 +38,7 @@ git archive FETCH_HEAD '*.csv.xz' | tar -x -C validation/evidence/bench_dut/capt
 
 ## Reproduction
 
-With the captures in place:
+With the captures in place, run:
 
 ```sh
 uv run --group validation python validation/evidence/bench_dut/summary.py

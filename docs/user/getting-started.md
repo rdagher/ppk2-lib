@@ -1,8 +1,9 @@
 # Getting started
 
-From nothing to a first capture: install, wire, check, capture, read.
+From nothing to a first capture in six steps: install, wire, check,
+capture, read, and open the capture in the app.
 
-## Installation
+## Step 1: installation
 
 ppk2-lib is not on PyPI yet. Install it from the repository:
 
@@ -17,8 +18,8 @@ it as a tool, in an environment of its own:
 uv tool install "git+https://github.com/rdagher/ppk2-lib"
 ```
 
-`uvx --from "git+https://github.com/rdagher/ppk2-lib" ppk2 list` runs
-it once without installing anything.
+To run it once without installing anything, use
+`uvx --from "git+https://github.com/rdagher/ppk2-lib" ppk2 list`.
 
 This gives you the `ppk2` command and the `ppk2` Python package. You
 need Python 3.11 or newer. Two dependencies come with it,
@@ -45,14 +46,13 @@ What it has been tested on:
 
 The package is written for the three systems and uses nothing that is
 specific to one of them: `pyserial` handles the serial port on each.
-What has run on a Mac only, so far, is the set of tests that need a
-PPK2 on a bench.
+So far, the tests that need a PPK2 on a bench have run on a Mac only.
 
-## Wiring
+## Step 2: wiring
 
 Wire it as you would for the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html). The PPK2
 has two modes, named here as in the app, and the wiring decides which
-one you use. Nordic's [PPK2 user guide](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html) shows both wirings on a
+one you use. See Nordic's [PPK2 user guide](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html) for both wirings on a
 dev kit, for the [Ampere meter](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/measure_current_ampere_meter.html) and for the
 [Source meter](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/measure_current_source_meter.html).
 
@@ -69,9 +69,9 @@ series with it. This is the default.
 ```
 
 - `--vdd` sets nothing in this mode, but the calibration uses it. Give
-  the voltage the DUT really runs at. The default is 3.3. The
+  the voltage the DUT really runs at. The default is 3.3. See the
   [Principle](../measure/principle.md#supply-voltage-term) page
-  says how much a wrong value costs.
+  for how much a wrong value costs.
 - Nothing else may feed the DUT. Current that reaches it by a second
   path does not pass through the PPK2 and is not measured.
 - Nordic's dev kits have a current-measurement header for this: remove
@@ -94,7 +94,7 @@ A DUT powered this way is off until a command switches it on, and off
 again when the command ends: the PPK2 cuts power when its serial port
 closes.
 
-### Digital inputs
+### Digital inputs (optional)
 
 The logic port has eight digital inputs, `D0` to `D7`, sampled together
 with the current. They are optional. To use them, connect:
@@ -104,7 +104,7 @@ with the current. They are optional. To use them, connect:
 - the logic port's `VCC` to the DUT's VDD. The PPK2 uses it as the
   reference to tell high from low.
 
-## Connection check
+## Step 3: connection check
 
 Only one program can hold a PPK2, so quit the app first.
 
@@ -140,7 +140,7 @@ Ampere meter mode and breathing red in Source meter mode.
     It does not mean the readings are wrong. See
     [the `Calibrated` flag](../measure/principle.md#calibrated-flag).
 
-## First capture
+## Step 4: first capture
 
 In Ampere meter mode, the default:
 
@@ -167,9 +167,9 @@ stops early and keeps what was recorded.
 A capture switches the DUT on as it starts and off as it ends, so the
 boot is in the file. The current rises about 10 ms into it.
 
-## Reading the file
+## Step 5: reading the file
 
-The CSV has the 11 columns of the app's export, one row every 0.01 ms:
+The CSV uses the 11 columns of the app's export, one row every 0.01 ms:
 
 ```csv
 Timestamp(ms),Current(uA),D0-D7,D0,D1,D2,D3,D4,D5,D6,D7
@@ -193,9 +193,9 @@ print(f"mean {ua.mean():.2f} µA, max {ua.max():.0f} µA")
 mean 749.47 µA, max 164014 µA
 ```
 
-[File formats](../measure/formats.md) has the columns in detail.
+See [File formats](../measure/formats.md) for the columns in detail.
 
-## Opening a capture in the app
+## Step 6: opening the capture in the app (optional)
 
 A name ending in `.ppk2` gives a session file in the format the app
 saves and loads, and `ppk2 convert` makes one from a CSV:
@@ -205,9 +205,19 @@ $ ppk2 convert first.csv first.ppk2
 wrote first.ppk2: 500000 samples at 100000 S/s (5.00 s)
 ```
 
-Here the CSV is 20.1 MB and the session file 0.7 MB.
-[File formats](../measure/formats.md#verification-status) says how
+Here the CSV is 20.1 MB and the session file 0.7 MB. See
+[File formats](../measure/formats.md#verification-status) for how
 far this format has been checked.
+
+## Recap
+
+You have:
+
+- installed the `ppk2` command and the Python package;
+- wired the PPK2 in Ampere meter mode or in Source meter mode;
+- checked the connection with `ppk2 list` and `ppk2 metadata`;
+- recorded a capture to a CSV file;
+- read the file with numpy, and converted it for the app.
 
 ## Platform notes
 
@@ -229,13 +239,15 @@ group.
 
 ### Windows
 
-The PPK2 shows up as two COM ports. Two things do not work on Windows
-yet, because they use POSIX calls: `ppk2 power on --hold`, and Ctrl-C
-during `ppk2 run`.
+The PPK2 shows up as two COM ports. Two things are not supported on
+Windows yet, because they use POSIX calls:
+
+- `ppk2 power on --hold`;
+- Ctrl-C during `ppk2 run`.
 
 ## Nordic development kits
 
-- nRF52840 DK: measure with switch SW6 on "nRF only". Otherwise the
+- nRF52840 DK: set switch SW6 to "nRF only" to measure. Otherwise the
   interface chip stays on the measured supply, and its current hides
   that of the nRF52840.
 - nRF54L15 DK and nRF54LM20 DK: put the PPK2 across the

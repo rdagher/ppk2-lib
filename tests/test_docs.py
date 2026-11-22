@@ -7,6 +7,7 @@ troubleshooting, and the examples that need only the stored fixtures,
 which must print what the page shows.
 """
 
+import ast
 import contextlib
 import importlib
 import io
@@ -104,6 +105,20 @@ def test_python_names_on_the_page_exist(page: Path) -> None:
         assert hasattr(getattr(ppk2, cls), member), (
             f"{cls}.{member} is on the page, not in the code"
         )
+
+
+@pytest.mark.parametrize("page", PAGES, ids=_name)
+def test_python_examples_on_the_page_parse(page: Path) -> None:
+    """A wrong indent in an example is a SyntaxError for whoever copies it."""
+    text = page.read_text(encoding="utf-8")
+    for match in re.finditer(r"^( *)```python\n(.*?)^ *```", text, flags=re.S | re.M):
+        indent, code = match.groups()
+        code = "\n".join(line[len(indent) :] for line in code.splitlines())
+        try:
+            ast.parse(code)
+        except SyntaxError as error:
+            line = text.count("\n", 0, match.start()) + 1 + (error.lineno or 0)
+            raise AssertionError(f"{_name(page)}:{line}: {error.msg}") from None
 
 
 # ─── the command line ────────────────────────────────────────────────────

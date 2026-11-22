@@ -3,8 +3,8 @@
 The claim this package makes is narrow: on the same PPK2 and the same
 bench, it gives the numbers that Nordic's
 [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html) gives. The app is the reference
-throughout. This page says how the claim is tested; the
-[results](results.md) are on the next one.
+throughout. This page describes how the claim is tested. See the
+[results](results.md) page for what the tests found.
 
 It is tested at three levels, from one sample to a whole bench:
 
@@ -17,7 +17,7 @@ It is tested at three levels, from one sample to a whole bench:
 ## Parser comparison
 
 The recording is `stream_poweron.bin`: 600 samples, 6 ms, taken while a
-PPK2 powered an nRF54LM20 DK on in Source meter mode at 3.3 V. The
+PPK2 in Source meter mode at 3.3 V powered up an nRF54LM20 DK. The
 current climbs through all five measurement ranges and changes range
 nine times. The calibration text of the same PPK2 is stored next to it.
 
@@ -25,29 +25,34 @@ The reference is `parsed_poweron.csv`: the output of the app's parser
 for those bytes. It was produced by running the app's code outside the
 app (`pc-nrfconnect-ppk` v4.4.1,
 [`src/device/serialDevice.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts)),
-with a small Node script. To produce it again:
+with a small Node script. To produce it again, run:
 
 ```sh
 git clone --branch v4.4.1 --depth 1 https://github.com/nordicsemi/pc-nrfconnect-ppk
 node tests/fixtures/make_reference.mjs pc-nrfconnect-ppk
 ```
 
-It needs Node 24 or newer, and writes the same two files, byte for
-byte.
+The script needs Node 24 or newer, and writes the same two files, byte
+for byte.
 
 The app's source is not copied into this repository: its licence
 allows using it, not redistributing it.
 
-A unit test parses the same bytes with this package. It passes when
-every current agrees to the three decimals the reference carries, and
-every byte of digital inputs is identical.
+A unit test parses the same bytes with this package. It passes when:
 
-This covers the extraction of the fields, the calibration of each
-range, and the spike filter across range changes. It does not cover
-lost samples: the recording has none. Those cases are tested on streams
-built for the purpose, and there this package differs from the app on
-purpose. The [results](results.md#differences-from-the-app)
-list the differences.
+- every current agrees to the three decimals the reference carries;
+- every byte of digital inputs is identical.
+
+This covers:
+
+- the extraction of the fields;
+- the calibration of each range;
+- the spike filter across range changes.
+
+It does not cover lost samples: the recording contains none. Those
+cases are tested on streams built for the purpose, and there this
+package differs from the app on purpose. See the
+[results](results.md#differences-from-the-app) for the differences.
 
 ## Capture comparison
 
@@ -71,10 +76,13 @@ Better still, capture with `ppk2 capture` before the app as well as
 after. The difference between those two captures is the drift of the
 bench, and the app's capture lies between them.
 
-Every capture contains the power-on, so the DUT boots in each. Record with
-the round what a reader needs to repeat it: the version of the app,
-the firmware of the PPK2 and its calibration text (`ppk2 metadata`),
-and the commit of this package.
+Every capture contains the power-on, so the DUT boots in each.
+
+Record with the round what a reader needs to repeat it:
+
+- the version of the app;
+- the firmware of the PPK2 and its calibration text (`ppk2 metadata`);
+- the commit of this package.
 
 ### Compared quantities
 
@@ -87,8 +95,11 @@ reads the two files and reports:
 - the Kolmogorov-Smirnov (KS) statistic between the two distributions;
 - the duty cycle and edge rate of each digital input.
 
-It passes when the headers are identical, the means are within 1 % and
-the KS statistic is below 0.05.
+It passes when:
+
+- the headers are identical;
+- the means are within 1 %;
+- the KS statistic is below 0.05.
 
 For a firmware that marks its work with D0 and D1, a second script,
 [`validation/regions.py`](https://github.com/rdagher/ppk2-lib/blob/main/validation/regions.py),
@@ -110,13 +121,18 @@ instrument:
   minutes apart differed by 0.05 % in the round of this release.
 
 So a round is judged by kind of region. For the regions marked by one
-digital input, the mean of their current is compared between the two
-captures, and the mean of their charge, which is the current added up
-over a region's duration. The regions are not paired one to one: the
-captures are different seconds of the DUT's life and do not hold the
-same number of them. The distribution of the current inside the
-workload and inside the idle is compared as well. There is no energy in
-the comparison, because a PPK2 measures current only.
+digital input, two means are compared between the captures:
+
+- the mean of their current;
+- the mean of their charge, which is the current added up over a
+  region's duration.
+
+The regions are not paired one to one: the captures are different
+seconds of the DUT's life and do not hold the same number of them.
+
+The distribution of the current inside the workload and inside the
+idle is compared as well. There is no energy in the comparison, because
+a PPK2 measures current only.
 
 ## Hardware tests
 
@@ -138,6 +154,8 @@ Ten tests check that:
 - two captures in a row both succeed;
 - `ppk2 run` returns the exit code of its command.
 
+To run them, in each mode:
+
 ```sh
 just test-hw                          # Ampere meter mode
 PPK2_HIL_SOURCE_MV=3300 just test-hw  # Source meter mode at 3.3 V
@@ -146,11 +164,11 @@ PPK2_HIL_SOURCE_MV=3300 just test-hw  # Source meter mode at 3.3 V
 ## Limitations
 
 - Absolute accuracy. The reference is the app, not a calibrated
-  instrument. Agreement with the app says the arithmetic is the same;
-  it says nothing about how close the PPK2 is to the true current.
+  instrument. Agreement with the app says the arithmetic is the same.
+  It says nothing about how close the PPK2 is to the true current.
 - Other units and other systems. The bench measurements were made on
   one PPK2, on a Mac. The package runs on Linux and Windows as well,
-  where its unit tests pass; no capture has been compared there.
+  where its unit tests pass. No capture has been compared there.
 - Lost samples. Their handling is tested on streams built for the
-  purpose and by freezing a capture on the bench, not against the app,
-  from which this package differs here on purpose.
+  purpose and by freezing a capture on the bench, not against the app:
+  this package differs from the app here on purpose.

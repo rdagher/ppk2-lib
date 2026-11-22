@@ -32,11 +32,15 @@ uv run --group validation python -m validation.cross_validate \
     --seconds 60
 ```
 
-This runs both binaries one after the other on the bench that is
-plugged in, then compares the two files. Both must accept `capture
---out PATH --seconds N` and write the CSV described in the
-[file formats](../docs/measure/formats.md#csv) page. Run it from the
-repository root. The captures are taken in Ampere meter mode.
+It runs both binaries one after the other on the bench that is
+plugged in, then compares the two files. Run it from the repository
+root. The captures are taken in Ampere meter mode.
+
+Both binaries must:
+
+- accept `capture --out PATH --seconds N`;
+- write the CSV described in
+  [File formats](../docs/measure/formats.md#csv).
 
 ## Limits of the 1 % rule
 
@@ -59,7 +63,7 @@ starts in the cycle. Compare it level by level, as the
 
 - [`bench_dut/`](evidence/bench_dut/README.md): the round of this
   release. The app against `ppk2 capture` in both modes on an
-  nRF54LM20 DK, with the way to the six captures, the versions used,
+  nRF54LM20 DK, with how to get the six captures, the versions used,
   and the scripts that print the tables and draw the plots.
 
 Its DUT runs the [bench firmware](../tests/hil/bench-dut/) of the

@@ -1,9 +1,9 @@
 # API reference
 
 Every name on this page can be imported from `ppk2`. The text under
-each one comes from its docstring. The
-[architecture page](architecture.md) says how the pieces fit and how a
-session goes.
+each one comes from its docstring. See the
+[architecture page](architecture.md) for how the pieces fit together
+and how a session runs.
 
 ## Discovery
 
@@ -17,10 +17,10 @@ there it:
 3. asks each port for its calibration. Only the data port answers. If
    none does, it asks once more after a `RESET`.
 
-If nothing is found it tries again for up to 3 seconds, because a PPK2
-that was just plugged in takes a moment to appear. With several PPK2s
-attached, use `find_ppk2_by_serial`, and `list_ppk2s` to see what is
-there.
+If nothing is found, it tries again for up to 3 seconds, because a
+PPK2 that was just plugged in takes a moment to appear. If several
+PPK2s are attached, use `find_ppk2_by_serial` to pick one, and
+`list_ppk2s` to see what is there.
 
 ::: ppk2.client.discovery.find_ppk2
 
@@ -81,18 +81,21 @@ there.
 ## Samples and stream parser
 
 `StreamParser` is what a capture runs on. Give it the bytes of each
-read, and it calls your function once per sample. It keeps the
-alignment when a read ends in the middle of a word, follows the counter
-of the samples, puts a placeholder where one was lost, and applies the
-spike filter.
+read, and it calls your function once per sample. It also:
+
+- keeps the alignment when a read ends in the middle of a word;
+- follows the counter of the samples, and puts a placeholder where one
+  was lost;
+- applies the spike filter.
 
 One call to `push_bytes` can produce no sample, one per word, or more.
 It produces none when the bytes do not complete a word, or when a
 sample is held back. It produces several when held samples are
 released, or when placeholders fill a gap.
 
-The parser does not care where the bytes come from. This decodes the
-stream stored with the tests, using the calibration stored next to it:
+The parser does not care where the bytes come from. For example, this
+decodes the stream stored with the tests, with the calibration stored
+next to it:
 
 ```python
 from pathlib import Path
@@ -147,7 +150,7 @@ print(f"{len(currents)} samples, mean {sum(currents) / len(currents):.2f} µA")
 ## Commands
 
 A command is one byte. The value of each member is the byte that goes
-on the wire. The [protocol page](../measure/protocol.md#2-commands)
-says what the PPK2 does with them.
+on the wire. See the [protocol page](../measure/protocol.md#2-commands)
+for what the PPK2 does with them.
 
 ::: ppk2.protocol.opcode.Opcode

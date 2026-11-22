@@ -1,9 +1,8 @@
 # Architecture
 
-This guide is for writing Python against the library. The rules for
-changing the library itself are in
+This guide is for writing Python against the library. See
 [`CONTRIBUTING.md`](https://github.com/rdagher/ppk2-lib/blob/main/CONTRIBUTING.md), at the root of the
-repository.
+repository, for the rules for changing the library itself.
 
 The `ppk2` package has three layers. Each one uses only the layer below
 it.
@@ -103,10 +102,17 @@ print(f"{len(currents)} samples, mean {sum(currents) / len(currents):.2f} µA")
 ```
 
 `capture` runs in the calling thread and calls your function for every
-sample. It stops when the function returns `False`. Leaving the `with`
-block stops the stream, switches the device under test (DUT) off and
-closes the port, also when the function raises. If the process is
-killed instead, the PPK2 cuts power by itself when the port closes.
+sample. It stops when the function returns `False`.
+
+When you leave the `with` block, even because the function raised, the
+session:
+
+- stops the stream;
+- switches the device under test (DUT) off;
+- closes the port.
+
+If the process is killed instead, the PPK2 cuts power by itself when
+the port closes.
 
 The sample count is the clock here: 100,000 samples are one second,
 whatever the computer was doing meanwhile.
@@ -174,25 +180,27 @@ state.
 Three details of this sequence are choices, not requirements of the
 PPK2:
 
-- On a running stream, `power_on` first reads until the host has
-  caught up with it, so that a capture begins at the power switch. The
-  [known caveats](../measure/protocol.md#10-known-caveats) have the
-  measurements. Without a stream it sends the command at once.
+- If a stream is running, `power_on` first reads until the host has
+  caught up with it, so that a capture begins at the power switch. See
+  the [known caveats](../measure/protocol.md#10-known-caveats) for the
+  measurements. Without a stream, it sends the command at once.
 - The session reads the stream to its end before it closes the port.
-  Left unread, the end of one stream would greet the next program that
+  Left unread, the end of one stream would reach the next program that
   opens the PPK2.
 - No `RESET` is sent on close. It makes the PPK2 drop off USB and come
   back, which can block the next program.
 
-`Session.open` tries three times in all, 0.5 s and then 1 s apart,
-before it raises the last error: `HandshakeFailed` when the PPK2 did
-not answer, `SerialIOError` when the port could not be opened.
+`Session.open` tries three times in all, 0.5 s and then 1 s apart.
+Then it raises the last error:
 
-A new session inherits two things. The PPK2 keeps its supply voltage
-and its mode when a program disconnects, and `Session.open` reads both
-back with the calibration. A PPK2 left in Source meter mode at 1,800 mV
-starts the next session there, until `set_mode` or
-`set_source_voltage` says otherwise.
+- `HandshakeFailed` when the PPK2 did not answer;
+- `SerialIOError` when the port could not be opened.
+
+A new session inherits two things from the last one: the supply
+voltage and the mode. The PPK2 keeps both when a program disconnects,
+and `Session.open` reads them back with the calibration. For example, a
+PPK2 left in Source meter mode at 1,800 mV starts the next session
+there, until `set_mode` or `set_source_voltage` changes it.
 
 ## Capture callback
 
@@ -201,30 +209,33 @@ def on_sample(sample: Sample) -> bool:
     ...  # return True to go on, False to stop
 ```
 
-`capture` calls your function for every sample and returns once it has
-answered `False`. A function that always answers `True` never comes
-back, so give it a way to stop: a number of samples, or a deadline.
+`capture` calls your function for every sample, and returns once the
+function has returned `False`. If the function always returns `True`,
+`capture` never returns, so give it a way to stop: a number of samples,
+or a deadline.
 
-Your function is not called again once it has answered `False`. The
-samples already read after that one are dropped.
+Once it has returned `False`, your function is not called again, and
+the samples already read after that one are dropped.
 
-When the PPK2 sends nothing, your function is never called and cannot
-stop the capture. Pass `keep_going` for that case: `capture` calls it
-after every read of the serial port, and stops when it answers `False`.
+If the PPK2 sends nothing, your function is never called and cannot
+stop the capture. For that case, pass `keep_going`: `capture` calls it
+after every read of the serial port, and stops when it returns `False`.
 
 ```python
 deadline = time.monotonic() + 5
 session.capture(on_sample, keep_going=lambda: time.monotonic() < deadline)
 ```
 
-An exception raised in the function leaves `capture`, and the `with`
+If the function raises, the exception leaves `capture`, and the `with`
 block still closes the session.
 
 A lost sample arrives as a `Sample` whose current is NaN and whose
 `logic` is 0. It keeps its place, so the count of samples still gives
 the time. The files `ppk2` writes record it as 0.2 µA instead, as
-Nordic's app does. To be told as it happens, pass `on_dataloss`. It is
-called with the total so far, at most once per read:
+Nordic's app does.
+
+To be told when samples are lost, pass `on_dataloss`. It is called with
+the total so far, at most once per read:
 
 ```python
 def on_dataloss(total: int) -> None:
@@ -250,18 +261,18 @@ panel does. None is needed for an ordinary capture.
 
 Set them after `Session.open` and before `start_measuring`. While a
 stream runs, all three raise `RuntimeError`: the capture has already
-taken its settings. After `stop_measuring` they are accepted again.
-None of them outlives the session: a new one starts from the defaults,
-which are the app's.
+taken its settings. After `stop_measuring`, they are accepted again.
+None of them outlives the session: a new session starts from the
+defaults, which are the app's.
 
-The [Principle](../measure/principle.md#spike-filter) page
-says what the three numbers of the spike filter do.
+See the [Principle](../measure/principle.md#spike-filter) page for
+what the three numbers of the spike filter do.
 
 ### Gains
 
-A gain multiplies every reading of one range. It is 1.0 unless you
-change it. The app numbers the ranges 1 to 5; here they are 0 to 4, so
-the app's Range 1 is `range_idx` 0.
+A gain multiplies every reading of one range. By default, it is 1.0.
+The app numbers the ranges 1 to 5. Here they are 0 to 4, so the app's
+Range 1 is `range_idx` 0.
 
 ```python
 session.set_user_gain(2, 1.05)  # range 2 here, Range 3 in the app
@@ -271,14 +282,14 @@ session.set_user_gain(2, 1.05)  # range 2 here, Range 3 in the app
 ppk2 capture --out trace.csv --seconds 10 --user-gain 2:1.05 --user-gain 4:0.98
 ```
 
-A gain goes from 0.9 to 1.1, as in the app; a value outside is refused.
-If the PPK2 itself reports a gain outside that range, all five are
-taken as 1.0 and a warning says so, which is what the app does when it
+A gain goes from 0.9 to 1.1, as in the app. A value outside that range
+is refused. If the PPK2 itself reports a gain outside it, all five are
+taken as 1.0 and a warning says so. The app does the same when it
 connects.
 
-The gain is applied on the computer and nothing is sent to the PPK2.
-Its firmware accepts the command for user gains and ignores it, and the
-app also applies its gains on the computer.
+The gain is applied on the computer, and nothing is sent to the PPK2.
+The PPK2's firmware accepts the command for user gains but ignores it,
+and the app also applies its gains on the computer.
 
 ### Voltage limit
 
@@ -297,7 +308,7 @@ with Session.open(find_ppk2().device) as session:
 
 The limit itself is kept between 800 and 5,000 mV, the range of the
 PPK2. Lowering it does not lower a supply voltage that is already
-higher: call `set_source_voltage` again for that.
+higher. To lower that one too, call `set_source_voltage` again.
 
 ## Threading
 

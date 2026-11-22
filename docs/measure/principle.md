@@ -20,14 +20,14 @@ flowchart TB
 ```
 
 The PPK2 sends raw readings. Everything after the USB cable is done by
-this package, in the same way as Nordic's
+this package, the same way as Nordic's
 [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html) does it.
 
 ## Measured quantities and modes
 
 The PPK2 measures the current that flows through it, 100,000 times
-per second, and with each sample the state of eight digital inputs. It
-does not measure voltage.
+per second. With each sample it also reads the state of eight digital
+inputs. It does not measure voltage.
 
 | Mode | Where the PPK2 sits | Supply voltage |
 |---|---|---|
@@ -49,12 +49,15 @@ them by itself as the current moves. From the
 | 5 | 4 | 50 mA to 1 A | 1 mA |
 
 The app and the user guide number the ranges 1 to 5. The PPK2's stream
-numbers them 0 to 4, and so does this package, in `--user-gain`, in
-`Session.set_user_gain` and in the calibration arrays.
+numbers them 0 to 4, and so does this package:
+
+- in `--user-gain`;
+- in `Session.set_user_gain`;
+- in the calibration arrays.
 
 There is no setting for where the PPK2 switches. Nordic's command list
-has `SWITCH_POINT_DOWN` and `SWITCH_POINT_UP`; the app does not send
-them and neither does this package.
+includes `SWITCH_POINT_DOWN` and `SWITCH_POINT_UP`, but neither the app
+nor this package sends them.
 
 Each sample says which range it was taken in. The range is in the
 stream, not in the CSV. To see it, decode the words:
@@ -80,8 +83,8 @@ through all five ranges.
 ## Calibration
 
 Every PPK2 carries its own calibration and sends it as text when asked.
-`ppk2 metadata` prints it; in Python it is what `Session.coefficients()`
-returns.
+`ppk2 metadata` prints it. In Python, `Session.coefficients()` returns
+it.
 
 ### Calibration data
 
@@ -106,12 +109,12 @@ And five single values:
 | `mode` | The mode it was left in: 1 Ampere meter, 2 Source meter |
 | `HW`, `IA` | Whole numbers, reported as they come. This package does not interpret them |
 
-The parser requires every one of these except `VDD` and `mode`. Without
-them it assumes 3,300 mV and Ampere meter mode.
+The parser requires every one of these except `VDD` and `mode`. When
+those two are missing, it assumes 3,300 mV and Ampere meter mode.
 
 A PPK2 can leave a slot of an array blank, which it prints as `-nan`.
-The parser then takes the value the app assumes for it. The
-[protocol page](protocol.md#3-calibration-text) lists those values.
+The parser then takes the value the app assumes for it. See the
+[protocol page](protocol.md#3-calibration-text) for those values.
 
 ### `Calibrated` flag
 
@@ -138,9 +141,13 @@ uA = UG[r] * (x * (GS[r] * x + GI[r]) + S[r] * vdd + I[r]) * 1e6
 ```
 
 `x` is the current in amperes before correction. 1.8 V is the reference
-of the converter and 163,840 is 2^14 × 10. The second line corrects the
-gain, adds the part that depends on the supply voltage, and applies the
-user gain. This is the formula of the app. In Python it is
+of the converter and 163,840 is 2^14 × 10. The second line:
+
+- corrects the gain;
+- adds the part that depends on the supply voltage;
+- applies the user gain.
+
+This is the app's formula. In Python it is
 [`current_micro_amps`](../develop/api.md#ppk2.protocol.calibration.current_micro_amps).
 
 The sample word `0x015c0097` decodes to a reading of 151 in range 0,
@@ -210,7 +217,7 @@ On the 600 samples above, with their nine range changes:
 | With the filter | 5,205.55 µA | 127 mA |
 | Without it | 5,907.45 µA | 288 mA |
 
-The filter changed 23 of the 600 samples. Without it the mean of these
+The filter changed 23 of the 600 samples. Without it, the mean of these
 samples reads 13.5 % higher than the app shows.
 
 | Setting in the app | Here | Default | Allowed |
@@ -220,11 +227,11 @@ samples reads 13.5 % higher than the app shows.
 | Coefficient for range 5 | `alpha5` | 0.06 | 0 to 1 |
 
 A smaller coefficient is a heavier average: with 0.18, each new
-reading counts for 18 % of the average.
-[`Session.set_spike_filter`](../develop/architecture.md#session-settings)
-changes the three numbers. The command line has no option for this, on
-purpose: a file written by `ppk2 capture` always uses the app's
-defaults.
+reading counts for 18 % of the average. To change the three numbers,
+use
+[`Session.set_spike_filter`](../develop/architecture.md#session-settings).
+The command line has no option for it, on purpose: a file written by
+`ppk2 capture` always uses the app's defaults.
 
 `samples=0` does not switch the filter off. The reading at each range
 change is still replaced: 9 of the 600 samples above. To see what the
@@ -249,20 +256,20 @@ print(f"{len(currents)} readings, mean {sum(currents) / len(currents):.2f} µA")
 600 readings, mean 5907.45 µA
 ```
 
-Nordic's command list also has `SPIKE_FILTERING_ON` and
-`SPIKE_FILTERING_OFF`, for a filter inside the PPK2. The app does not
-send either, and neither does this package.
+Nordic's command list also includes `SPIKE_FILTERING_ON` and
+`SPIKE_FILTERING_OFF`, for a filter inside the PPK2. Neither the app
+nor this package sends them.
 
 ### Limit: waking from sleep
 
-The filter does not remove everything, and a DUT that wakes from sleep
-is where it shows.
+The filter does not remove everything, and it shows when a DUT wakes
+from sleep.
 
 ![Two wake-ups of the same DUT in one capture: one as it should read, one with readings the filter left in](../img/wakeup.png)
 
-These are two wake-ups of the same DUT, 0.2 s apart in one capture of
-the [validation](../validation/results.md). The two traces lie on each
-other except for 40 µs, where one reads 50 to 120 mA.
+The figure shows two wake-ups of the same DUT, 0.2 s apart in one
+capture of the [validation](../validation/results.md). The two traces
+overlap except for 40 µs, where one reads 50 to 120 mA.
 
 To follow a current that jumps from microamperes to milliamperes, the
 PPK2 changes its measuring range. For 2 or 3 samples during that
@@ -270,17 +277,18 @@ change it sits in its highest range and reports several hundred mA.
 
 The spike filter exists for this. It replaces the readings after a
 range change by a running average, and keeps the first two readings in
-the top range out of that average. A third one enters it. The four
-samples that follow then carry what is left of it: tens of mA that
-fade over 40 µs, as in the orange trace.
+the top range out of that average.
+
+A third one enters it, and the four samples that follow carry what is
+left of it: tens of mA that fade over 40 µs, as in the orange trace.
 
 Those four samples add about 3.5 µC. A short event, such as a radio
 transmission of a few µC, can read nearly twice as much because of
 them.
 
-Counted in the captures of the [validation](../validation/results.md),
-where an nRF54LM20 DK wakes five times a second, as `just plots` prints
-it:
+In the captures of the [validation](../validation/results.md), an
+nRF54LM20 DK wakes five times a second. `just plots` prints these
+counts:
 
 | Capture | Wake-ups | With a sample above 20 mA |
 |---|---:|---:|
@@ -291,16 +299,22 @@ it:
 
 It is the same in both modes and in the app's own captures.
 
-Nordic describes the cause in its course on
-[low-power Bluetooth LE products](https://academy.nordicsemi.com/courses/designing-low-power-bluetooth-le-products/lessons/lesson-3-tools-and-best-practices-for-power-measurement/topic/current-measurement-fundamentals/#Issues-with-automatic-range-switching).
-When an instrument switches its measuring resistor, the supply voltage
-at the DUT steps, and the decoupling capacitors take an inrush current,
-seen as an overshoot. How much of it shows depends on the instrument.
-Nordic's [webinar on the nRF54L series](https://www.youtube.com/watch?v=P94FbstA_ow) gives the wake-up
-before a radio event as an example: such spikes last about 10 µs and
-are not to be taken as the peak current of the device. The app's
-documentation of the [spike filter](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/overview.html/spike-filter) says that the first
-samples after a switch may be higher than the actual value.
+Nordic covers the effect in three places:
+
+- Its course on
+  [low-power Bluetooth LE products](https://academy.nordicsemi.com/courses/designing-low-power-bluetooth-le-products/lessons/lesson-3-tools-and-best-practices-for-power-measurement/topic/current-measurement-fundamentals/#Issues-with-automatic-range-switching)
+  describes the cause. When an instrument switches its measuring
+  resistor, the supply voltage at the DUT steps, and the decoupling
+  capacitors take an inrush current, seen as an overshoot. How much of
+  it shows depends on the instrument.
+- Its [webinar on the nRF54L series](https://www.youtube.com/watch?v=P94FbstA_ow)
+  gives the wake-up before a radio event as an example: such spikes
+  last about 10 µs and are not to be taken as the peak current of the
+  device.
+- The app's documentation of the
+  [spike filter](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/overview.html/spike-filter)
+  says that the first samples after a switch may be higher than the
+  actual value.
 
 So part of the burst is a real current into the capacitors and part may
 be overshoot. The capture does not say how much of each.
@@ -319,8 +333,8 @@ mean: the leaked samples move the mean and not the median.
 
 A value below 0.2 µA, negative noise included, becomes 0. The app does
 the same when it receives a sample: its source gives 200 nA as the
-lowest current a PPK2 reads. `ppk2 capture` applies it before it
-writes the file and before it computes the mean it prints, so the two
+lowest current a PPK2 reads. `ppk2 capture` applies the floor before
+it writes the file and before it computes the mean it prints, so the two
 agree.
 
 ## Timing
@@ -329,25 +343,26 @@ The sample count is the clock. One sample lasts 10 µs, and the
 timestamp of a row is its number times 0.01 ms. No computer clock is
 involved, so rows are exactly 10 µs apart.
 
-- A lost sample keeps its place. Each sample carries a counter; when
+- A lost sample keeps its place. Each sample carries a counter. When
   the counter jumps, the parser puts a placeholder where each missing
   sample was. The trace keeps its true length, with one limit. The
   counter has 6 bits, so a loss of exactly 64 samples, or a multiple
   of 64, goes unseen, and a longer loss is counted short by a multiple
-  of 64. The [protocol page](protocol.md#5-stream-reassembly) says how.
+  of 64. See the [protocol page](protocol.md#5-stream-reassembly) for
+  how.
 - The rate is fixed. The PPK2 has no command that makes it send fewer
   samples: its firmware ignores `AVG_NUM_SET`. When the app shows fewer
   samples per second, it has averaged blocks of samples on the
   computer. `ppk2 capture` always writes the full rate.
-- A capture starts about 10 ms before the DUT is powered. The
-  [known caveats](protocol.md#10-known-caveats) explain why.
+- A capture starts about 10 ms before the DUT is powered. See the
+  [known caveats](protocol.md#10-known-caveats) for why.
 
 ## Digital inputs
 
 The eight inputs of the logic port are read at the same instants as the
-current, and travel in the same sample word. That is what allows a
+current, and travel in the same sample word. That is why a
 [marked region](../user/recipes.md#current-of-a-marked-region) of code
-to be measured to the sample.
+can be measured to the sample.
 
 - In the library, `Sample.logic` is a number in which D0 is bit 0. In
   the CSV's `D0-D7` field, D0 is the leftmost character.
@@ -364,5 +379,5 @@ average value in ranges 1 to 4 and ±15 % in range 5, as typical
 figures, and "better than ±20 %" overall.
 
 This package neither improves nor measures that. What it aims at is
-narrower: from the same samples, the same numbers as the app. The
-[validation](../validation/method.md) shows how that is checked.
+narrower: from the same samples, the same numbers as the app. See the
+[validation](../validation/method.md) for how that is checked.
