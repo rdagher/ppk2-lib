@@ -20,7 +20,7 @@ flowchart TB
 ```
 
 The PPK2 sends raw readings. Everything after the USB cable is done by
-this package, in the same way as Nordic's Power Profiler app does it.
+this package, in the same way as Nordic's [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html) does it.
 
 ## Measured quantities and modes
 
@@ -36,7 +36,7 @@ measure voltage.
 ## Measurement ranges
 
 The PPK2 covers 200 nA to 1 A with five ranges and switches between
-them by itself as the current moves. From the PPK2 user guide:
+them by itself as the current moves. From the [PPK2 user guide](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html):
 
 | Range in the app | Range in the stream | Span | Resolution |
 |---:|---:|---|---:|

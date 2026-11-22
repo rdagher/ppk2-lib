@@ -160,6 +160,11 @@ too.
   protocol page are newer, so each has a table below it with the same
   content.
 - Links between pages are relative: `../measure/principle.md`.
+- An external project, product or document is linked where a page
+  first names it: `pyserial`, the Power Profiler app, the PPK2 user
+  guide. A References section at the end does not replace that link.
+- A file or folder of this repository that a reader of the site would
+  want to open is linked to GitHub the same way, on its first mention.
 - To link to a function, use its full name as the anchor:
   `api.md#ppk2.client.session.Session.capture`.
 

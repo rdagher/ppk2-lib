@@ -96,7 +96,7 @@ D0
 ```
 
 Over the 147 regions of that 30 s capture the mean current stayed
-between 1,382.40 and 1,387.90 µA. pandas reads the compressed file as
+between 1,382.40 and 1,387.90 µA. [pandas](https://pandas.pydata.org/) reads the compressed file as
 it is.
 
 Three things to watch:

@@ -1,6 +1,6 @@
 # Command reference
 
-`ppk2` does from a terminal what the Power Profiler app does with a
+`ppk2` does from a terminal what the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html) does with a
 PPK2: find it, switch power to the DUT (device under test), and record current and digital
 inputs to a file. `python -m ppk2` is the same program, and every
 command has `--help`.

@@ -46,7 +46,7 @@ error: could not identify the PPK2 data port: none of [...] answered GET_METADAT
 
 The ports are there, but none answered. The line names the ports in
 place of `[...]`. The cause is another program holding the PPK2, nearly
-always the Power Profiler app. `ppk2 list` then shows a port as
+always the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html). `ppk2 list` then shows a port as
 `[busy: held by another process?]`.
 
 Quit the app, or disconnect the PPK2 inside it. If you know the path of
@@ -171,7 +171,7 @@ cable, without a hub, and close what else loads the machine.
 
 Capture the same DUT with the app and with `ppk2 capture`, export the
 app's capture as CSV, and compare the two files. The repository's
-`validation/compare_cli.py` does it and writes a report. The
+[`validation/compare_cli.py`](https://github.com/rdagher/ppk2-lib/blob/main/validation/compare_cli.py) does it and writes a report. The
 [validation](../validation/method.md) describes the procedure, and its
 [results](../validation/results.md) show it on one dev kit, in both modes.
 

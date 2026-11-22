@@ -30,8 +30,8 @@ within minutes of each other and without being touched in between.
 |---|---|
 | Date | 2026-11-21, between 19:31 and 19:40 |
 | PPK2 | One unit, firmware 1.2.4 (`db16a94`), the version the app installs. Its calibration text is in the evidence folder |
-| App | Power Profiler 4.4.1, in nRF Connect for Desktop 5.4.1 |
-| This package | Commit `ace11d0`, with Python 3.13.13 and pyserial 3.5 |
+| App | Power Profiler 4.4.1, in [nRF Connect for Desktop](https://www.nordicsemi.com/Software-and-Tools/Development-Tools/nRF-Connect-for-desktop) 5.4.1 |
+| This package | Commit `ace11d0`, with Python 3.13.13 and [pyserial](https://pyserial.readthedocs.io/) 3.5 |
 | Host | macOS 26.5.1 |
 | DUT (device under test) | nRF54LM20 DK with the bench firmware: D0 toggles at 5 Hz, D1 at 0.5 Hz, and the CPU is busy while D0 is high |
 | Captures | 30 s each at 100,000 samples per second. Those of `ppk2 capture` start at power-on, the app's about 0.7 s before it |

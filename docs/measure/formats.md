@@ -1,6 +1,6 @@
 # File formats
 
-`ppk2` writes the two formats of the Power Profiler app: the CSV the
+`ppk2` writes the two formats of the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html): the CSV the
 app exports, and the `.ppk2` session file it saves and loads. A name
 ending in `.ppk2` gives a session file, any other name a CSV.
 
@@ -53,7 +53,7 @@ app's export reads this.
 
 ### Reading a CSV
 
-The current only, with numpy:
+The current only, with [numpy](https://numpy.org/):
 
 ```python
 import numpy as np
@@ -62,7 +62,7 @@ ua = np.loadtxt("capture.csv", delimiter=",", skiprows=1, usecols=1)
 print(f"{len(ua)} samples, mean {ua.mean():.2f} µA")
 ```
 
-Everything, with pandas:
+Everything, with [pandas](https://pandas.pydata.org/):
 
 ```python
 import pandas as pd

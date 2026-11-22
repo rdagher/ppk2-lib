@@ -4,7 +4,7 @@ A Python library and command-line tool for Nordic's Power Profiler
 Kit II (PPK2). The PPK2 measures the current of a device under test
 (DUT) and samples eight digital inputs with it, 100,000 times per
 second. With ppk2-lib a script, a terminal or a CI job drives it,
-without the Power Profiler app.
+without the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html).
 
 This is an experimental release (0.1.0). It works and is checked on
 hardware, but the API may still change between 0.x versions.

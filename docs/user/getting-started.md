@@ -21,8 +21,8 @@ uv tool install "git+https://github.com/rdagher/ppk2-lib"
 it once without installing anything.
 
 This gives you the `ppk2` command and the `ppk2` Python package. You
-need Python 3.11 or newer. Two dependencies come with it, `pyserial`
-and `typer`; there is nothing to compile.
+need Python 3.11 or newer. Two dependencies come with it, [`pyserial`](https://pyserial.readthedocs.io/)
+and [`typer`](https://typer.tiangolo.com/); there is nothing to compile.
 
 ```console
 $ ppk2 version
@@ -47,7 +47,7 @@ expected to work.
 
 ## Wiring
 
-Wire it as you would for the Power Profiler app. The PPK2 has two
+Wire it as you would for the [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html). The PPK2 has two
 modes, named here as in the app, and the wiring decides which one you
 use.
 
@@ -173,7 +173,7 @@ Timestamp(ms),Current(uA),D0-D7,D0,D1,D2,D3,D4,D5,D6,D7
 0.02,0.000,00000000,0,0,0,0,0,0,0,0
 ```
 
-A quick look with numpy:
+A quick look with [numpy](https://numpy.org/):
 
 ```python
 import numpy as np

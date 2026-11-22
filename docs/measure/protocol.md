@@ -18,8 +18,8 @@ covers two things:
 | | [9. Session sequence](#9-session-sequence) |
 | | [10. Known caveats](#10-known-caveats) |
 
-The code is in `src/ppk2/protocol/` for the bytes and in
-`src/ppk2/client/session.py` for the order of things. The file formats
+The code is in [`src/ppk2/protocol/`](https://github.com/rdagher/ppk2-lib/tree/main/src/ppk2/protocol) for the bytes and in
+[`src/ppk2/client/session.py`](https://github.com/rdagher/ppk2-lib/blob/main/src/ppk2/client/session.py) for the order of things. The file formats
 `ppk2` writes are not part of the protocol; they are under
 [file formats](formats.md).
 
@@ -32,7 +32,7 @@ Their order is not fixed, so discovery finds the data port by asking
 each one for its calibration.
 
 - The baud rate does not matter over USB. This package sets 115200
-  because pyserial wants a number.
+  because [pyserial](https://pyserial.readthedocs.io/) wants a number.
 - After plugging in, both ports can take 1 to 3 seconds to appear.
   Discovery polls for up to 3 s.
 - A Nordic dev kit on the same bench shows its debugger under SEGGER's
@@ -94,7 +94,7 @@ them.
 
 `GET_METADATA` returns about 1 kB of `key: value` lines that end with
 the word `END`. Each range has its own key for each coefficient. From
-`tests/fixtures/metadata.raw`, shortened:
+[`tests/fixtures/metadata.raw`](https://github.com/rdagher/ppk2-lib/blob/main/tests/fixtures/metadata.raw), shortened:
 
 ```text
 Calibrated: 0
@@ -166,7 +166,7 @@ Bit 0 is the least significant bit of the first byte received.
 | `COUNTER` | 18 to 23 | Goes up by one per sample, modulo 64 |
 | `LOGIC` | 24 to 31 | The eight digital inputs. Bit 0 is D0 |
 
-The stream numbers the ranges 0 to 4. The app and the PPK2 user guide
+The stream numbers the ranges 0 to 4. The app and the [PPK2 user guide](https://docs.nordicsemi.com/bundle/ug_ppk2/page/UG/ppk/PPK_user_guide_Intro.html)
 number them 1 to 5: range 4 here is their range 5, which the user
 guide gives as 50 mA to 1 A.
 
@@ -505,7 +505,7 @@ It has other USB IDs and another protocol. This package only accepts
 
 ## 11. References
 
-- Nordic's Power Profiler app,
+- Nordic's [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html),
   [`pc-nrfconnect-ppk`](https://github.com/nordicsemi/pc-nrfconnect-ppk),
   read at commit `63ae4b7` and checked again at v4.4.1. The files that
   matter:

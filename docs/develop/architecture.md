@@ -1,7 +1,7 @@
 # Architecture
 
 This guide is for writing Python against the library. The rules for
-changing the library itself are in `CONTRIBUTING.md` at the root of the
+changing the library itself are in [`CONTRIBUTING.md`](https://github.com/rdagher/ppk2-lib/blob/main/CONTRIBUTING.md) at the root of the
 repository.
 
 The `ppk2` package has three layers. Each one uses only the layer below
@@ -10,8 +10,8 @@ it.
 | Layer | What it does | Needs |
 |---|---|---|
 | `ppk2.protocol` | The bytes: commands, calibration text, sample decoding, calibration formula, stream parser. No input or output | Standard library |
-| `ppk2.client` | The device: finds the PPK2 and runs a session on its serial port | `pyserial` |
-| `ppk2.cli` | The [`ppk2` command](../user/command.md): files, progress, signals, exit codes | `typer` |
+| `ppk2.client` | The device: finds the PPK2 and runs a session on its serial port | [`pyserial`](https://pyserial.readthedocs.io/) |
+| `ppk2.cli` | The [`ppk2` command](../user/command.md): files, progress, signals, exit codes | [`typer`](https://typer.tiangolo.com/) |
 
 The [API reference](api.md) lists what the first two contain.
 

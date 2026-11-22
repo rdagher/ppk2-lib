@@ -1,7 +1,7 @@
 # Method
 
 The claim this package makes is narrow: on the same PPK2 and the same
-bench, it gives the numbers that Nordic's Power Profiler app gives. The
+bench, it gives the numbers that Nordic's [Power Profiler app](https://docs.nordicsemi.com/r/bundle/nrf-connect-for-desktop/page/app/pc-nrfconnect-ppk/using_ppk_app.html) gives. The
 app is the reference throughout. This page says how the claim is
 tested; the [results](results.md) are on the next one.
 
@@ -9,9 +9,9 @@ It is tested at three levels, from one sample to a whole bench:
 
 | Level | What is compared | Against | Material |
 |---|---|---|---|
-| The parser | 600 recorded samples, one by one | The app's own parsing code | `tests/fixtures/` |
+| The parser | 600 recorded samples, one by one | The app's own parsing code | [`tests/fixtures/`](https://github.com/rdagher/ppk2-lib/tree/main/tests/fixtures) |
 | Whole captures | Two captures of one bench, taken back to back | The app's CSV export | `validation/` |
-| A bench | What the tool reads from a signal known in advance | The bench firmware | `tests/hil/` |
+| A bench | What the tool reads from a signal known in advance | The bench firmware | [`tests/hil/`](https://github.com/rdagher/ppk2-lib/tree/main/tests/hil) |
 
 ## Parser comparison
 
@@ -22,7 +22,7 @@ nine times. The calibration text of the same PPK2 is stored next to it.
 
 The reference is `parsed_poweron.csv`: the output of the app's parser
 for those bytes. It was produced by running the app's code outside the
-app (`pc-nrfconnect-ppk` v4.4.1, `src/device/serialDevice.ts`), with a
+app (`pc-nrfconnect-ppk` v4.4.1, [`src/device/serialDevice.ts`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/v4.4.1/src/device/serialDevice.ts)), with a
 small Node script. To produce it again:
 
 ```sh
@@ -73,7 +73,7 @@ and the commit of this package.
 
 ### Compared quantities
 
-`validation/compare_cli.py` reads the two files and reports:
+[`validation/compare_cli.py`](https://github.com/rdagher/ppk2-lib/blob/main/validation/compare_cli.py) reads the two files and reports:
 
 - the header, which must be identical;
 - the sample rate;
@@ -115,7 +115,7 @@ energy in the comparison, because a PPK2 measures current only.
 
 The hardware tests do not compare with the app. They check the tool
 against a signal that is known in advance, from the firmware in
-`tests/hil/bench-dut`. D0 toggles at 5 Hz and D1 at 0.5 Hz. The CPU is
+[`tests/hil/bench-dut`](https://github.com/rdagher/ppk2-lib/tree/main/tests/hil/bench-dut). D0 toggles at 5 Hz and D1 at 0.5 Hz. The CPU is
 busy while D0 is high, so the current steps with D0.
 
 Ten tests check that:
