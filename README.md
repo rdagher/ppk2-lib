@@ -112,6 +112,11 @@ app ([pc-nrfconnect-ppk](https://github.com/nordicsemi/pc-nrfconnect-ppk))
 and from bench measurements. It contains none of that source,
 whose licence allows reading and running it but not redistributing it.
 
+The code and the documentation were written with Claude Code and
+reviewed by the author. The figures are checked on a bench against
+Nordic's app: see the [method](docs/validation/method.md) and the
+[results](docs/validation/results.md).
+
 ## Related projects
 
 - Nordic's Power Profiler app: the reference for this package.
