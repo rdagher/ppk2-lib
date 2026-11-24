@@ -55,7 +55,7 @@ from ppk2.protocol import (
     parse_metadata,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.0rc1"
 
 __all__ = [
     "DEFAULT_SPIKE_FILTER_ALPHA",
