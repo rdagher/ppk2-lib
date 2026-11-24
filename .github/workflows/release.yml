@@ -1,7 +1,13 @@
 # Tag-driven release: push a `v*` tag -> build wheel + sdist with uv,
-# smoke-test the wheel in a clean venv, attach both to a GitHub
-# Release. No PyPI publish: the experimental phase distributes via
-# GitHub only (`pip install git+…` or the attached wheel).
+# smoke-test the wheel in a clean venv, upload both to the package
+# index, attach both to a GitHub Release.
+#
+# A pre-release tag (v0.1.0rc1, v0.2.0a1, v0.2.0b2) goes to TestPyPI,
+# a final tag (v0.1.0) to PyPI. Neither upload uses a stored token:
+# each index trusts this workflow in its environment (`testpypi`,
+# `pypi`) through Trusted Publishing, set up once on the index for
+# the project `ppk2-lib`. A version can be uploaded to an index only
+# once, so rehearse a release with an rc tag first.
 name: release
 
 on:
@@ -9,11 +15,14 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write # create the GitHub Release + upload assets
+  contents: read
 
 jobs:
-  build-and-release:
+  build:
+    name: wheel + sdist
     runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.kind.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
 
@@ -42,9 +51,75 @@ jobs:
             exit 1
           fi
 
+      # v0.1.0 is final; v0.1.0rc1, v0.2.0a1 and v0.2.0b2 are not.
+      - name: Tell a pre-release from a final release
+        id: kind
+        run: |
+          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
+
+  publish-testpypi:
+    name: upload to TestPyPI
+    needs: build
+    if: needs.build.outputs.prerelease == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/ppk2-lib/
+    permissions:
+      id-token: write # Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: upload to PyPI
+    needs: build
+    if: needs.build.outputs.prerelease == 'false'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/ppk2-lib/
+    permissions:
+      id-token: write # Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub Release + upload assets
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, 'a') || contains(github.ref_name, 'b') || contains(github.ref_name, 'rc') || startsWith(github.ref_name, 'v0.') }}
+          prerelease: ${{ needs.build.outputs.prerelease == 'true' || startsWith(github.ref_name, 'v0.') }}
