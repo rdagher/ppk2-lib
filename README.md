@@ -20,14 +20,14 @@ hardware, but the API may still change between 0.x versions.
 ## Installation
 
 ```sh
-pip install "git+https://github.com/rdagher/ppk2-lib"
+pip install ppk2-lib
 ```
 
 Or with [uv](https://docs.astral.sh/uv/):
 
 ```sh
-uv tool install "git+https://github.com/rdagher/ppk2-lib"
-uvx --from "git+https://github.com/rdagher/ppk2-lib" ppk2 list
+uv tool install ppk2-lib
+uvx --from ppk2-lib ppk2 list
 ```
 
 You need Python 3.11 or newer. On Windows, two things do not work yet:

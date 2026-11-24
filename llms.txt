@@ -6,8 +6,8 @@
 > app's export or to a session file in the app's `.ppk2` format, in
 > Ampere meter or Source meter mode, and it switches power to the
 > device under test (DUT) from a script.
-> Experimental: the API may change between 0.x versions. Not on PyPI
-> yet; install from git.
+> Experimental: the API may change between 0.x versions. On PyPI as
+> `ppk2-lib`.
 
 The command and the import name are `ppk2`; the distribution is
 `ppk2-lib`. Three layers: `ppk2.protocol` (standard library only),

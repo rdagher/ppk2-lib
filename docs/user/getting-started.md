@@ -5,21 +5,21 @@ capture, read, and open the capture in the app.
 
 ## Step 1: installation
 
-ppk2-lib is not on PyPI yet. Install it from the repository:
+Install it from [PyPI](https://pypi.org/project/ppk2-lib/):
 
 ```sh
-pip install "git+https://github.com/rdagher/ppk2-lib"
+pip install ppk2-lib
 ```
 
 If you only want the command, [uv](https://docs.astral.sh/uv/) installs
 it as a tool, in an environment of its own:
 
 ```sh
-uv tool install "git+https://github.com/rdagher/ppk2-lib"
+uv tool install ppk2-lib
 ```
 
 To run it once without installing anything, use
-`uvx --from "git+https://github.com/rdagher/ppk2-lib" ppk2 list`.
+`uvx --from ppk2-lib ppk2 list`.
 
 This gives you the `ppk2` command and the `ppk2` Python package. You
 need Python 3.11 or newer. Two dependencies come with it,
@@ -34,7 +34,7 @@ $ ppk2 version
 In a project of your own, add it as a dependency, here with `uv`:
 
 ```sh
-uv add "git+https://github.com/rdagher/ppk2-lib"
+uv add ppk2-lib
 ```
 
 What it has been tested on:
