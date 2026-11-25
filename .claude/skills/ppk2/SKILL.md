@@ -79,6 +79,11 @@ stays in debug mode and draws more until it is power-cycled: 330 µA
 where it idles at 1.4 µA, on the nRF54LM20 DK. A capture power-cycles
 the DUT, so measure with a fresh one.
 
+Do not use `--out` on a `ppk2 run` that flashes. It records while the
+command runs, with the chip in debug mode: the capture looks plausible
+and reads high. An idle current far above the expected one means the
+chip was in debug mode.
+
 ## Bench notes
 
 - nRF52840 DK: set SW6 to "nRF only" to measure. Otherwise the
