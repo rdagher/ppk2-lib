@@ -254,22 +254,27 @@ follow from that:
 
 ### Differences from Nordic's app
 
-This logic follows the app's `handleRawDataSet` (`pc-nrfconnect-ppk`
-at `63ae4b7`, `src/device/serialDevice.ts:246-296`, unchanged through
-v4.4.1), written anew. It differs in five places.
+This logic follows the app's `handleRawDataSet`
+([`pc-nrfconnect-ppk`](https://github.com/nordicsemi/pc-nrfconnect-ppk)
+at `63ae4b7`,
+[`src/device/serialDevice.ts:246-297`](https://github.com/nordicsemi/pc-nrfconnect-ppk/blob/63ae4b773e638845eeda42172e3b16869830768c/src/device/serialDevice.ts#L246-L297),
+unchanged through v4.4.1), written anew. It differs in five places,
+all on a stream that has lost data or carries a damaged word. The
+[fixture stream](https://github.com/rdagher/ppk2-lib/tree/main/tests/fixtures)
+holds neither, and on it the two parsers emit the same samples.
 
 - A held sample is emitted once. The app emits every word on arrival
-  (`:284-285`) and the held ones again when they are released, so a
-  glitch duplicates samples.
+  (`:284-285`) and the held ones again when they are released
+  (`:264-266`), so a glitch duplicates samples.
 - A lost gap has its full length. The app's count of the missing
   samples (`:269-271`) comes out one short.
 - Samples received after a gap come after it. The app has already
-  emitted them, so they sit before the placeholders.
+  emitted them, so they sit before the placeholders (`:273-275`).
 - A range above 4 drops the word. The app clamps it to 5
   (`:248-251`), which points one past the calibration arrays, and lets
   the word's counter drive the resynchronisation.
 - A lost alignment is searched for and found again. The app keeps
-  reading words at the old offset.
+  reading words at the old offset (`:301-314`).
 
 ## 6. Calibration formula
 

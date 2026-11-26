@@ -150,13 +150,16 @@ how the parser finds its place again.
 
 On purpose, and outside what the comparisons above exercise:
 
-- Lost samples. The app's code duplicates held samples, counts a lost
-  gap one short, and places the samples received after a gap before
-  it. This package emits each sample once, counts the full gap, and
-  keeps the order. See the
-  [protocol page](../measure/protocol.md#5-stream-reassembly)
-  for the five points, with their line references. Both record a lost
-  sample as 0.2 µA.
+- Lost samples. The two parsers differ in five places, all on a
+  stream with lost or damaged data. On such a stream this package
+  emits each held sample once, counts a lost gap in full, and keeps
+  the samples in order. The app emits a held sample on arrival and
+  again when it releases it. It counts the gap one sample short and
+  places the samples it held before the gap. See the
+  [protocol page](../measure/protocol.md#differences-from-nordics-app)
+  for the five points, with their line references. Both tools record
+  a lost sample as 0.2 µA, and no capture above holds such a sample:
+  the lowest value above zero is 0.201 µA.
 - Where a capture starts. In the app you start the capture and enable
   power by hand. `ppk2 capture` does both, and its file begins about
   10 ms before the power comes up.
